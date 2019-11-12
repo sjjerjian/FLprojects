@@ -15,7 +15,7 @@ clear all
 
 subject = 'human';
 paradigm = 'dots3DMP';
-dateRange = 20190612:20191231;
+dateRange = 20190612:20191220;
 
 % subject = 'hanzo';
 % paradigm = 'Dots';
