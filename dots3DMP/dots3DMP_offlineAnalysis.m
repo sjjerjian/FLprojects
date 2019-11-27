@@ -4,6 +4,7 @@
 clear all; close all
 
 conftask=1; % 1=colorbars, 2=PDW
+normalize = 0;
 
 % these will specify which (previously saved) mat file to load
 subject = 'human';
@@ -34,13 +35,18 @@ end
 %% choose subjects to include based on 3-letter code
 
 subjs = unique(data.subj); % all
-% subjs = {'AAW'}; % the best single subject
+
+subjs = {'AAW'}; % the best single subject
 % subjs = {'LLV'};
-% subjs = {'AAW' 'LLV'};
-% subjs = {'AAW' 'LLV' 'IWT'}; % these other two have the most trials after AAW
-% subjs = {'AAW' 'LLV' 'IWT' 'CXD'}; % including CXD would add a few extra trials
-% subjs = {'AAW' 'LLV' 'IWT' 'EMF'}; % including CXD would add a few extra trials
-% subjs = {'AAW' 'LLV' 'IWT' 'CXD' 'EMF'}; % including CXD would add a few extra trials
+% subjs = {'IWT'};
+% subjs = {'CXD'};
+% subjs = {'EMF'};
+
+
+% subjs = {'AAW' 'LLV' 'IWT'};
+% subjs = {'AAW' 'IWT' 'CXD'};
+% subjs = {'AAW' 'LLV' 'IWT' 'EMF'};
+% subjs = {'AAW' 'LLV' 'IWT' 'CXD' 'EMF'};
 
 
 % remove invalid trials (fixation breaks (which gives nans), excluded subj,
@@ -68,16 +74,16 @@ mods = unique(data.modality);
 
 % ...lump coherences together (work in progress)
 
-% avery
-data.coherence(data.coherence<0.2) = 0.1;
-data.coherence(data.coherence>=0.2 & data.coherence<0.6) = 0.5;
-data.coherence(data.coherence>=0.6) = 0.9;
-cohs = [0.1 0.5 0.9];
+% % avery
+% data.coherence(data.coherence<0.2) = 0.1;
+% data.coherence(data.coherence>=0.2 & data.coherence<0.6) = 0.5;
+% data.coherence(data.coherence>=0.6) = 0.9;
+% cohs = [0.1 0.5 0.9];
 
-% % everyone else
-% data.coherence(data.coherence<=0.3) = 0.1;
-% data.coherence(data.coherence>0.3 & data.coherence<=0.7) = 0.5;
-% cohs = [0.1 0.5];
+% everyone else
+data.coherence(data.coherence<=0.3) = 0.1;
+data.coherence(data.coherence>0.3 & data.coherence<=0.7) = 0.5;
+cohs = [0.1 0.5];
 
 
 
@@ -106,15 +112,60 @@ for F = 1:length(fnames)
     eval(['data.' fnames{F} '(removethese) = [];']);
 end
 
+%% normalize confidence ratings, *within subject*
+
+if normalize
+
+data_orig = data;
+usubj = unique(data.subj);
+for s = 1:length(usubj)
+    data = data_orig;
+    removethese = ~strcmp(data.subj,usubj{s});
+    for F = 1:length(fnames)
+        eval(['data.' fnames{F} '(removethese) = [];']);
+    end    
+    
+    % subtract min and divide by max
+    % data.conf = (data.conf - min(data.conf)) / max((data.conf - min(data.conf)));
+
+    % OR, subtract/divide by *means*
+    dots3DMP_parseData
+    minOfMeans = nanmin(nanmin(nanmin(nanmin(confMean))));
+    data.conf = data.conf - minOfMeans;
+    dots3DMP_parseData
+    maxOfMeans = nanmax(nanmax(nanmax(nanmax(confMean))));
+    data.conf = data.conf / maxOfMeans;
+
+    % OR, rectify
+    % data.conf(data.conf>1) = 1;
+    % data.conf(data.conf>1) = 1;
+
+    % append each subj to a new data struct
+    if s==1
+        data_new = data;
+    else
+        for F = 1:length(fnames)
+            eval(['data_new.' fnames{F} '(end+1:end+length(data.date)) = data.' fnames{F} ';']);
+        end
+    end
+end
+data = data_new;
+
+end
+
     
 %% after settling on the above, run this script to generate summary data
 
 dots3DMP_parseData
 
 
+
+
+
 %% some plots
 
 dots3DMP_plots
+
 
 
 %% fit cumulative gaussians
@@ -131,13 +182,13 @@ flippedGauss_err = @(param,SEP,hdg) sum((flippedGauss(param,hdg)-SEP).^2);
 
 %%
 
-unc = 0; % saves biases from fminunc instead of fminsearch (SEs always are unc, and plots are always search)
+% unc = 0; % saves biases from fminunc instead of fminsearch (SEs always are unc, and plots are always search)
 
-dots3DMP_plots_cgauss
+% dots3DMP_plots_cgauss
 
 
 %%
-dots3DMP_plots_cgauss_forTalk
+% dots3DMP_plots_cgauss_forTalk
 
 
 

@@ -13,13 +13,13 @@ clear all
 
 %% decide which files to load
 
-subject = 'human';
-paradigm = 'dots3DMP';
-dateRange = 20190612:20191220;
+% subject = 'human';
+% paradigm = 'dots3DMP';
+% dateRange = 20190612:20191231;
 
-% subject = 'hanzo';
-% paradigm = 'Dots';
-% dateRange = 20190501:20190803;
+subject = 'genji';
+paradigm = 'Dots';
+dateRange = 20190901:20191231;
 
 dateStr = num2str(dateRange(1));
 for d = 2:length(dateRange)

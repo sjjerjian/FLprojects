@@ -8,22 +8,28 @@
 
 
 % get file list from local dir
+if ~exist(localDir,'file')
+    mkdir(localDir);
+end
 allFiles = dir(localDir);
-localFileList = allFiles(3).name; % skip 1+2, they are are "." and ".."
-for n = 4:length(allFiles)
-    localFileList = [localFileList newline allFiles(n).name];
+if length(allFiles)>2
+    localFileList = allFiles(3).name; % skip 1+2, they are are "." and ".."
+    for n = 4:length(allFiles)
+        localFileList = [localFileList newline allFiles(n).name];
+    end
+else
+    localFileList = [];
 end
 
 % get file list from remote dir
 cmd = ['ssh fetschlab@172.30.3.33 ls ' remoteDir];
 [~,remoteFileList] = system(cmd);
-filenameStart = strfind(remoteFileList,subject);
-filenameEnd = strfind(remoteFileList,'.PDS')+3;
+filenameStart = strfind(lower(remoteFileList),lower(subject)); % lower makes it case-insensitive
+filenameEnd = strfind(remoteFileList,'.')+3; % . instead of .PDS because sometimes they are .mat (why?)
 if length(filenameStart) ~= length(filenameEnd)
     error('invalid file list: starts and ends don''t match');
-        % this can happen, for example, if not all the files in the folder
-        % match the subject name, case sensitive (e.g. Hanzo vs. hanzo), or
-        % if some of them are not .PDS
+    % now this should only happen if filename has >1 or <1 dot, or there
+    % are files with the wrong subject name (not just a case mismatch)
 end
 
 % check each file for a match to the desired date range and paradigm,
