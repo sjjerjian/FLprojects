@@ -4,8 +4,8 @@
 n = nan(length(mods),length(cohs),length(deltas)+1,length(hdgs));
                                % add extra column^ for pooling all trials irrespective of delta
 pRight = n;
-% % RTmean = n;
-% % RTse = n;
+RTmean = n;
+RTse = n;
 confMean = n;
 confSE = n;
 
@@ -27,8 +27,8 @@ for d = 1:length(deltas)+1 % add extra column for all trials irrespective of del
         end
         n(m,c,d,h) = sum(J);
         pRight(m,c,d,h) = sum(J & data.choice==2) / n(m,c,d,h); % 2 is rightward
-% %         RTmean(m,c,d,h) = mean(data.RT(J));
-% %         RTse(m,c,d,h) = std(data.RT(J))/sqrt(n(m,c,d,h));
+        RTmean(m,c,d,h) = mean(data.RT(J));
+        RTse(m,c,d,h) = std(data.RT(J))/sqrt(n(m,c,d,h));
         if conftask==1
             confMean(m,c,d,h) = mean(data.conf(J));
             confSE(m,c,d,h) = std(data.conf(J))/sqrt(n(m,c,d,h));
@@ -69,8 +69,8 @@ pRight(1,2,:,:) = pRight(1,1,:,:);
 pRightSE(1,2,:,:) = pRightSE(1,1,:,:);
 confMean(1,2,:,:) = confMean(1,1,:,:);
 confSE(1,2,:,:) = confSE(1,1,:,:);
-% % RTmean(1,2,:,:) = RTmean(1,1,:,:);
-% % RTse(1,2,:,:) = RTse(1,1,:,:);
+RTmean(1,2,:,:) = RTmean(1,1,:,:);
+RTse(1,2,:,:) = RTse(1,1,:,:);
 confMean(1,2,:,:) = confMean(1,1,:,:);
 confSE(1,2,:,:) = confSE(1,1,:,:);
 yVals(1,2,:,:) = yVals(1,1,:,:);
@@ -85,8 +85,8 @@ if length(cohs)==3
     pRightSE(1,3,:,:) = pRightSE(1,1,:,:);
     confMean(1,3,:,:) = confMean(1,1,:,:);
     confSE(1,3,:,:) = confSE(1,1,:,:);
-% %     RTmean(1,3,:,:) = RTmean(1,1,:,:);
-% %     RTse(1,3,:,:) = RTse(1,1,:,:);
+    RTmean(1,3,:,:) = RTmean(1,1,:,:);
+    RTse(1,3,:,:) = RTse(1,1,:,:);
     confMean(1,3,:,:) = confMean(1,1,:,:);
     confSE(1,3,:,:) = confSE(1,1,:,:);
     yVals(1,3,:,:) = yVals(1,1,:,:);
@@ -94,3 +94,8 @@ if length(cohs)==3
     B(1,3,:) = B(1,1,:);
     stats(1,3,:) = stats(1,1,:);
 end
+
+if length(cohs)>3
+    error('can''t handle >3 cohs');
+end
+

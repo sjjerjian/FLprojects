@@ -21,7 +21,12 @@ end
 
 
 fprintf(['\ncleaning up ' remoteFiles{n} '...']);
-load([localDir remoteFiles{n}],'-mat');
+try
+    load([localDir remoteFiles{n}],'-mat');
+catch me
+    fprintf(' Could not load! Check file. Skipping...\n');
+    return
+end
 
 try PDS = rmfield(PDS,'initialParameters'); catch; end
 try PDS = rmfield(PDS,'initialParameterNames'); catch; end
@@ -55,6 +60,7 @@ for t = 1:length(PDS.data) % loop over trials for this file
         try PDS.data{t}.stimulus = rmfield(PDS.data{t}.stimulus,'dotX'); catch; end
         try PDS.data{t}.stimulus = rmfield(PDS.data{t}.stimulus,'dotY'); catch; end
         try PDS.data{t}.stimulus = rmfield(PDS.data{t}.stimulus,'dotZ'); catch; end
+        try PDS.data{t}.stimulus = rmfield(PDS.data{t}.stimulus,'dotPos'); catch; end        
         try PDS.data{t}.stimulus = rmfield(PDS.data{t}.stimulus,'dotSize'); catch; end
     end
     
