@@ -22,8 +22,10 @@ else
 end
 
 % get file list from remote dir
-cmd = ['ssh fetschlab@172.30.3.33 ls ' remoteDir];
+% cmd = ['ssh fetschlab@172.30.3.33 ls ' remoteDir];
+cmd = ['ssh fetschlab@10.161.240.133 ls ' remoteDir];
 [~,remoteFileList] = system(cmd);
+if any(strfind(remoteFileList,'timed out')); error(remoteFileList); end
 filenameStart = strfind(lower(remoteFileList),lower(subject)); % lower makes it case-insensitive
 filenameEnd = strfind(remoteFileList,'.')+3; % . instead of .PDS because sometimes they are .mat (why?)
 if length(filenameStart) ~= length(filenameEnd)

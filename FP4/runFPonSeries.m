@@ -54,6 +54,7 @@ dbstop if error
 % 6/23/09 mns added pGT0 argout
 % 8/26/09 updated documentation
 
+
 m = length(uvect);
 
 % if any(Bup <=0) || any(Blo>=0)
@@ -151,14 +152,15 @@ for i = 1:m
         [ufinal,~,Ptb,Pg0,Pxt] = FP4(xmesh,uinit,uvect(i),sigma,b_change,b_margin,dt); 
     end
     plo = Ptb(:,1);         %probability of crossing the lower bound at each moment
-    pup = Ptb(:,2);        %probability of crossing the upper bound
+    pup = Ptb(:,2);         %probability of crossing the upper bound
     % survival_ = Pt_;            %survivor function
     % Pt_ = -diff(Pt_);           %the total probability of crossing either of the bounds at each moment
     pUpAbs(i) = sum(pup);
     pLoAbs(i) = sum(plo);
     % These means only make sense if there is no mass in ufinal. It's the
     % mean rt only for absorbed.
-    rtUp(i) = sum(pup(2:end) .* t) ./ pUpAbs(i);
+%     rtUp(i) = sum(pup(2:end) .* t) ./ pUpAbs(i); % formerly this - very weird! -CF Mar2020
+    rtUp(i) = sum(pup(2:end).*t(:)) / pUpAbs(i);
     rtLo(i) = sum(plo(2:end).*t(:)) / pLoAbs(i);
     upDist{i} = pup(2:end); % in RK's code, the 1st element of Ptb is absorption at t=0, that is 1 time step before our 1st
     loDist{i} = plo(2:end);

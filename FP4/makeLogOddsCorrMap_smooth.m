@@ -1,4 +1,4 @@
-function [logOddsMapR, logOddsMapL, logOddsCorrMap, tAxis, vAxis] = makeLogOddsCorrMap_smooth(k,B,sigma,theta,plotflag)
+function [logOddsMapR, logOddsMapL, logOddsCorrMap, tAxis, vAxis] = makeLogOddsCorrMap_smooth(k,B,sigma,theta,tAxis,plotflag)
 
 % % to run as script, uncomment:
 % % clear;
@@ -9,11 +9,17 @@ function [logOddsMapR, logOddsMapL, logOddsCorrMap, tAxis, vAxis] = makeLogOddsC
 % % sigma=1; % standard deviation of momentary evidence
 % % theta=0.8; % threshold, in log odds correct, for making a direction choice as opposed to sure-bet
 
+% keyboard
+
 cohs = [-0.512 -0.256 -0.128 -0.064 -0.032 -eps eps 0.032 0.064 0.128 0.256 0.512];
 uvect = k*cohs; % vector of mean drift rates
-dT = 1; % time step (ms)
-buf = 4; % buffer for bound crossings
-tAxis = (0:dT:800)'; % time axis
+buf = 4*sigma; % buffer for bound crossings
+if isempty(tAxis)
+    dT = 1; % time step (ms)
+    tAxis = (0:dT:800)'; % time axis
+else
+    dT = mode(diff(tAxis));
+end
 
 y0 = 0;
 Bup = ones(1,length(tAxis))*(B+buf); % upper bound
@@ -34,7 +40,7 @@ mapLeft = 0; mapRight = 0;
 for c = 1:length(cohs)
     if cohs(c)>0
         mapRight = mapRight + xtDist{c};
-    else  % careful if using coh=0
+    else  % careful if using coh=0!
         mapLeft = mapLeft + xtDist{c};
     end
 end
@@ -43,9 +49,9 @@ mapLeft = mapLeft / sum(cohs<0);
 
 % clip PDFs at some minimum, for plotting purposes
 mapRightClipped = mapRight; mapRightClipped(mapRightClipped<1e-6) = 1e-6;
-mapLeftClipped = mapLeft; mapLeftClipped(mapLeftClipped<1e-6) = 1e-6;
+% mapLeftClipped = mapLeft; mapLeftClipped(mapLeftClipped<1e-9) = 1e-9;
 
-n = 100; % set n to 100+ for Roozbeh's smooth plots, lower for faster plotting
+n = 60; % set n to 100+ for Roozbeh's smooth plots, lower for faster plotting
 if plotflag==2
     % log-transform P to enable log scale for contourf
     logPmap = (log10(mapRightClipped)+6)/6;
@@ -62,10 +68,15 @@ if plotflag==2
 %     set(h,'LineColor','none'); xlabel('time (ms)'); ylabel('DV');  title('PDF of DV for leftward motion');
 end
 
+
 % log odds is log(P/(1-P)), which in this case is Right/Left or vice versa
 logOddsMapR = log(mapRight./mapLeft); 
 logOddsMapL = log(mapLeft./mapRight);
-logOddsCorrMap = [logOddsMapL(1:(size(vAxis,2)+1)/2,:) ; logOddsMapR((size(vAxis,2)+1)/2+1:end,:)];
+if mod(size(logOddsMapL,1),2)==0
+    logOddsCorrMap = [logOddsMapL(1:(size(vAxis,2))/2,:) ; logOddsMapR((size(vAxis,2))/2+1:end,:)];
+else
+    logOddsCorrMap = [logOddsMapL(1:(size(vAxis,2)+1)/2,:) ; logOddsMapR((size(vAxis,2)+1)/2+1:end,:)];
+end
 if plotflag
     figure; set(gcf, 'Color', [1 1 1], 'Position', [100 100 450 350], 'PaperPositionMode', 'auto'); hold on;
     [~,h] = contourf(tAxis,vAxis,logOddsCorrMap,n);
@@ -77,8 +88,8 @@ if plotflag
     set(hh,'LineColor','k','LineWidth',2);
     colorbar('YTick',0:1:5); 
     xlabel('Time (ms)'); ylabel('DV');
-    set(gca,'XTick',0:200:800,'YTick',-B:round(B/2):B,'XTickLabel',0:200:800,'TickDir','out');
-%     changeAxesFontSize(gca,24,24);
+    set(gca,'XTick',0:200:1000,'YTick',-B:round(B/2):B,'XTickLabel',0:200:1000,'TickDir','out');
+%     changeAxesFontSize(gca,24,24); % for paper fig
     title('Log odds correct');
     colormap(jet);
 end
