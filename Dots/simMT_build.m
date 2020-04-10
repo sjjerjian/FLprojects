@@ -1,3 +1,8 @@
+% build a simulated MT population and generate its spiking activity to a 
+% standard set of random-dot motion stimuli
+% CF 2014-2020
+
+
 %% build an experiment
 clear all
 close all
@@ -60,7 +65,7 @@ end
 for c = 1:length(poscohs)
     tuning{c} = zeros(nNeurons,length(dirAxis));
     for n = 1:nNeurons
-        % von Mises tuning functions (captures asymmetry in pref/left response to coh)
+        % von Mises tuning functions (captures asymmetry in right/left response to coh)
         k = K * poscohs(c); % scale inverse variance by coh
         tuning{c}(n,:) = ampl * exp(k*cosd(dirAxis-prefDirs(n))) / (2*pi*besseli(0,k)) + offset;
                  %^ rows are neurons, columns are dirs           

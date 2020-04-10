@@ -50,7 +50,8 @@ for n = 1:length(filenameStart)
     end
     if any(strfind(dateStr,thisDate)) && foundProt
         if ~any(strfind(localFileList,remoteFiles{n})) || overwriteLocalFiles % always copy if overwrite option selected
-            cmd = ['scp fetschlab@172.30.3.33:' remoteDir remoteFiles{n} ' ' localDir];
+%             cmd = ['scp fetschlab@172.30.3.33:' remoteDir remoteFiles{n} ' ' localDir];
+            cmd = ['scp fetschlab@10.161.240.133:' remoteDir remoteFiles{n} ' ' localDir];
             system(cmd,'-echo');
             % now clean it up and re-save
             pdsCleanup
