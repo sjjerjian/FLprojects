@@ -56,7 +56,7 @@
 clear
 close all
 
-plotExampleTrials = 0;
+plotExampleTrials = 1;
 
 model = 'kiani09+drugo14';
 % model = 'indepRace';
@@ -89,7 +89,35 @@ sigma = mean([sigmaVes sigmaVis]);
 % uses Fokker-Planck equation to propagate the probability density of the DV,
 % as in Kiani & Shadlen 2009. Required for readout of confidence, although
 % a simpler heuristic could be used (conf proportional to accum evidence)
-    
+
+
+% create acceleration and velocity profiles (arbitrary for now)
+% SJ 04/2020
+
+% Hou et al. 2019, peak vel = 0.37m/s, SD = 210ms
+vel = normpdf(1:duration,duration/2,210);
+vel = 0.37*vel./max(vel);
+acc = gradient(vel)*1000; % multiply by 1000 to get from m/s/ms to m/s/s
+
+figure; hh=plot(1:duration,vel,1:duration,acc);
+for i=1:length(hh)
+    hh(i).LineWidth=2;
+end
+ylim([-1.1 1.1]*max(acc))
+xlabel('time [s]')
+legend('Vel','Acc')
+changeAxesFontSize(gca,15,15);
+
+vel = vel./max(vel);
+acc = abs(acc./max(acc)); % rectify
+
+% vel and acc are now scaled 0..1, so scale up kves and kvis a bit to
+% compensate
+% kves and kvis would eventually be free parameters to be fit
+kves = kves*3;
+kvis = kvis*3;
+
+
 %% build trial list
 % (can't just randsample the above vectors, because certain combinations of
 % modality, coh, delta etc are invalid)
@@ -143,7 +171,6 @@ condlist = [hdg modality coh delta];
 trialTable = Shuffle(repmat(condlist,nreps,1),2);
     % why shuffle? well, sometimes it's easier to find particular trial
     % types to test out when debugging
-
 hdg = trialTable(:,1);  
 modality = trialTable(:,2);  
 coh = trialTable(:,3);  
@@ -157,7 +184,6 @@ ntrials = length(trialTable);
     % the simulation is concerned) fixed duration with internal bounded
     % process (Kiani et al. 2008)
 dur = ones(ntrials,1) * duration;
-
 
 %% bounded evidence accumulation
 
@@ -192,29 +218,38 @@ for n = 1:ntrials
     % faster version: avoids FOR loop over the variable t
     switch modality(n)
         case 1
-            mu = kves * sind(hdg(n)); % mean of momentary evidence
-            dv = [0, cumsum(normrnd(mu,sigmaVes,1,dur(n)-1))];
+            mu = abs(acc) .* kves * sind(hdg(n)); % mean of momentary evidence
+%             dv = [0, cumsum(normrnd(mu,sigmaVes,1,dur(n)-1))];
+            dv = [0, cumsum(normrnd(mu,sigmaVes))];
         case 2
-            mu = kvis(cohs==coh(n)) * sind(hdg(n));
-            dv = [0, cumsum(normrnd(mu,sigmaVis(cohs==coh(n)),1,dur(n)-1))];
+            mu = vel .* kvis(cohs==coh(n)) * sind(hdg(n));
+%             dv = [0, cumsum(normrnd(mu,sigmaVis(cohs==coh(n)),1,dur(n)-1))];
+            dv = [0, cumsum(normrnd(mu,sigmaVis(cohs==coh(n))))];
+
         case 3
             % positive delta defined as ves to the left, vis to the right
             muVes = kves               * sind(hdg(n) - delta(n)/2);
-            muVis = kvis(cohs==coh(n)) * sind(hdg(n) + delta(n)/2);
-
-            wVes = sqrt( kves^2 /               (kvis(cohs==coh(n))^2 + kves^2) );
+            muVes = abs(acc) .* kves               * sind(hdg(n) - delta(n)/2);
+            muVis = vel .* kvis(cohs==coh(n)) * sind(hdg(n) + delta(n)/2);
+            
+            wVes = sqrt( kves^2 / (kvis(cohs==coh(n))^2 + kves^2) );
             wVis = sqrt( kvis(cohs==coh(n))^2 / (kvis(cohs==coh(n))^2 + kves^2) );
 
-            mu = wVes*muVes + wVis*muVis;
+            mu = wVes.*muVes + wVis.*muVis;
             % here the DV is a sample from a dist with mean = weighted sum
             % of means. thus the variance is the weighted sum of variances
             % (error propagation formula):
-            sigmaComb = sqrt(wVes^2 * sigmaVes^2 + wVis^2 * sigmaVis(cohs==coh(n))^2); % assume zero covariance
-            dv = [0, cumsum(normrnd(mu,sigmaComb,1,dur(n)-1))];
-            
+            sigmaComb = sqrt(wVes.^2 .* sigmaVes^2 + wVis.^2 .* sigmaVis(cohs==coh(n))^2); % assume zero covariance
+%             dv = [0, cumsum(normrnd(mu,sigmaComb,1,dur(n)-1))];
+            dv = [0, cumsum(normrnd(mu,sigmaComb))]; % if mu is a vector
+
             if strcmp(model,'indepRace')
-                dvVes = [0, cumsum(normrnd(muVes,sigmaVes,1,dur(n)-1))];
-                dvVis = [0, cumsum(normrnd(muVis,sigmaVis(cohs==coh(n)),1,dur(n)-1))];
+%                 dvVes = [0, cumsum(normrnd(muVes,sigmaVes,1,dur(n)-1))];
+%                 dvVis = [0, cumsum(normrnd(muVis,sigmaVis(cohs==coh(n)),1,dur(n)-1))];
+                
+                dvVes = [0, cumsum(normrnd(muVes,sigmaVes))];
+                dvVis = [0, cumsum(normrnd(muVis,sigmaVis(cohs==coh(n))))];
+            
             end                
     end
         
@@ -271,6 +306,7 @@ for n = 1:ntrials
             dvEnds = [dvVes(end) dvVis(end)];
             whichWon = abs(dvEnds) == max(abs(dvEnds));
             finalV(n) = dvEnds(whichWon);
+%             finalV(n) = mean(dvEnds);
             hitBound(n) = 0;
         % (4) or both do
         else
