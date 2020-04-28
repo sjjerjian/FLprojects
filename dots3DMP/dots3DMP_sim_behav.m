@@ -151,9 +151,7 @@ delta = trialTable(:,4);
 ntrials = length(trialTable);
 
 
-% sample durations from truncated exponential
-% durs = ???;
-% dur = randsample(durs,ntrials,'true');
+% sample durations from truncated exponential?
     % not practical experimentally.
     % instead, make constant dur, assume RT task, or (equivalently, as far as
     % the simulation is concerned) fixed duration with internal bounded
@@ -192,7 +190,6 @@ for n = 1:ntrials
 %     % slow version: codebank(71)
     
     % faster version: avoids FOR loop over the variable t
-% % %     x = nan(1,dur(n));
     switch modality(n)
         case 1
             mu = kves * sind(hdg(n)); % mean of momentary evidence
@@ -205,7 +202,7 @@ for n = 1:ntrials
             muVes = kves               * sind(hdg(n) - delta(n)/2);
             muVis = kvis(cohs==coh(n)) * sind(hdg(n) + delta(n)/2);
 
-            wVes = sqrt( kves^2 / (kvis(cohs==coh(n))^2 + kves^2) );
+            wVes = sqrt( kves^2 /               (kvis(cohs==coh(n))^2 + kves^2) );
             wVis = sqrt( kvis(cohs==coh(n))^2 / (kvis(cohs==coh(n))^2 + kves^2) );
 
             mu = wVes*muVes + wVis*muVis;
@@ -306,12 +303,11 @@ for n = 1:ntrials
     logOddsCorr(n) = logOddsCorrMap(thisV(1), thisT(1));
     expectedPctCorr(n) = logistic(logOddsCorr(n)); % convert to pct corr
     conf(n) = 2*expectedPctCorr(n) - 1; % convert to 0..1
-    
+
 end
 toc
 
-
-% choice(choice==0) = sign(randn); % not needed under usual circumstances
+choice(choice==0) = sign(randn); % not needed under usual circumstances
 
 % sanity check:
 pCorrect_total = (sum(choice==1 & hdg>0) + sum(choice==-1 & hdg<0)) / ntrials
@@ -340,8 +336,6 @@ dots3DMP_plots
 
 
 
-
-% 
 % %% fit cumulative gaussians
 % 
 % cgauss = @(b,hdg) 1/2 * ( 1 + erf( (hdg-b(1))./(b(2)*sqrt(2)) ) );
@@ -362,7 +356,8 @@ dots3DMP_plots
 % 
 % %%
 % dots3DMP_plots_cgauss_forTalk
-% 
+
+
 
 
 

@@ -33,7 +33,7 @@ load([folder file], 'data');
 %       (or in other datasets, PDW)
 
 
-%% new 04/2020: selecting 'good' data (esp RT)
+%%
 
 % some new useful vars
 for k = 1:length(data.filename)
@@ -65,7 +65,6 @@ end
 
 % now this should reflect only good data, per spreadsheet:
 blocks = unique(data.filename)
-
 
 %% choose subjects to include based on 3-letter code
 
