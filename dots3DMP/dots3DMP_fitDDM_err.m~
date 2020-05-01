@@ -11,6 +11,8 @@ hdgs = [-10 -5 -2.5 -1.25 -eps eps 1.25 2.5 5 10]; % heading angles
 duration = 2000; % stimulus duration (ms)
 dur = ones(ntrials,1) * duration;
 
+% % % param = getParam(param,guess,fixed); % ignore this for now
+
 kves = param(1);
 kvis = param(2)*cohs;
 B = abs(param(3)); % don't accept negative bound heights
@@ -143,7 +145,7 @@ fit.conf = conf;
 % really kind of the opposite: it's a function of the params for fixed data.
 
 % Confusingly, we don't actually need an equation for the full likelihood
-% *function* -- that's the Nparams-dimensional surface which is mapped out
+% /function/ -- that's the Nparams-dimensional surface which is mapped out
 % over many iterations of our fitting routine. The optimization just needs
 % to sample the surface sufficiently well to find the maximum.
 
@@ -151,30 +153,29 @@ fit.conf = conf;
 % density p(data|params), where data is a set of N trials x 3 observations,
 % choice, RT, and confidence. In other words we need a concise way to
 % describe the stochastic process that gives rise to the observations,
-% given a set of params.
-
-% In likelihood_tutorial.m, the stochastic process is Poisson, the
-% observation is a spike count, and params is one-dimensional: some
-% stimulus value theta. The probability p(obs|theta) for a given theta
-% is either calculated from the equation for the Poisson probability
-% mass function, or estimated using a 'histogram method' by generating many
-% samples from this distribution.
+% given a set of params. In likelihood_tutorial.m, the stochastic process
+% is Poisson, the observation is a spike count, and params is one-
+% dimensional, some stimulus value theta. The probability p(obs|theta) for
+% a given theta is either calculated from the equation for the Poisson
+% probability mass function, or estimated using a 'histogram method' by
+% generating many samples from this distribution.
 
 % This approach seems like it might be amenable to what we're doing here,
 % since we're generating the model fits/predictions through monte carlo
-% simulation anyway. But there's a key difference: In likelihood_tutorial,
-% there was only a scalar observation (the spike count) and an IID set of
-% trials (poissrnd(theta)). Here, we have a vector of observations (choice,
-% RT, conf) and a non-iid set of trials, each defined by the 4-vector:
-% [heading, coh, delta, modality].
+% simulation anyway. But there's a key difference:
+
+% In likelihood_tutorial, there was only a scalar observation (the 
+% spike count) and an IID set of trials (poissrnd(theta)). Here, we have a
+% vector of observations (choice, RT, conf) and a non-iid set of trials,
+% each defined by the 4-vector [heading, coh, delta, modality]
 
 % In the Kiani DDM fitting code, it was possible to accumulate (log)
-% likelihood trial by trial, because for any combination of coh and
-% duration, the model specified a probability of rightward, leftward, and
-% sure bet *for that trial*. To replicate this in our monte carlo sim-style
+% likelihood trial by trial because for any combination of coh and duration
+% the model specified a probability of rightward, leftward, and sure bet 
+% *for that trial*. To replicate this in our monte carlo sim-style of
 % fitting, we'd have to simulate every combination of hdg, mod, coh, delta
 % many times to estimate these probabilities. This is probably too slow to
-% be viable, but I may try it anyway.
+% be viable.
 
 
 
@@ -185,6 +186,7 @@ fit.conf = conf;
 
 
 % normalize before calculating error:
+
 % shift choice back to 0..1, normalize RT, and conf already is 0..1
 choiceM = choice - 1;
 choiceD = data.choice - 1;
