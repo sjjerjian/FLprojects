@@ -1,4 +1,4 @@
-%% does overall conf depend on delta? (nope)
+%% does overall conf depend on delta?
 
 exportfigs = 0;
 

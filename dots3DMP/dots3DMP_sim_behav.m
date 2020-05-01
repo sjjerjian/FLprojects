@@ -65,7 +65,7 @@ nreps = 200; % number of repetitions of each unique trial type
             % start small to verify it's working, then increase
             % (ntrials depends on num unique trial types)
 
-cohs = [0.1 0.5]; % visual coherence levels
+cohs = [0.2 0.5]; % visual coherence levels
 hdgs = [-10 -5 -2.5 -1.25 -eps eps 1.25 2.5 5 10]; % heading angles
                             % (map fn seems to require even number of diff 
                             % levels (or just no zero), so we use +/- eps)
@@ -73,19 +73,28 @@ deltas = [-3 0 3]; % conflict angle; positive means vis to the right
 mods = [1 2 3]; % stimulus modalities: ves, vis, comb
 duration = 2000; % stimulus duration (ms)
 
-kves = 0.4; % sensitivity constant for converting heading angle into mean of momentary evidence
-kvis = [0.2 0.6]; % straddles vestibular reliability, by construction
+% kves = 0.4; % sensitivity constant for converting heading angle into mean of momentary evidence
+% kvis = [0.25 0.6]; % straddles vestibular reliability, by construction
+% % vel and acc are now scaled 0..1, so scale up kves and kvis a bit to
+% % compensate; kves and kvis would eventually be free parameters to be fit
+% kves = kves*3;
+% kvis = kvis*3;
+%   moved this^ up here so it's easier to see/change the actual values (for param recovery)
+kves = 1.2; % sensitivity constant for converting heading angle into mean of momentary evidence
+kvis = [0.8 2]; % straddles vestibular reliability, by construction
+
 B = 70; % bound height
 sigmaVes = 1; % std of momentary evidence
 sigmaVis = [1 1]; % allow for separate sigmas for condition, coherence
-theta = 0.6; % in old models, threshold for sure-bet choice in units of log odds correct.
-             % not used for analog confidence judgment, but needed for the makeLogOddsCorrMap func
 Tnd = 300; % non-decision time (or make this the mean of a dist?)
 
 maxdur = duration;
+% assume the mapping is based on an equal amount of experience with the 
+% *three* levels of reliability (ves, vis-low, vis-high) hence k and sigma
+% are their averages
 k = mean([kves kvis]);
 sigma = mean([sigmaVes sigmaVis]);
-[logOddsMapR, logOddsMapL, logOddsCorrMap, tAxis, vAxis] = makeLogOddsCorrMap_3DMP(hdgs,k,B,sigma,maxdur,0);
+[~, ~, logOddsCorrMap, tAxis, vAxis] = makeLogOddsCorrMap_3DMP(hdgs,k,B,sigma,maxdur,0);
 % uses Fokker-Planck equation to propagate the probability density of the DV,
 % as in Kiani & Shadlen 2009. Required for readout of confidence, although
 % a simpler heuristic could be used (conf proportional to accum evidence)
@@ -99,24 +108,18 @@ vel = normpdf(1:duration,duration/2,210);
 vel = 0.37*vel./max(vel);
 acc = gradient(vel)*1000; % multiply by 1000 to get from m/s/ms to m/s/s
 
-figure; hh=plot(1:duration,vel,1:duration,acc);
-for i=1:length(hh)
-    hh(i).LineWidth=2;
-end
-ylim([-1.1 1.1]*max(acc))
-xlabel('time [s]')
-legend('Vel','Acc')
-changeAxesFontSize(gca,15,15);
+% figure; hh=plot(1:duration,vel,1:duration,acc);
+% for i=1:length(hh)
+%     hh(i).LineWidth=2;
+% end
+% ylim([-1.1 1.1]*max(acc))
+% xlabel('time [s]')
+% legend('Vel','Acc')
+% changeAxesFontSize(gca,15,15);
 
+% normalize
 vel = vel./max(vel);
-acc = abs(acc./max(acc)); % rectify
-
-% vel and acc are now scaled 0..1, so scale up kves and kvis a bit to
-% compensate
-% kves and kvis would eventually be free parameters to be fit
-kves = kves*3;
-kvis = kvis*3;
-
+acc = abs(acc./max(acc)); % (and abs)
 
 %% build trial list
 % (can't just randsample the above vectors, because certain combinations of
@@ -178,9 +181,7 @@ delta = trialTable(:,4);
 ntrials = length(trialTable);
 
 
-% sample durations from truncated exponential
-% durs = ???;
-% dur = randsample(durs,ntrials,'true');
+% sample durations from truncated exponential?
     % not practical experimentally.
     % instead, make constant dur, assume RT task, or (equivalently, as far as
     % the simulation is concerned) fixed duration with internal bounded
@@ -218,10 +219,13 @@ for n = 1:ntrials
 %     % slow version: codebank(71)
     
     % faster version: avoids FOR loop over the variable t
-% % %     x = nan(1,dur(n));
     switch modality(n)
         case 1
+<<<<<<< HEAD
             mu = abs(acc) .* kves * sind(hdg(n)); % mean of momentary evidence
+=======
+            mu = acc .* kves * sind(hdg(n)); % mean of momentary evidence
+>>>>>>> ca5d032234f9955a3005cc1ac9b61865109eeed5
 %             dv = [0, cumsum(normrnd(mu,sigmaVes,1,dur(n)-1))];
             dv = [0, cumsum(normrnd(mu,sigmaVes))];
         case 2
@@ -231,7 +235,12 @@ for n = 1:ntrials
 
         case 3
             % positive delta defined as ves to the left, vis to the right
+<<<<<<< HEAD
             muVes = abs(acc) .* kves               * sind(hdg(n) - delta(n)/2);
+=======
+            muVes = kves               * sind(hdg(n) - delta(n)/2);
+            muVes = acc .* kves               * sind(hdg(n) - delta(n)/2);
+>>>>>>> ca5d032234f9955a3005cc1ac9b61865109eeed5
             muVis = vel .* kvis(cohs==coh(n)) * sind(hdg(n) + delta(n)/2);
             
             wVes = sqrt( kves^2 / (kvis(cohs==coh(n))^2 + kves^2) );
@@ -341,12 +350,11 @@ for n = 1:ntrials
     logOddsCorr(n) = logOddsCorrMap(thisV(1), thisT(1));
     expectedPctCorr(n) = logistic(logOddsCorr(n)); % convert to pct corr
     conf(n) = 2*expectedPctCorr(n) - 1; % convert to 0..1
-    
+
 end
 toc
 
-
-% choice(choice==0) = sign(randn); % not needed under usual circumstances
+choice(choice==0) = sign(randn); % not needed under usual circumstances
 
 % sanity check:
 pCorrect_total = (sum(choice==1 & hdg>0) + sum(choice==-1 & hdg<0)) / ntrials
@@ -366,38 +374,49 @@ data.choice = choice;
 data.RT = RT;
 data.conf = conf;
 
-dots3DMP_parseData
 
 
 %% plots
 
-dots3DMP_plots
+% dots3DMP_parseData
+% dots3DMP_plots
 
 
 
+%% now try fitting the fake data to recover the generative parameters
 
-% 
-% %% fit cumulative gaussians
-% 
-% cgauss = @(b,hdg) 1/2 * ( 1 + erf( (hdg-b(1))./(b(2)*sqrt(2)) ) );
-%     % for probabilities, error is negative log likelihood of observing the data, which is
-%     % [ log(Pright(hdg)) + log(1-(~Pright(hdg))) ]
-% cgauss_err = @(param,choice,hdg) -(sum(log(cgauss(param,hdg(choice))))+sum(log(1-cgauss(param,hdg(~choice))))); 
-% 
-% flippedGauss = @(b,hdg) 1 - ( min(max(b(1),0),1) .* exp(-(hdg-b(2)).^2 ./ (2*b(3).^2)) + b(4));
-%     % for continuous values, error is sum squared error
-% flippedGauss_err = @(param,SEP,hdg) sum((flippedGauss(param,hdg)-SEP).^2);
-% 
-% 
-% %%
-% 
-% unc = 0; % saves biases from fminunc instead of fminsearch (SEs always are unc, and plots are always search)
-% 
-% dots3DMP_plots_cgauss
-% 
-% %%
-% dots3DMP_plots_cgauss_forTalk
-% 
+
+options.fitMethod = 'fms';
+% options.fitMethod = 'global';
+% options.fitMethod = 'multi';
+% options.fitMethod = 'pattern';
+
+    %    kves kvisMult B 
+fixed = [0    0        0];
+
+% one small diff: in sim, kvis is just coh, here it will multiply coh
+
+% initial guess (or hand-tuned params)
+kves = 1.2;
+kvisMult = 4; % will be multiplied by coh to get kvis (this simplifies parameterization)
+B = 70;
+
+guess = [kves kvisMult B];
+
+% ************************************
+% set all fixed to 1 for hand-tuning:
+fixed(:)=0;
+% (can be used to fix some params and not others)
+% ************************************
+
+% plot error trajectory (prob doesn't work with parallel fit methods)
+options.ploterr = 1;
+
+[X, err_final, fit, fitInterp] = dots3DMP_fitDDM(data,options,guess,fixed);
+
+% plot it!
+dots3DMP_plots_fit(data,fitInterp)
+
 
 
 

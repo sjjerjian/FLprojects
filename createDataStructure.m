@@ -25,53 +25,58 @@ for d = 1:length(dateRange)
            && contains(allFiles(f).name, paradigm)
        
             disp(['loading ' allFiles(f).name]);
-            load([localDir allFiles(f).name],'-mat'); % load it. this is the time limiting step;
-                                                      % will eventually change how data are saved to make this faster
-                                                      
-            if exist('PDS','var')
-            T = length(data.choice); % set trial counter to continue where left off (0, to start)
-            fprintf('\ncumulative trials processed = %d\n',T);
-            for t = 1:length(PDS.data) % loop over trials for this file,
-                if isfield(PDS.data{t}.behavior,'choice') % and save out the data, excluding trials with
-                                                          % missing data (choice is a good marker for this)
-                    T = T+1; % increment trial counter
-                    
-                    data.filename{T,1} = allFiles(f).name(1:end-4);
-                    dateStart = strfind(allFiles(f).name,'20');
-                    if contains(subject,'human')
-                        data.subj{T,1} = allFiles(f).name(dateStart(1)-3:dateStart(1)-1); % 3-letter code
-                    else
-                        data.subj{T,1} = subject;
+            try
+                load([localDir allFiles(f).name],'-mat'); % load it. this is the time limiting step;
+                                                          % will eventually change how data are saved to make this faster
+                if exist('PDS','var')
+                    T = length(data.choice); % set trial counter to continue where left off (0, to start)
+                    fprintf('\ncumulative trials processed = %d\n',T);
+                    for t = 1:length(PDS.data) % loop over trials for this file,
+                        if isfield(PDS.data{t}.behavior,'choice') % and save out the data, excluding trials with
+                                                                  % missing data (choice is a good marker for this)
+                            T = T+1; % increment trial counter
+
+                            data.filename{T,1} = allFiles(f).name(1:end-4);
+                            dateStart = strfind(allFiles(f).name,'20');
+                            if contains(subject,'human')
+                                data.subj{T,1} = allFiles(f).name(dateStart(1)-3:dateStart(1)-1); % 3-letter code
+                            else
+                                data.subj{T,1} = subject;
+                            end
+
+                            % independent variables are stored in PDS.conditions.stimulus
+                            fnames = fieldnames(PDS.conditions{t}.stimulus);
+                            fnames(ismember(fnames,fieldExcludes)) = [];
+                            for F = 1:length(fnames)
+                                eval(['data.' fnames{F} '(T,1) = PDS.conditions{t}.stimulus.' fnames{F} ';']);
+                            end
+                                % EXCEPT! dot duration, and anything else in
+                                % PDS.data.stimulus, i.e. things that are generated
+                                % on each trial and not pre-configured. For now
+                                % will need to hard-code them here.
+                            if isfield(PDS.data{t}.stimulus,'dotDuration')
+                                data.duration(T,1) = PDS.data{t}.stimulus.dotDuration;
+                            end
+                            if isfield(PDS.data{t}.stimulus,'dotPos')
+                                data.dotPos{T,1} = PDS.data{t}.stimulus.dotPos;
+                            end
+
+                            % dependent variables are stored in PDS.data.behavior
+                            fnames = fieldnames(PDS.data{t}.behavior);
+                            fnames(ismember(fnames,fieldExcludes)) = [];
+                            for F = 1:length(fnames)
+                                eval(['data.' fnames{F} '(T,1) = PDS.data{t}.behavior.' fnames{F} ';']);
+                            end
+
+                        end
                     end
-                    
-                    % independent variables are stored in PDS.conditions.stimulus
-                    fnames = fieldnames(PDS.conditions{t}.stimulus);
-                    fnames(ismember(fnames,fieldExcludes)) = [];
-                    for F = 1:length(fnames)
-                        eval(['data.' fnames{F} '(T,1) = PDS.conditions{t}.stimulus.' fnames{F} ';']);
-                    end
-                        % EXCEPT! dot duration, and anything else in
-                        % PDS.data.stimulus, i.e. things that are generated
-                        % on each trial and not pre-configured. For now
-                        % will need to hard-code them here.
-                    if isfield(PDS.data{t}.stimulus,'dotDuration')
-                        data.duration(T,1) = PDS.data{t}.stimulus.dotDuration;
-                    end
-                    if isfield(PDS.data{t}.stimulus,'dotPos')
-                        data.dotPos{T,1} = PDS.data{t}.stimulus.dotPos;
-                    end
-                    
-                    % dependent variables are stored in PDS.data.behavior
-                    fnames = fieldnames(PDS.data{t}.behavior);
-                    fnames(ismember(fnames,fieldExcludes)) = [];
-                    for F = 1:length(fnames)
-                        eval(['data.' fnames{F} '(T,1) = PDS.data{t}.behavior.' fnames{F} ';']);
-                    end
-                    
+                    clear PDS
                 end
+            
+            catch
+                warning(['error loading ' allFiles(f).name ' -- skipping']);
             end
-            clear PDS
-            end
+
         end
     end
 end

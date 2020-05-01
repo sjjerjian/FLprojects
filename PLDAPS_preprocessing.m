@@ -15,7 +15,7 @@ clear all
 
 subject = 'human';
 paradigm = 'dots3DMP';
-dateRange = 20200101:20200331;
+dateRange = 20200213:20200308;
 
 % subject = 'genji';
 % paradigm = 'Dots';
