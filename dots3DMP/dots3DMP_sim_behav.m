@@ -221,11 +221,7 @@ for n = 1:ntrials
     % faster version: avoids FOR loop over the variable t
     switch modality(n)
         case 1
-<<<<<<< HEAD
-            mu = abs(acc) .* kves * sind(hdg(n)); % mean of momentary evidence
-=======
             mu = acc .* kves * sind(hdg(n)); % mean of momentary evidence
->>>>>>> ca5d032234f9955a3005cc1ac9b61865109eeed5
 %             dv = [0, cumsum(normrnd(mu,sigmaVes,1,dur(n)-1))];
             dv = [0, cumsum(normrnd(mu,sigmaVes))];
         case 2
@@ -235,12 +231,7 @@ for n = 1:ntrials
 
         case 3
             % positive delta defined as ves to the left, vis to the right
-<<<<<<< HEAD
-            muVes = abs(acc) .* kves               * sind(hdg(n) - delta(n)/2);
-=======
-            muVes = kves               * sind(hdg(n) - delta(n)/2);
             muVes = acc .* kves               * sind(hdg(n) - delta(n)/2);
->>>>>>> ca5d032234f9955a3005cc1ac9b61865109eeed5
             muVis = vel .* kvis(cohs==coh(n)) * sind(hdg(n) + delta(n)/2);
             
             wVes = sqrt( kves^2 / (kvis(cohs==coh(n))^2 + kves^2) );
