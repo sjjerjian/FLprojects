@@ -23,7 +23,7 @@ global call_num; call_num=1;
 if all(fixed)
     X = guess;
 else
-
+    
 switch options.fitMethod
     case 'fms'
         fitOptions = optimset('Display', 'final', 'MaxFunEvals', 500*sum(fixed==0), 'MaxIter', ... 

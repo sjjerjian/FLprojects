@@ -77,7 +77,6 @@ for n = 1:ntrials
             dv = [0, cumsum(normrnd(mu,sigmaVis(cohs==coh(n))))];
         case 3
             % positive delta defined as ves to the left, vis to the right
-            muVes = kves               * sind(hdg(n) - delta(n)/2);
             muVes = acc .* kves               * sind(hdg(n) - delta(n)/2);
             muVis = vel .* kvis(cohs==coh(n)) * sind(hdg(n) + delta(n)/2);
             
