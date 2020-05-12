@@ -225,6 +225,7 @@ for t = 1:nTrials
     diff = rightspikes(t,:) - leftspikes(t,:) + poolingNoise;    
     dv = cumsum(diff);
         
+    % RT
     cRT = find(abs(dv)>=B, 1, 'first');
     if isempty(cRT)
         RT(t) = dur(t);

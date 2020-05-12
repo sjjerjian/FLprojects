@@ -47,9 +47,6 @@ acc = abs(acc./max(acc)); % (and abs)
 
 %% bounded evidence accumulation
 
-% assume momentary evidence is proportional to sin(heading),
-% as in drugowitsch et al 2014
-
 choice = nan(ntrials,1);
 RT = nan(ntrials,1);
 finalV = nan(ntrials,1);
@@ -62,6 +59,19 @@ hdg = data.heading;
 coh = data.coherence;
 delta = data.delta;
 modality = data.modality;
+
+
+keyboard
+% fundamental change: don't simulate every trial, just every unique trial
+% type; simulate it K times, do IBS, then lookup-table the log-likelihood
+% for each trial and sum them
+
+
+
+
+
+
+
 
 tic
 for n = 1:ntrials
@@ -77,7 +87,7 @@ for n = 1:ntrials
             dv = [0, cumsum(normrnd(mu,sigmaVis(cohs==coh(n))))];
         case 3
             % positive delta defined as ves to the left, vis to the right
-            muVes = kves               * sind(hdg(n) - delta(n)/2);
+%             muVes = kves                      * sind(hdg(n) - delta(n)/2);
             muVes = acc .* kves               * sind(hdg(n) - delta(n)/2);
             muVis = vel .* kvis(cohs==coh(n)) * sind(hdg(n) + delta(n)/2);
             
@@ -121,7 +131,7 @@ toc
 choice(choice==0) = sign(randn); % not needed under usual circumstances
 choice(choice==1) = 2; choice(choice==-1) = 1; % 1=left, 2=right
 
-% output var 'fit' gets the same values for the conditions, but the
+% output var 'fit' gets the same values as data for the conditions, but the
 % simulated trial outcomes for the observables!
 fit.heading = data.heading;
 fit.coherence = data.coherence;

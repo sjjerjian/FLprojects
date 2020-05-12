@@ -371,8 +371,8 @@ data.conf = conf;
 
 %% plots
 
-% dots3DMP_parseData
-% dots3DMP_plots
+dots3DMP_parseData
+dots3DMP_plots
 
 
 
@@ -398,7 +398,7 @@ guess = [kves kvisMult B];
 
 % ************************************
 % set all fixed to 1 for hand-tuning:
-fixed(:)=0;
+fixed(:)=1;
 % (can be used to fix some params and not others)
 % ************************************
 
