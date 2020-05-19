@@ -61,7 +61,7 @@ plotExampleTrials = 0;
 model = 'kiani09+drugo14';
 % model = 'indepRace';
 
-nreps = 200; % number of repetitions of each unique trial type
+nreps = 10; % number of repetitions of each unique trial type
             % start small to verify it's working, then increase
             % (ntrials depends on num unique trial types)
 
@@ -359,9 +359,9 @@ pCorrect_total = (sum(choice==1 & hdg>0) + sum(choice==-1 & hdg<0)) / ntrials
 choice(choice==1) = 2; choice(choice==-1) = 1; % 1=left, 2=right
 
 conftask = 1;
+data.modality = modality;
 data.heading = hdg;
 data.coherence = coh;
-data.modality = modality;
 data.delta = delta;
 data.choice = choice;
 data.RT = RT;
@@ -379,10 +379,11 @@ dots3DMP_plots
 %% now try fitting the fake data to recover the generative parameters
 
 
-options.fitMethod = 'fms';
+% options.fitMethod = 'fms';
 % options.fitMethod = 'global';
 % options.fitMethod = 'multi';
 % options.fitMethod = 'pattern';
+options.fitMethod = 'bads';
 
     %    kves kvisMult B 
 fixed = [0    0        0];
@@ -398,7 +399,7 @@ guess = [kves kvisMult B];
 
 % ************************************
 % set all fixed to 1 for hand-tuning:
-fixed(:)=1;
+fixed(:)=0;
 % (can be used to fix some params and not others)
 % ************************************
 

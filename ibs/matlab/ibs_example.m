@@ -44,7 +44,11 @@ PUB = [log(5) 1 0.2];
 % We set 10 reps for the IBS estimator (see Section 4.4 in the paper) -
 % note that this is also the default for IBSLIKE
 options_ibs.Nreps = 10;
+% nllfun_ibs = @(theta) ibs_basic(@psycho_gen,theta,R,S);
 nllfun_ibs = @(theta) ibslike(@psycho_gen,theta,R,S,options_ibs);
+
+% function [nlogL,nlogLvar,exitflag,output] = ibslike(fun,params,respMat,designMat,options,varargin)
+
 
 % As a starting point for the optimization, we draw a sample inside the
 % plausible box (in practice you should use multiple restarts!)
@@ -54,6 +58,7 @@ fprintf('Maximum-likelihood estimation with BADS using IBS...\n');
 fprintf('(press a key to continue)\n');
 pause;
 
+% theta_ibs = fmincon(nllfun_ibs,theta0,[],[],[],[],LB,UB);
 theta_ibs = bads(nllfun_ibs,theta0,LB,UB,PLB,PUB);
 
 % Compare with MLE obtained using the analytical log-likelihood expression

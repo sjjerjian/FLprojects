@@ -247,6 +247,7 @@ else
 end
 
 for iter = 1:MaxIter
+    
     % Pick trials that need more hits, sample multiple times
     T = Trials(Ridx <= targetHits);
     if isfinite(options.MaxTime) && toc(t0) > options.MaxTime
@@ -390,6 +391,8 @@ Psi_tab = [];
 
 for iRep = 1:options.Nreps
     
+    disp(num2str(iRep)); % temp: track progress
+
     offset = 1;
     hits = zeros(Ntrials,1);
     if isfinite(options.MaxTime) && toc(t0) > options.MaxTime
@@ -398,6 +401,9 @@ for iRep = 1:options.Nreps
     end
     
     for iter = 1:MaxIter
+        
+        fprintf('iter #%d out of %d [too slow; give up!]\n',iter,MaxIter);
+                
         % Pick trials that need more hits, sample multiple times
         T = Trials(hits < 1);
         if isempty(T); break; end        

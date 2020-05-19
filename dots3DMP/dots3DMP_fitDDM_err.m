@@ -5,9 +5,8 @@ global call_num
 ntrials = length(data.heading);
 
 cohs = unique(data.coherence); % visual coherence levels
-hdgs = [-10 -5 -2.5 -1.25 -eps eps 1.25 2.5 5 10]; % heading angles
-                            % (map fn seems to require even number of diff 
-                            % levels (or just no zero), so we use +/- eps)
+hdgs = unique(data.heading);
+
 duration = 2000; % stimulus duration (ms)
 dur = ones(ntrials,1) * duration;
 
@@ -55,25 +54,26 @@ logOddsCorr = nan(ntrials,1);
 expectedPctCorr = nan(ntrials,1);
 conf = nan(ntrials,1);
 
+modality = data.modality;
 hdg = data.heading;
 coh = data.coherence;
 delta = data.delta;
-modality = data.modality;
 
-
-keyboard
 % fundamental change: don't simulate every trial, just every unique trial
 % type; simulate it K times, do IBS, then lookup-table the log-likelihood
 % for each trial and sum them
 
+% % uTrialVect = nan(ntrials,4);
+% % for n = 1:ntrials
+% %     uTrialVect(n,:) = [data.modality(n) data.heading(n) data.coherence(n) data.delta(n)];
+% % end
+% % uTrials = unique(uTrialVect,'rows');
+
+% NO NEED FOR THIS; if continued, this would be analogous to ibs_basic. 
+% instead, can just keep our sim as normal and pass this function as an
+% argument to ibslike.m
 
 
-
-
-
-
-
-tic
 for n = 1:ntrials
 
     switch modality(n)
@@ -126,7 +126,6 @@ for n = 1:ntrials
     conf(n) = 2*expectedPctCorr(n) - 1; % convert to 0..1
 
 end
-toc
 
 choice(choice==0) = sign(randn); % not needed under usual circumstances
 choice(choice==1) = 2; choice(choice==-1) = 1; % 1=left, 2=right
@@ -144,72 +143,11 @@ fit.conf = conf;
 
 %% calculate error
 
-% What we want is to use maximum-likelihood estimation (MLE), so we need a
-% way to calculate the likelihood.
-% Here's a refresher (see also likelihood_tutorial.m):
-
-% The likelihood is often written P(data|params), which looks like a 
-% conditional density where data varies and params is fixed, but it's
-% really kind of the opposite: it's a function of the params for fixed data.
-
-% Confusingly, we don't actually need an equation for the full likelihood
-% *function* -- that's the Nparams-dimensional surface which is mapped out
-% over many iterations of our fitting routine. The optimization just needs
-% to sample the surface sufficiently well to find the maximum.
-
-% What each iteration needs is a functional form for the conditional
-% density p(data|params), where data is a set of N trials x 3 observations,
-% choice, RT, and confidence. In other words we need a concise way to
-% describe the stochastic process that gives rise to the observations,
-% given a set of params.
-
-% In likelihood_tutorial.m, the stochastic process is Poisson, the
-% observation is a spike count, and params is one-dimensional: some
-% stimulus value theta. The probability p(obs|theta) for a given theta
-% is either calculated from the equation for the Poisson probability
-% mass function, or estimated using a 'histogram method' by generating many
-% samples from this distribution.
-
-% This approach seems like it might be amenable to what we're doing here,
-% since we're generating the model fits/predictions through monte carlo
-% simulation anyway. But there's a key difference: In likelihood_tutorial,
-% there was only a scalar observation (the spike count) and an IID set of
-% trials (poissrnd(theta)). Here, we have a vector of observations (choice,
-% RT, conf) and a non-iid set of trials, each defined by the 4-vector:
-% [heading, coh, delta, modality].
-
-% In the Kiani DDM fitting code, it was possible to accumulate (log)
-% likelihood trial by trial, because for any combination of coh and
-% duration, the model specified a probability of rightward, leftward, and
-% sure bet *for that trial*. To replicate this in our monte carlo sim-style
-% fitting, we'd have to simulate every combination of hdg, mod, coh, delta
-% many times to estimate these probabilities. This is probably too slow to
-% be viable, but I may try it anyway.
+% Do ibs_basic?
 
 
 
-% For now we'll use least squares just to get it working at all, but need a
-% better long term fix... (least squares is equivalent to maximum
-% likelihood only in the case of Gaussian error dist, which maybe is close
-% enough?)
-
-
-% normalize before calculating error:
-% shift choice back to 0..1, normalize RT, and conf already is 0..1
-choiceM = choice - 1;
-choiceD = data.choice - 1;
-
-RTm = RT/max(RT);
-RTd = data.RT/max(data.RT);
-
-err_choice = sum((choiceM-choiceD).^2);
-err_RT = sum((RTm-RTd).^2);
-err_conf = sum((conf-data.conf).^2);
-
-err = err_choice + err_RT + err_conf;
-
-
-%print progress report!
+%% print progress report!
 fprintf('\n\n\n****************************************\n');
 fprintf('run %d\n', call_num);
 fprintf('\tkves= %g\n\tkvisMult= %g\n\tB= %g\n', param(1), param(2), param(3));

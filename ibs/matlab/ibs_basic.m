@@ -1,4 +1,4 @@
-function L = ibs_basic(fun,theta,R,S)
+function L = ibs_basic(fun,theta,R,S,varargin)
 %IBS_BASIC A barebone implementation of inverse binomial sampling (IBS).
 %  IBS_BASIC returns an unbiased estimate L of the log-likelihood for the 
 %  simulated model and data, calculated using inverse binomial sampling. 
@@ -24,13 +24,12 @@ function L = ibs_basic(fun,theta,R,S)
 %  See also IBSLIKE.
 
 %  Luigi Acerbi 2020
-
 N = size(R,1);
 L = zeros(N,1);
 
 for i = 1:N         % Loop over all trials (rows)
     K = 1;
-    while any(fun(theta,S(i,:)) ~= R(i,:))
+    while any(fun(theta,S(i,:),varargin) ~= R(i,:))
         K = K + 1;  % Sample until the generated response is a match
     end
     L(i) = -sum(1./(1:K-1));    % IBS estimator for the i-th trial

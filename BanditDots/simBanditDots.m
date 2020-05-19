@@ -48,7 +48,7 @@
 % independently of the reward you received on that high-confidence trial
 
 % What I don't have is a hypothesis. All these things may be related,
-% conf, RT, learning rate -- but it's bound to be complex and hard to
++% conf, RT, learning rate -- but it's bound to be complex and hard to
 % constrain with data. We need a specific hypothesis we can test.
 
 % A preliminary question I have is, if not softmax, what is the decision

@@ -20,7 +20,7 @@ lapse = theta(3);
 
 %% Noisy measurement
 
-% Ass Gaussian noise to true orientations S to simulate noisy measurements
+% Add Gaussian noise to true orientations S to simulate noisy measurements
 X = S + sigma*randn(size(S));
 
 %% Decision rule
