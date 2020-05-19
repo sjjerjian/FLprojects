@@ -92,7 +92,7 @@ switch options.fitMethod
         S = [data.modality data.heading data.coherence data.delta];
         
         % also need to discretize RT and conf
-        nbins = 5;
+        nbins = 10;
         RTedges = [0 quantile(data.RT,nbins-1) inf];
         RTbinned = discretize(data.RT,RTedges);
         
