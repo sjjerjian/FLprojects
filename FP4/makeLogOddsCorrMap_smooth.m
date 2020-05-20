@@ -83,10 +83,10 @@ if plotflag
     colorbar; set(h,'LineColor','none');
 %     figure; [c,h] = contourf(tAxis,vAxis,logOddsMapL,n);
 %     figure; [c,h] = contourf(tAxis,vAxis,logOddsMapR,n);
-    caxis([0 5]);
+    caxis([0 round(B*k/2.2)]);
     [~,hh] = contour(tAxis,vAxis,logOddsCorrMap,[theta -theta]);
     set(hh,'LineColor','k','LineWidth',2);
-    colorbar('YTick',0:1:5); 
+    colorbar('YTick',linspace(0,round(B*k/2.2),6)); 
     xlabel('Time (ms)'); ylabel('DV');
     set(gca,'XTick',0:200:1000,'YTick',-B:round(B/2):B,'XTickLabel',0:200:1000,'TickDir','out');
 %     changeAxesFontSize(gca,24,24); % for paper fig

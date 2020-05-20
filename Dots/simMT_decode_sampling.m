@@ -1,4 +1,4 @@
-% very simple PPC/likelihood-based decoding
+% very simple sampling-based decoding
 
 dirAxis = prefDirs; % here it's only defined at the neurons' pref dir, not for all possible dirs
 

@@ -3,7 +3,7 @@ dbstop if error
 
 % Runs the Fokker-Planck to bounds through a series of stimlus difficulties.
 % Just a wrapper to run through a coherence series to generate
-% probability surface in time under bounary conditions.
+% probability surface in time under boundary conditions.
 %
 % Input args
 % ~~~~~~~~~~
