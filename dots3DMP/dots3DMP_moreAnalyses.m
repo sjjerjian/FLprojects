@@ -185,7 +185,7 @@ clear X Y
 uhdg = unique(abs(data.heading));
 for h = 1:length(uhdg)
     I = abs(data.heading)==uhdg(h);
-    theseRT = data.rt(I);
+    theseRT = data.RT(I);
     theseConf = data.conf(I);
     rtQ = [0 quantile(theseRT,3) inf]; % try quartiles
     for q = 1:length(rtQ)-1
@@ -209,7 +209,7 @@ for h = 1:length(uhdg)       % vvvv  shifted for clarity!!!
     L{h} = Ltxt{h};
     l = legend(g,L,'Location','South','Orientation','Horizontal');
     legend('boxoff')
-    export_fig(['kianiFig2-' num2str(h)],'-eps');
+%     export_fig(['kianiFig2-' num2str(h)],'-eps');
 end
 
 
@@ -260,35 +260,39 @@ options.fitMethod = 'fms';
 % % % 
 
 
-% put this on hold for now, instead use a much simpler version,
-% the minimum parameterization sufficient for CCC_sim
+% options.fitMethod = 'fms';
+% options.fitMethod = 'global';
+% options.fitMethod = 'multi';
+% options.fitMethod = 'pattern';
+options.fitMethod = 'bads';
 
-
-data.strength = sind(data.heading);
-data.dur = ones(size(data.strength))*2000;
-
-    %    kves kvis B 
-fixed = [0    0    0];
+    %    kves kvisMult B 
+fixed = [0    0        0];
 
 % one small diff: in sim, kvis is just coh, here it will multiply coh
 
 % initial guess (or hand-tuned params)
-kves = 0.4; % sensitivity parameter for ves
-kvis = 1; % multiplies coh to get sensitivity parameter for vis
-B = 70; % bound height
+kves = 1.2;
+kvisMult = 4; % will be multiplied by coh to get kvis (this simplifies parameterization)
+B = 70;
 
-guess = [kves kvis B];
-
+guess = [kves kvisMult B];
 
 % ************************************
 % set all fixed to 1 for hand-tuning:
-fixed(:)=1;
+fixed(:)=0;
+% (can be used to fix some params and not others)
 % ************************************
 
-options.feedback = false;
-options.plot = false;
+% plot error trajectory (prob doesn't work with parallel fit methods)
+options.ploterr = 1;
 
-[X, LL_final, data, fit] = dots3DMP_fitDDM(data,options,guess,fixed);
+[X, err_final, fit, fitInterp] = dots3DMP_fitDDM(data,options,guess,fixed);
+
+% plot it!
+dots3DMP_plots_fit(data,fitInterp)
+
+
 
 
 

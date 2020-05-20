@@ -61,7 +61,7 @@ plotExampleTrials = 0;
 model = 'kiani09+drugo14';
 % model = 'indepRace';
 
-nreps = 10; % number of repetitions of each unique trial type
+nreps = 200; % number of repetitions of each unique trial type
             % start small to verify it's working, then increase
             % (ntrials depends on num unique trial types)
 
@@ -69,7 +69,7 @@ cohs = [0.2 0.5]; % visual coherence levels
 hdgs = [-10 -5 -2.5 -1.25 -eps eps 1.25 2.5 5 10]; % heading angles
                             % (map fn seems to require even number of diff 
                             % levels (or just no zero), so we use +/- eps)
-deltas = [-3 0 3]; % conflict angle; positive means vis to the right
+deltas = [-5 0 5]; % conflict angle; positive means vis to the right
 mods = [1 2 3]; % stimulus modalities: ves, vis, comb
 duration = 2000; % stimulus duration (ms)
 
@@ -374,6 +374,26 @@ dots3DMP_plots
 
 dots3DMP_parseData_splitConf
 dots3DMP_plots_splitConf
+
+%% fit cumulative gaussians
+% (needed for weights calculation)
+
+cgauss = @(b,hdg) 1/2 * ( 1 + erf( (hdg-b(1))./(b(2)*sqrt(2)) ) );
+    % for probabilities, error is negative log likelihood of observing the data, which is
+    % [ log(Pright(hdg)) + log(1-(~Pright(hdg))) ]
+cgauss_err = @(param,choice,hdg) -(sum(log(cgauss(param,hdg(choice))))+sum(log(1-cgauss(param,hdg(~choice))))); 
+
+flippedGauss = @(b,hdg) 1 - ( min(max(b(1),0),1) .* exp(-(hdg-b(2)).^2 ./ (2*b(3).^2)) + b(4));
+    % for continuous values, error is sum squared error
+flippedGauss_err = @(param,SEP,hdg) sum((flippedGauss(param,hdg)-SEP).^2);
+
+% unc = 0; % saves biases from fminunc instead of fminsearch (SEs always are fminunc, and plots are always fminsearch)
+% dots3DMP_plots_cgauss
+
+
+%%
+
+
 
 %% now try fitting the fake data to recover the generative parameters
 
