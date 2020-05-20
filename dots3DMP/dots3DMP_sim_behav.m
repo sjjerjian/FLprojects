@@ -121,7 +121,6 @@ acc = gradient(vel)*1000; % multiply by 1000 to get from m/s/ms to m/s/s
 vel = vel./max(vel);
 acc = abs(acc./max(acc)); % (and abs)
 
-
 %% build trial list
 % (can't just randsample the above vectors, because certain combinations of
 % modality, coh, delta etc are invalid)
@@ -232,7 +231,6 @@ for n = 1:ntrials
 
         case 3
             % positive delta defined as ves to the left, vis to the right
-            muVes = kves               * sind(hdg(n) - delta(n)/2);
             muVes = acc .* kves               * sind(hdg(n) - delta(n)/2);
             muVis = vel .* kvis(cohs==coh(n)) * sind(hdg(n) + delta(n)/2);
             
@@ -374,7 +372,8 @@ data.conf = conf;
 dots3DMP_parseData
 dots3DMP_plots
 
-
+dots3DMP_parseData_splitConf
+dots3DMP_plots_splitConf
 
 %% now try fitting the fake data to recover the generative parameters
 
@@ -399,17 +398,17 @@ guess = [kves kvisMult B];
 
 % ************************************
 % set all fixed to 1 for hand-tuning:
-fixed(:)=0;
+% fixed(:)=1;
 % (can be used to fix some params and not others)
 % ************************************
 
 % plot error trajectory (prob doesn't work with parallel fit methods)
-options.ploterr = 1;
+options.ploterr = 0;
 
 [X, err_final, fit, fitInterp] = dots3DMP_fitDDM(data,options,guess,fixed);
 
 % plot it!
-dots3DMP_plots_fit(data,fitInterp)
+%dots3DMP_plots_fit(data,fitInterp)
 
 
 
