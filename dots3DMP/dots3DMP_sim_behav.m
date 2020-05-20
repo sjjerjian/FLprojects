@@ -56,7 +56,7 @@
 clear
 close all
 
-plotExampleTrials = 1;
+plotExampleTrials = 0;
 
 model = 'kiani09+drugo14';
 % model = 'indepRace';
@@ -369,10 +369,12 @@ data.conf = conf;
 
 %% plots
 
+
 % dots3DMP_parseData
 % dots3DMP_plots
 
-
+dots3DMP_parseData_splitConf
+dots3DMP_plots_splitConf
 
 %% now try fitting the fake data to recover the generative parameters
 
@@ -388,7 +390,7 @@ fixed = [0    0        0];
 % one small diff: in sim, kvis is just coh, here it will multiply coh
 
 % initial guess (or hand-tuned params)
-kves = 1.0;
+kves = 1.2;
 kvisMult = 4; % will be multiplied by coh to get kvis (this simplifies parameterization)
 B = 70;
 
@@ -396,7 +398,7 @@ guess = [kves kvisMult B];
 
 % ************************************
 % set all fixed to 1 for hand-tuning:
-% fixed(:)=0;
+% fixed(:)=1;
 % (can be used to fix some params and not others)
 % ************************************
 
@@ -406,7 +408,7 @@ options.ploterr = 0;
 [X, err_final, fit, fitInterp] = dots3DMP_fitDDM(data,options,guess,fixed);
 
 % plot it!
-dots3DMP_plots_fit(data,fitInterp)
+%dots3DMP_plots_fit(data,fitInterp)
 
 
 

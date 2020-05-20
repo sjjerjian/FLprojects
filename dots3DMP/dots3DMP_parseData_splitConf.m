@@ -37,8 +37,8 @@ for d = 1:length(deltas)+1 % add extra column for all trials irrespective of del
         n(m,c,d,h,1) = sum(Jhi);
         n(m,c,d,h,2) = sum(Jlo);
 
-        pRight(m,c,d,h,1) = sum(J & hiConf & data.choice==2) / n(m,c,d,h,1); % 2 is rightward
-        pRight(m,c,d,h,2) = sum(J & ~hiConf & data.choice==2) / n(m,c,d,h,2); % 2 is rightward
+        pRight(m,c,d,h,1) = sum(Jhi & data.choice==2) / n(m,c,d,h,1); % 2 is rightward
+        pRight(m,c,d,h,2) = sum(Jlo & data.choice==2) / n(m,c,d,h,2); % 2 is rightward
 
         RTmean(m,c,d,h,1) = mean(data.RT(Jhi));
         RTmean(m,c,d,h,2) = mean(data.RT(Jlo));
