@@ -12,6 +12,7 @@ nTrials = 1000;
 disp('loading...');
 tic
 load(sprintf('simMT_nNeu=%d_nTr=%d.mat', nNeurons, nTrials));
+disp('done.');
 toc
 
 ustim = zeros(size(coh));
