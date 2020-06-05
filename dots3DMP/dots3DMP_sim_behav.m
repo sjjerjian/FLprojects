@@ -50,6 +50,17 @@
     % their ratio won't change and hence neither will weights...
     
 % How bout first just checking independent race model vs. integration?
+    % that's fine and good. not getting us anywhere new though.
+    
+    
+% thinking more about this issue and the pervasive "what's the alternative?"
+% question. the alternative is not that there is no accumulation, since we
+% need it to explain RT. the alternative is that the weights are set by a
+% process independent of the accumulation, OR that comprises essentially a
+% summary statistic of the accumulated evidence that ignores time.
+
+
+
 
 %% build expt and hand-pick some model params
 
@@ -362,7 +373,7 @@ data.heading = hdg;
 data.coherence = coh;
 data.delta = delta;
 data.choice = choice;
-data.RT = RT;
+data.RT = RT/1000; % seconds
 data.conf = conf;
 
 
@@ -372,8 +383,10 @@ data.conf = conf;
 dots3DMP_parseData
 dots3DMP_plots
 
-dots3DMP_parseData_splitConf
-dots3DMP_plots_splitConf
+% dots3DMP_parseData_splitConf
+% dots3DMP_plots_splitConf
+
+
 
 %% fit cumulative gaussians
 % (needed for weights calculation)
@@ -387,50 +400,58 @@ flippedGauss = @(b,hdg) 1 - ( min(max(b(1),0),1) .* exp(-(hdg-b(2)).^2 ./ (2*b(3
     % for continuous values, error is sum squared error
 flippedGauss_err = @(param,SEP,hdg) sum((flippedGauss(param,hdg)-SEP).^2);
 
-% unc = 0; % saves biases from fminunc instead of fminsearch (SEs always are fminunc, and plots are always fminsearch)
-% dots3DMP_plots_cgauss
+unc = 0; % saves biases from fminunc instead of fminsearch (SEs always are fminunc, and plots are always fminsearch)
+dots3DMP_fit_cgauss
 
 
-%%
+%% and plot them
+
+dots3DMP_plots_cgauss
 
 
 
-%% now try fitting the fake data to recover the generative parameters
+%% nicer looking versions
+
+% dots3DMP_plots_cgauss_forTalk
 
 
-% options.fitMethod = 'fms';
-% options.fitMethod = 'global';
-% options.fitMethod = 'multi';
-% options.fitMethod = 'pattern';
-options.fitMethod = 'bads';
 
-    %    kves kvisMult B 
-fixed = [0    0        0];
-
-% one small diff: in sim, kvis is just coh, here it will multiply coh
-
-% initial guess (or hand-tuned params)
-kves = 1.2;
-kvisMult = 4; % will be multiplied by coh to get kvis (this simplifies parameterization)
-B = 70;
-
-guess = [kves kvisMult B];
-
-% ************************************
-% set all fixed to 1 for hand-tuning:
-% fixed(:)=1;
-% (can be used to fix some params and not others)
-% ************************************
-
-% plot error trajectory (prob doesn't work with parallel fit methods)
-options.ploterr = 0;
-
-[X, err_final, fit, fitInterp] = dots3DMP_fitDDM(data,options,guess,fixed);
-
-% plot it!
-%dots3DMP_plots_fit(data,fitInterp)
-
-
+% %% now try fitting the fake data to recover the generative parameters
+% 
+% 
+% % options.fitMethod = 'fms';
+% % options.fitMethod = 'global';
+% % options.fitMethod = 'multi';
+% % options.fitMethod = 'pattern';
+% options.fitMethod = 'bads';
+% 
+%     %    kves kvisMult B 
+% fixed = [0    0        0];
+% 
+% % one small diff: in sim, kvis is just coh, here it will multiply coh
+% 
+% % initial guess (or hand-tuned params)
+% kves = 1.2;
+% kvisMult = 4; % will be multiplied by coh to get kvis (this simplifies parameterization)
+% B = 70;
+% 
+% guess = [kves kvisMult B];
+% 
+% % ************************************
+% % set all fixed to 1 for hand-tuning:
+% % fixed(:)=1;
+% % (can be used to fix some params and not others)
+% % ************************************
+% 
+% % plot error trajectory (prob doesn't work with parallel fit methods)
+% options.ploterr = 0;
+% 
+% [X, err_final, fit, fitInterp] = dots3DMP_fitDDM(data,options,guess,fixed);
+% 
+% % plot it!
+% %dots3DMP_plots_fit(data,fitInterp)
+% 
+% 
 
 
 

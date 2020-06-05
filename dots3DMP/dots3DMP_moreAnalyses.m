@@ -1,4 +1,4 @@
-%% does overall conf depend on delta?
+%% does overall conf (or RT) depend on delta?
 
 exportfigs = 0;
 
@@ -6,18 +6,24 @@ for c = 1:length(cohs)
     I = data.modality==3 & data.coherence==cohs(c) & data.delta==0;
     confDzero(c) = mean(data.conf(I));
     confDzeroSE(c) = std(data.conf(I))/sqrt(sum(I));
+    rtDzero(c) = mean(data.RT(I));
+    rtDzeroSE(c) = std(data.RT(I))/sqrt(sum(I));
 
     J = data.modality==3 & data.coherence==cohs(c) & data.delta~=0;
     confDnonzero(c) = mean(data.conf(J));
     confDnonzeroSE(c) = std(data.conf(J))/sqrt(sum(J));
+    rtDnonzero(c) = mean(data.RT(J));
+    rtDnonzeroSE(c) = std(data.RT(J))/sqrt(sum(J));
 
-    [~,pval(c)] = ttest2(data.conf(I),data.conf(J))
+    [~,pvalConf(c)] = ttest2(data.conf(I),data.conf(J));
+    [~,pvalRT(c)] = ttest2(data.RT(I),data.RT(J));
 end
 
 barx = 1:length(cohs);
 bary = [confDzero ; confDnonzero]';
 errlow = [confDzeroSE ; confDnonzeroSE]';
 errhigh = errlow;
+
 figure(809); set(gcf,'Color',[1 1 1],'Position',[50 20 360 320],'PaperPositionMode','auto'); clf;
 bar(barx,bary); hold on;
 er = errorbar([barx-0.14;barx+0.14]',bary,errlow,errhigh,'k.');    
@@ -28,8 +34,22 @@ legend('no conflict', 'conflict'); legend('boxoff');
 changeAxesFontSize(gca,20,20); set(gca,'box','off');
 if exportfigs; export_fig('confDeltaZeroNonzero','-eps'); end
 
+bary = [rtDzero ; rtDnonzero]';
+errlow = [rtDzeroSE ; rtDnonzeroSE]';
+errhigh = errlow;
 
-%% calculate predicted/empirical weights
+figure(810); set(gcf,'Color',[1 1 1],'Position',[50 20 360 320],'PaperPositionMode','auto'); clf;
+bar(barx,bary); hold on;
+er = errorbar([barx-0.14;barx+0.14]',bary,errlow,errhigh,'k.');    
+set(gca,'XTickLabel',[10 50 90]);
+xlabel('Visual coherence (%)'); ylabel('Avg RT (s)');
+legend('no conflict', 'conflict'); legend('boxoff');
+changeAxesFontSize(gca,20,20); set(gca,'box','off');
+if exportfigs; export_fig('RTDeltaZeroNonzero','-eps'); end
+
+
+
+%% calculate predicted/empirical weights (requires dots3DMP_fit_cgauss to be run first)
 
 for c = 1:length(cohs)      % m c d
     wvesPred(c) = (1/sigmaPMF(1,1,D)^2) / ((1/sigmaPMF(1,1,D)^2) + (1/sigmaPMF(2,c,D)^2));
@@ -89,7 +109,7 @@ for c=1:length(cohs)
     end
 end
 figure(20); set(gcf,'Color',[1 1 1],'Position',[50 20 360 320],'PaperPositionMode','auto'); clf;
-[hsym,hxe,hye] = errorbar2(choiceBias, confBias, choiceBias, confBias, 'ko', 2);
+[hsym,hxe,hye] = errorbar2(choiceBias, confBias, choiceBiasSE, confBiasSE, 'ko', 2);
 set(hsym,'MarkerSize',10,'MarkerFaceColor','w');
 hold on; plot([-2 2],[-2 2],'k--','LineWidth',2); axis square;
 xlim([-2 2]); ylim([-2 2]);
@@ -170,7 +190,7 @@ if exportfigs; export_fig('medianSplit4','-eps'); end
 
 
 
-%% try sliding window across trials (or session by session!)
+%% try sliding window across trials (or session by session)
 
 
 
@@ -178,41 +198,129 @@ if exportfigs; export_fig('medianSplit4','-eps'); end
 
 
 %% for RT, try kiani 2014 analysis:
-
 % plot conf as a function of RT quantile, separately for abs(hdg)
 
-clear X Y
-uhdg = unique(abs(data.heading));
-for h = 1:length(uhdg)
-    I = abs(data.heading)==uhdg(h);
-    theseRT = data.RT(I);
-    theseConf = data.conf(I);
-    rtQ = [0 quantile(theseRT,3) inf]; % try quartiles
-    for q = 1:length(rtQ)-1
-        J = theseRT>=rtQ(q) & theseRT<rtQ(q+1);
-        X(h,q) = mean(theseRT(J));
-        Y(h,q) = mean(theseConf(J));
+sim=0;
+
+% FOR SIM ONLY: exclude capped values (maxDur+Tnd, often 2300)
+if sim
+    dataBackup = data;
+    removethese = data.RT==mode(data.RT);
+    fnames = fieldnames(data);
+    for F = 1:length(fnames)
+        eval(['data.' fnames{F} '(removethese) = [];']);
     end
 end
 
-Ltxt = {num2str(uhdg(1)), num2str(uhdg(2)), num2str(uhdg(3)), num2str(uhdg(4)), num2str(uhdg(5))};
-figure(16); set(gcf,'Color',[1 1 1],'Position',[50 20 360 320],'PaperPositionMode','auto'); clf;
-clr = {'bo-','rs-','c^-','gd-','kv-'};
-clear g L
-for h = 1:length(uhdg)       % vvvv  shifted for clarity!!!
-    g(h) = plot(X(h,:),Y(h,:)+(0.03*double(h==5)),clr{h},'LineWidth', 2); hold on;
-    set(g(h),'MarkerSize',10,'MarkerFaceColor',clr{h}(1));
-    xlim([1 3.5]); ylim([0 1]);
-    % set(gca,'Xtick',-2:1:2,'Ytick',-2:1:2);
-    xlabel('Reaction time (s)'); ylabel('Confidence');
-    changeAxesFontSize(gca,16,16); set(gca,'box','off');
-    L{h} = Ltxt{h};
-    l = legend(g,L,'Location','South','Orientation','Horizontal');
-    legend('boxoff')
-%     export_fig(['kianiFig2-' num2str(h)],'-eps');
+
+clear X Y
+uhdg = unique(abs(data.heading));
+
+% also loop over 'conditions' indexed as [modality coherence], with the
+% familiar manual kluge necessary to avoid invalid combinations:
+ucoh = unique(data.coherence);
+ucond = [1 ucoh(1); 2 ucoh(1); 2 ucoh(2); 3 ucoh(1); 3 ucoh(2)];
+subplotInd = [1 3 4 5 6];
+titles = {'Ves-Low';'Vis-lo';'Vis-hi';'Comb-lo';'Comb-hi'};
+
+for c = 1:size(ucond,1)
+    for h = 1:length(uhdg)
+        I = abs(data.heading)==uhdg(h) & data.modality==ucond(c,1) & data.coherence==ucond(c,2);
+        theseRT = data.RT(I);
+        theseConf = data.conf(I);
+        rtQ = [0 quantile(theseRT,3) inf]; % try quartiles
+        for q = 1:length(rtQ)-1
+            J = theseRT>=rtQ(q) & theseRT<rtQ(q+1);
+            X(c,h,q) = mean(theseRT(J));
+            Y(c,h,q) = mean(theseConf(J));
+        end
+    end
+
+    if sim 
+        Ltxt = {num2str(uhdg(1)), num2str(uhdg(2)), num2str(uhdg(3)), num2str(uhdg(4)), num2str(uhdg(5))};
+        clr = {'bo-','rs-','c^-','gd-','kv-'};
+    else
+        Ltxt = {num2str(uhdg(1)), num2str(uhdg(2)), num2str(uhdg(3))};
+        clr = {'bo-','rs-','gd-'};
+    end
+
+    figure(16+sim);
+    % set(gcf,'Color',[1 1 1],'Position',[50 20 360 320],'PaperPositionMode','auto'); clf;
+    set(gcf,'Color',[1 1 1],'Position',[200 200 360*2 320*3],'PaperPositionMode','auto');
+    subplot(3,2,subplotInd(c));
+    
+    clear g L
+    % (loop over h to allow animating figures one heading at a time)
+    for h = 1:length(uhdg)       % y coord shifted for clarity!!!
+%         g(h) = plot(X(c,h,:),Y(c,h,:)+(0.03*double(h==5)),clr{h},'LineWidth', 2); hold on;
+        g(h) = plot(squeeze(X(c,h,:)),squeeze(Y(c,h,:)),clr{h},'LineWidth', 2); hold on;
+        set(g(h),'MarkerSize',10,'MarkerFaceColor',clr{h}(1));
+        xlim([0.5 2.5]);
+        ylim([0 1.1]);
+        % set(gca,'Xtick',-2:1:2,'Ytick',-2:1:2);
+        xlabel('Reaction time (s)'); ylabel('Confidence');
+        changeAxesFontSize(gca,16,16); set(gca,'box','off');
+        L{h} = Ltxt{h};
+%         l = legend(g,L,'Location','South','Orientation','Horizontal');
+        if c==1
+            l = legend(g,L,'Location',[0.55 0.8 .4 .05],'Orientation','Horizontal');
+            legend('boxoff')
+            text(3.75+sim*0.10,0.7,'Heading (deg)','Fontsize',14)
+        end
+        title(titles{c});
+    %     export_fig(['kianiFig2-' num2str(h)],'-eps');
+    end
+end
+
+if sim
+    data = dataBackup;
+end
+
+    
+
+
+%% calculate subject's performance ('score') based on accuracy and metacog accuracy
+
+% what we don't want is simply to reward confidence scaling with heading
+% angle, or coherence
+% rather, within a coh+hdg, how well does confidence predict accuracy?
+
+corr = double((data.heading>0 & data.choice==2) | (data.heading<0 & data.choice==1));
+corr(data.heading==0) = NaN;
+q=1;
+for m = 1:length(mods)
+    for c = 1:length(cohs)
+        for h = 1:length(hdgs)
+            J = data.modality==mods(m) & data.coherence==cohs(c) & data.heading==hdgs(h); % all trials irrespective of delta
+            confCorr = mean(data.conf(J & corr==1));
+            confErr = mean(data.conf(J & corr==0));
+%             diff(m,c,h) = confCorr - confErr;
+            diff(q) = confCorr - confErr;
+
+            cc = corrcoef(corr(J),data.conf(J));
+%             phi(m,c,h) = cc(1,2);
+            phi(q) = cc(1,2);
+            
+            q = q+1;
+        end
+    end
 end
 
 
+
+meanphi = nanmean(phi);
+bestphi = 0.25; % hypothetical best performance
+worstphi = 0; % not sure about this
+
+totalPcorr = nansum(corr)/sum(data.heading~=0);
+bestPcorr = 0.9; % hypothetical best performance
+worstPcorr = 0.5;
+
+scorePcorr = (min([totalPcorr bestPcorr]) - worstPcorr) / (bestPcorr-worstPcorr);
+scorePhi = (min([meanphi bestphi]) - worstphi) / (bestphi-worstphi);
+
+score =  scorePcorr*0.5 + scorePhi*0.5
+payout = score*8 + 12
 
 
 
@@ -294,52 +402,6 @@ dots3DMP_plots_fit(data,fitInterp)
 
 
 
-
-
-
-
-%% calculate 'score' based on accuracy and metacog accuracy
-
-% what we don't want is simply to reward confidence scaling with heading
-% angle, or coherence
-% rather, within a coh+hdg, how well does confidence predict accuracy?
-
-corr = double((data.heading>0 & data.choice==2) | (data.heading<0 & data.choice==1));
-corr(data.heading==0) = NaN;
-q=1;
-for m = 1:length(mods)
-    for c = 1:length(cohs)
-        for h = 1:length(hdgs)
-            J = data.modality==mods(m) & data.coherence==cohs(c) & data.heading==hdgs(h); % all trials irrespective of delta
-            confCorr = mean(data.conf(J & corr==1));
-            confErr = mean(data.conf(J & corr==0));
-%             diff(m,c,h) = confCorr - confErr;
-            diff(q) = confCorr - confErr;
-
-            cc = corrcoef(corr(J),data.conf(J));
-%             phi(m,c,h) = cc(1,2);
-            phi(q) = cc(1,2);
-            
-            q = q+1;
-        end
-    end
-end
-
-
-
-meanphi = nanmean(phi);
-bestphi = 0.25; % hypothetical best performance
-worstphi = 0; % not sure about this
-
-totalPcorr = nansum(corr)/sum(data.heading~=0);
-bestPcorr = 0.9; % hypothetical best performance
-worstPcorr = 0.5;
-
-scorePcorr = (min([totalPcorr bestPcorr]) - worstPcorr) / (bestPcorr-worstPcorr);
-scorePhi = (min([meanphi bestphi]) - worstphi) / (bestphi-worstphi);
-
-score =  scorePcorr*0.5 + scorePhi*0.5
-payout = score*8 + 12
 
 
 
