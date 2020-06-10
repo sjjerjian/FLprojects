@@ -87,7 +87,7 @@ subjs = unique(data.subj); % all
 % remove invalid trials (fixation breaks (which gives nans), excluded subj,
 % and obvious testing trials, signaled by very large confidence (saccade
 % endpoint) values
-removethese = isnan(data.choice) | ~ismember(data.subj,subjs) | data.conf>2 | isnan(data.conf);
+removethese = isnan(data.choice) | ~ismember(data.subj,subjs) | data.conf>3 | isnan(data.conf);
 fnames = fieldnames(data);
 for F = 1:length(fnames)
     eval(['data.' fnames{F} '(removethese) = [];']);
@@ -253,15 +253,17 @@ flippedGauss = @(b,hdg) 1 - ( min(max(b(1),0),1) .* exp(-(hdg-b(2)).^2 ./ (2*b(3
     % for continuous values, error is sum squared error
 flippedGauss_err = @(param,SEP,hdg) sum((flippedGauss(param,hdg)-SEP).^2);
 
-
-%%
-
 unc = 0; % saves biases from fminunc instead of fminsearch (SEs always are fminunc, and plots are always fminsearch)
+dots3DMP_fit_cgauss
+
+
+%% and plot them
 
 dots3DMP_plots_cgauss
 
 
-%%
+%% nicer looking versions
+
 % dots3DMP_plots_cgauss_forTalk
 
 

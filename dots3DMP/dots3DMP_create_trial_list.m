@@ -1,11 +1,5 @@
 function [hdg,modality,coh,delta,ntrials] = dots3DMP_create_trial_list(hdgs,mods,cohs,deltas,nreps)
 
-if nargin < 5, nreps  = 200; end
-if nargin < 4, deltas = [-3 0 3]; end
-if nargin < 3, cohs   = [0.1 0.5 0.9]; end
-if nargin < 2, mods   = [1 2 3]; end
-if nargin < 1, hdgs   = [-10 -5 -2.5 -1.25 -eps eps 1.25 2.5 5 10]; end
-
 %% build trial list
 % (can't just randsample the above vectors, because certain combinations of
 % modality, coh, delta etc are invalid)
