@@ -276,9 +276,8 @@ if sim
     data = dataBackup;
 end
 
+
     
-
-
 %% calculate subject's performance ('score') based on accuracy and metacog accuracy
 
 % what we don't want is simply to reward confidence scaling with heading

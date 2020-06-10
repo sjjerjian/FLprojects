@@ -49,11 +49,11 @@ disp('running PPC...');
 simMT_decode_PPC
 disp('done');
 
-% % temp: quickly try different gammas
-% gamma = 10;
-% pdw(betaAll(:,2)>=gamma) = 1;
-% pdw(betaAll(:,2)<gamma) = 0;
-% simMT_plotResults
+% temp: quickly try different gammas
+gamma = 10;
+pdw(betaAll(:,2)>=gamma) = 1;
+pdw(betaAll(:,2)<gamma) = 0;
+simMT_plotResults
 
 if sum(ustim)<10
     simMT_plotResults
