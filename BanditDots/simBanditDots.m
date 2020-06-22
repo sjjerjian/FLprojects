@@ -297,7 +297,7 @@ B0 = 0.1; % switching parameters
 gamma = 2; % switching parameters
 omega = 1; % switching parameters
 H = nan(ntrials,1);
-Be=5; % switching bound
+Be=3; % switching bound
 
 %initialize switching evidence
 mue = nan(ntrials,1); %switch evidence
@@ -429,7 +429,8 @@ B0 = 0.1; % switching parameters
 gamma = 2; % switching parameters
 omega = 1; % switching parameters
 H = nan(ntrials,1);
-Be=0; % switching bound
+Be=3; % switching bound
+Be0 = Be;
 
 %initialize switching evidence
 mue = nan(ntrials,1); %switch evidence
@@ -534,12 +535,11 @@ for i = 2: ntrials
         h = h(max_p);
         h_s = B0 + (h^gamma/((h^gamma+(1-h)^gamma)^(1/gamma)))*(1-B0);
         h_subjective = [h_subjective h_s];
-        h_subjective
         
         if count_error >2 
             hazard_temp = hazard_temp + omega* log(1-h_subjective(count_error));
         end
-        hazard = (-log(h_subjective(1)) +log(1-h_subjective(1)) + hazard_temp);
+        hazard = Be0 + (-log(h_subjective(1)) +log(1-h_subjective(1)) + hazard_temp);
         % not sure how to deal with the negative Be
         if hazard < 0
             hazard = 0;
