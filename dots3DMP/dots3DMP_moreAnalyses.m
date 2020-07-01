@@ -127,7 +127,7 @@ if exportfigs; export_fig('biasVsConf','-eps'); end
 % this logic doesn't work, because confidence in the combined condition per
 % se would not map onto weights even under the hypothesis
 
-% BUT we can do it peacewise:
+% BUT we can do it piecewise:
 
 % high coh, left side of the graph, delta +3,
 I = data.modality==3 & ismember(data.coherence,cohs(2:end)) & data.heading<=hdgs(3) & data.delta==deltas(end);
@@ -223,16 +223,22 @@ ucond = [1 ucoh(1); 2 ucoh(1); 2 ucoh(2); 3 ucoh(1); 3 ucoh(2)];
 subplotInd = [1 3 4 5 6];
 titles = {'Ves-Low';'Vis-lo';'Vis-hi';'Comb-lo';'Comb-hi'};
 
-for c = 1:size(ucond,1)
+for c = 1:size(ucond,1)+1 % the extra one is for all conditions pooled
     for h = 1:length(uhdg)
-        I = abs(data.heading)==uhdg(h) & data.modality==ucond(c,1) & data.coherence==ucond(c,2);
+        if c==size(ucond,1)+1
+            I = abs(data.heading)==uhdg(h);
+        else
+            I = abs(data.heading)==uhdg(h) & data.modality==ucond(c,1) & data.coherence==ucond(c,2);
+        end
         theseRT = data.RT(I);
         theseConf = data.conf(I);
-        rtQ = [0 quantile(theseRT,3) inf]; % try quartiles
+%         rtQ = [0 quantile(theseRT,3) inf]; % try quartiles
+        rtQ = [0 quantile(theseRT,4) inf]; % or quintiles
         for q = 1:length(rtQ)-1
             J = theseRT>=rtQ(q) & theseRT<rtQ(q+1);
             X(c,h,q) = mean(theseRT(J));
             Y(c,h,q) = mean(theseConf(J));
+            Ye(c,h,q) = std(theseConf(J)) / sqrt(sum(J));
         end
     end
 
@@ -240,36 +246,47 @@ for c = 1:size(ucond,1)
         Ltxt = {num2str(uhdg(1)), num2str(uhdg(2)), num2str(uhdg(3)), num2str(uhdg(4)), num2str(uhdg(5))};
         clr = {'bo-','rs-','c^-','gd-','kv-'};
     else
-        Ltxt = {num2str(uhdg(1)), num2str(uhdg(2)), num2str(uhdg(3))};
+%         Ltxt = {num2str(uhdg(1)), num2str(uhdg(2)), num2str(uhdg(3))};
+        Ltxt = {num2str(1.25), num2str(3.5), num2str(10)};
         clr = {'bo-','rs-','gd-'};
     end
 
-    figure(16+sim);
-    % set(gcf,'Color',[1 1 1],'Position',[50 20 360 320],'PaperPositionMode','auto'); clf;
-    set(gcf,'Color',[1 1 1],'Position',[200 200 360*2 320*3],'PaperPositionMode','auto');
-    subplot(3,2,subplotInd(c));
-    
+    if c==size(ucond,1)+1
+        figure(18+sim);
+        set(gcf,'Color',[1 1 1],'Position',[50 20 360 320],'PaperPositionMode','auto'); clf;
+    else    
+        figure(16+sim);
+        set(gcf,'Color',[1 1 1],'Position',[200 200 360*2 320*3],'PaperPositionMode','auto');
+        subplot(3,2,subplotInd(c));
+    end
+
     clear g L
     % (loop over h to allow animating figures one heading at a time)
-    for h = 1:length(uhdg)       % y coord shifted for clarity!!!
-%         g(h) = plot(X(c,h,:),Y(c,h,:)+(0.03*double(h==5)),clr{h},'LineWidth', 2); hold on;
-        g(h) = plot(squeeze(X(c,h,:)),squeeze(Y(c,h,:)),clr{h},'LineWidth', 2); hold on;
+    for h = 1:length(uhdg)       
+%         g(h) = plot(squeeze(X(c,h,:)),squeeze(Y(c,h,:)),clr{h},'LineWidth', 2); hold on;
+        g(h) = errorbar(squeeze(X(c,h,:)),squeeze(Y(c,h,:)),squeeze(Ye(c,h,:)),clr{h},'LineWidth', 2); hold on;
+        
         set(g(h),'MarkerSize',10,'MarkerFaceColor',clr{h}(1));
         xlim([0.5 2.5]);
         ylim([0 1.1]);
         % set(gca,'Xtick',-2:1:2,'Ytick',-2:1:2);
         xlabel('Reaction time (s)'); ylabel('Confidence');
-        changeAxesFontSize(gca,16,16); set(gca,'box','off');
+        changeAxesFontSize(gca,20,20); set(gca,'box','off');
         L{h} = Ltxt{h};
-%         l = legend(g,L,'Location','South','Orientation','Horizontal');
         if c==1
             l = legend(g,L,'Location',[0.55 0.8 .4 .05],'Orientation','Horizontal');
             legend('boxoff')
             text(3.75+sim*0.10,0.7,'Heading (deg)','Fontsize',14)
         end
-        title(titles{c});
-    %     export_fig(['kianiFig2-' num2str(h)],'-eps');
+        if c==size(ucond,1)+1
+            l = legend(g,L,'Location','South','Orientation','Horizontal');
+            legend('boxoff');
+            export_fig(['kianiFig2-' num2str(h)],'-eps');
+        else
+            title(titles{c});
+        end
     end
+    
 end
 
 if sim

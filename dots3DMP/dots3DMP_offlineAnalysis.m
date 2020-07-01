@@ -94,7 +94,7 @@ for F = 1:length(fnames)
 end
 
 
-%% parse data
+%% cull data
 
 mods = unique(data.modality); 
 
@@ -134,6 +134,7 @@ data.coherence(data.modality==1) = cohs(1);
 
     
 deltas = unique(data.delta); % aka conflict angle
+
 hdgs = unique(data.heading);
       % same here.  the 1.5-12 range was only used rarely, and in fact is a
       % good signature of warmup or testing-mode trials to be excluded
@@ -242,24 +243,14 @@ dots3DMP_plots
 
 
 
-%% fit cumulative gaussians
+%% fit cumulative gaussians (needed for weights calculation)
 
-cgauss = @(b,hdg) 1/2 * ( 1 + erf( (hdg-b(1))./(b(2)*sqrt(2)) ) );
-    % for probabilities, error is negative log likelihood of observing the data, which is
-    % [ log(Pright(hdg)) + log(1-(~Pright(hdg))) ]
-cgauss_err = @(param,choice,hdg) -(sum(log(cgauss(param,hdg(choice))))+sum(log(1-cgauss(param,hdg(~choice))))); 
-
-flippedGauss = @(b,hdg) 1 - ( min(max(b(1),0),1) .* exp(-(hdg-b(2)).^2 ./ (2*b(3).^2)) + b(4));
-    % for continuous values, error is sum squared error
-flippedGauss_err = @(param,SEP,hdg) sum((flippedGauss(param,hdg)-SEP).^2);
-
-unc = 0; % saves biases from fminunc instead of fminsearch (SEs always are fminunc, and plots are always fminsearch)
 dots3DMP_fit_cgauss
 
 
-%% and plot them
-
-dots3DMP_plots_cgauss
+% %% and plot them
+% 
+% dots3DMP_plots_cgauss
 
 
 %% nicer looking versions

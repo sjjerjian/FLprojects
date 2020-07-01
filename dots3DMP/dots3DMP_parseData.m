@@ -25,10 +25,12 @@ for d = 1:length(deltas)+1 % add extra column for all trials irrespective of del
         else
             J = data.modality==mods(m) & data.coherence==cohs(c) & data.heading==hdgs(h) & data.delta==deltas(d);
         end
+        
         n(m,c,d,h) = sum(J);
         pRight(m,c,d,h) = sum(J & data.choice==2) / n(m,c,d,h); % 2 is rightward
         RTmean(m,c,d,h) = mean(data.RT(J));
         RTse(m,c,d,h) = std(data.RT(J))/sqrt(n(m,c,d,h));
+        
         if conftask==1
             confMean(m,c,d,h) = mean(data.conf(J));
             confSE(m,c,d,h) = std(data.conf(J))/sqrt(n(m,c,d,h));
