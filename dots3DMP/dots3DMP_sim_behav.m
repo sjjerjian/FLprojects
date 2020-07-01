@@ -4,64 +4,6 @@
 % CF started it 2016
 % heavily modified early 2019
 
-
-% CCC emerged out of brainstorming my research plan for job apps and
-% simultaneous discussions with John Morrison about perceptual confidence.
-% The question is whether the estimation of sensory uncertainty that
-% governs cue weighting also informs an explicit confidence report. Naively
-% I imagined that such a result would support John's idea that perception 
-% itself 'assigns' degrees of confidence (aka belief, aka subjective
-% probability) -- the alternative being that confidence is solely post-
-% perceptual. Resolving this particular debate, though of interest to
-% philosophers of mind, is not really our primary goal although it can be
-% useful (and fun) to engage with the arguments.
-
-% The challenge for us is how to test whether weights and conf come from
-% the same process, given that (a) they will share roughly the same mean
-% even if not correlated from trial to trial (conditioned on the stimulus),
-% and (b) confidence on multisensory trials isn't separable into components
-% attributable to uncertainty of individual cues.
-
-% Previously, I envisioned solving (b) by comparing empirical vs predicted
-% weights, in two ways: (i) the traditional way based on single-cue
-% thresholds, and (ii) a new way based on single-cue confidence ratings.
-% This is similar to one of Devin's existing figures, but not exactly.
-% Instead what I wanted to try is to calculate a predicted weight based on
-% /relative/ confidence in the constituent single-cue conditions. How to
-% calculate this? Presumably there's a normative definition. Let's find it.
-
-% It should be noted that the way around this could be in the neural data.
-% Decoding uncertainty from single-cue areas on single trials, leveraging
-% what we learn from Miguel's experiment, should give a prediction for
-% multisensory PDW...
-
-% For now, let's just simulate a model with RT (Kiani 2014, or Drugo 2019)
-% and see where it leads.
-
-% ...
-
-% Okay so the sim data look reasonable. What question can we ask with it?
-% What's an alternative to test against? The question is, what is the
-% nature of the weighting -- does it share signatures of the relationship
-% between confidence and time, beyond what you'd expect from inverse
-% variance as computed from single-cue choice data?
-    % Analysis should be simple: compute weights for different RT quantiles
-    % BUT, if both vis and ves confidence scales up/down equally w time,
-    % their ratio won't change and hence neither will weights...
-    
-% How bout first just checking independent race model vs. integration?
-    % that's fine and good. not getting us anywhere new though.
-    
-    
-% thinking more about this issue and the pervasive "what's the alternative?"
-% question. the alternative is not that there is no accumulation, since we
-% need it to explain RT. the alternative is that the weights are set by a
-% process independent of the accumulation, OR that comprises essentially a
-% summary statistic of the accumulated evidence that ignores time.
-
-
-
-
 %% build expt and hand-pick some model params
 
 clear
@@ -93,6 +35,7 @@ duration = 2000; % stimulus duration (ms)
 %   moved this^ up here so it's easier to see/change the actual values (for param recovery)
 kves = 1.2; % sensitivity constant for converting heading angle into mean of momentary evidence
 kvis = [0.8 2]; % straddles vestibular reliability, by construction
+
 
 B = 70; % bound height
 sigmaVes = 1; % std of momentary evidence
