@@ -79,60 +79,7 @@ acc = abs(acc./max(acc)); % (and abs)
 % (can't just randsample the above vectors, because certain combinations of
 % modality, coh, delta etc are invalid)
     
-% repeat heading list once for ves, ncoh for vis, and ncoh x ndelta for comb
-numHdgGroups = any(ismember(mods,1)) + ...
-               any(ismember(mods,2)) * length(cohs) + ...
-               any(ismember(mods,3)) * length(cohs)*length(deltas);
-hdg = repmat(hdgs', numHdgGroups, 1);
-
-lh = length(hdgs);
-coh = nan(size(hdg));
-delta = nan(size(hdg));
-modality = nan(size(hdg));
-
-% kluge for ves, call it the lowest coh by convention
-if any(ismember(mods,1))
-    coh(1:lh) = cohs(1); 
-    delta(1:lh) = 0;
-    modality(1:lh) = 1;
-    last = lh;
-else
-    last = 0;    
-end
-
-if any(ismember(mods,2)) % loop over coh for vis
-    for c = 1:length(cohs)
-        these = last+(c-1)*lh+1 : last+(c-1)*lh+lh;
-        coh(these) = cohs(c);
-        delta(these) = 0;
-        modality(these) = 2;
-    end
-    last = these(end);
-end
-
-if any(ismember(mods,3)) % loop over coh and delta for comb
-    for c = 1:length(cohs)
-        for d = 1:length(deltas)
-            here = last + 1 + (c-1)*lh*length(deltas) + (d-1)*lh;
-            these = here:here+lh-1;
-            coh(these) = cohs(c);
-            delta(these) = deltas(d);
-            modality(these) = 3;
-        end
-    end
-end
-
-% now replicate times nreps and shuffle (or not):
-condlist = [hdg modality coh delta];
-% trialTable = repmat(condlist,nreps,1); 
-trialTable = Shuffle(repmat(condlist,nreps,1),2);
-    % why shuffle? well, sometimes it's easier to find particular trial
-    % types to test out when debugging
-hdg = trialTable(:,1);  
-modality = trialTable(:,2);  
-coh = trialTable(:,3);  
-delta = trialTable(:,4);  
-ntrials = length(trialTable);
+[hdg, modality, coh, delta, ntrials] = dots3DMP_create_trial_list(hdgs,mods,cohs,deltas,nreps);
 
 
 % sample durations from truncated exponential?
@@ -320,7 +267,6 @@ data.RT = RT/1000; % seconds
 data.conf = conf;
 
 
-
 %% plots
 
 dots3DMP_parseData
@@ -333,16 +279,6 @@ dots3DMP_plots
 %% fit cumulative gaussians
 % (needed for weights calculation)
 
-cgauss = @(b,hdg) 1/2 * ( 1 + erf( (hdg-b(1))./(b(2)*sqrt(2)) ) );
-    % for probabilities, error is negative log likelihood of observing the data, which is
-    % [ log(Pright(hdg)) + log(1-(~Pright(hdg))) ]
-cgauss_err = @(param,choice,hdg) -(sum(log(cgauss(param,hdg(choice))))+sum(log(1-cgauss(param,hdg(~choice))))); 
-
-flippedGauss = @(b,hdg) 1 - ( min(max(b(1),0),1) .* exp(-(hdg-b(2)).^2 ./ (2*b(3).^2)) + b(4));
-    % for continuous values, error is sum squared error
-flippedGauss_err = @(param,SEP,hdg) sum((flippedGauss(param,hdg)-SEP).^2);
-
-unc = 0; % saves biases from fminunc instead of fminsearch (SEs always are fminunc, and plots are always fminsearch)
 dots3DMP_fit_cgauss
 
 
