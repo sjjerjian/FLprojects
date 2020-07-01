@@ -367,11 +367,11 @@ options.fitMethod = 'fms';
 % % % 
 
 
-% options.fitMethod = 'fms';
+options.fitMethod = 'fms';
 % options.fitMethod = 'global';
 % options.fitMethod = 'multi';
 % options.fitMethod = 'pattern';
-options.fitMethod = 'bads';
+% options.fitMethod = 'bads';
 
     %    kves kvisMult B 
 fixed = [0    0        0];
@@ -397,7 +397,7 @@ options.ploterr = 1;
 [X, err_final, fit, fitInterp] = dots3DMP_fitDDM(data,options,guess,fixed);
 
 % plot it!
-dots3DMP_plots_fit(data,fitInterp)
+%dots3DMP_plots_fit(data,fitInterp)
 
 
 
