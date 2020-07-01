@@ -1,4 +1,4 @@
-function [hdg,modality,coh,delta] = dots3DMP_create_trial_list(hdgs,mods,cohs,deltas)
+function [hdg,modality,coh,delta,ntrials] = dots3DMP_create_trial_list(hdgs,mods,cohs,deltas,nreps)
 
 %% build trial list
 % (can't just randsample the above vectors, because certain combinations of
