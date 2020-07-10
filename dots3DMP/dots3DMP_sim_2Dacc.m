@@ -17,8 +17,9 @@ nreps = 200; % number of repetitions of each unique trial type
             % start small to verify it's working, then increase
             % (ntrials depends on num unique trial types)
 
-cohs = [0.2 0.5]; % visual coherence levels (these are really just labels, since k's are set manually)
-hdgs = [-10 -5 -2.5 -1.25 -eps eps 1.25 2.5 5 10]; % heading angles
+cohs = [0.2 0.6]; % visual coherence levels (these are really just labels, since k's are set manually)
+hdgs = [-10 -5 -2.5 -1.25 0 1.25 2.5 5 10]; % heading angles
+% hdgs = [-10 -3.5 -1.25 1.25 3.5 10]; % heading angles
 deltas = [-3 0 3]; % conflict angle; positive means vis to the right
 mods = [1 2 3]; % stimulus modalities: ves, vis, comb
 duration = 2000; % stimulus duration (ms)
@@ -56,7 +57,6 @@ P =  images_dtb_2d(R);
 %% build trial list
 
 [hdg, modality, coh, delta, ntrials] = dots3DMP_create_trial_list(hdgs,mods,cohs,deltas,nreps);
-
 
 % sample durations from truncated exponential?
     % not practical experimentally.
@@ -247,6 +247,7 @@ data.choice = choice;
 data.RT = RT; % already in seconds
 data.conf = conf;
 
+RTtask = 1;
 
 
 %% plots
@@ -276,43 +277,40 @@ dots3DMP_plots_cgauss
 
 
 
-% %% now try fitting the fake data to recover the generative parameters
-%           %** AWAITS FITTING CODE FOR 2DACC
-% 
-% 
-% % options.fitMethod = 'fms';
-% % options.fitMethod = 'global';
-% % options.fitMethod = 'multi';
-% % options.fitMethod = 'pattern';
+%% now try fitting the fake data to recover the generative parameters
+
+options.fitMethod = 'fms';
+% options.fitMethod = 'global';
+% options.fitMethod = 'multi';
+% options.fitMethod = 'pattern';
 % options.fitMethod = 'bads';
-% 
-%     %    kves kvisMult B 
-% fixed = [0    0        0];
-% 
-% % one small diff: in sim, kvis is just coh, here it will multiply coh
-% 
-% % initial guess (or hand-tuned params)
-% kves = 1.2;
-% kvisMult = 4; % will be multiplied by coh to get kvis (this simplifies parameterization)
-% B = 70;
-% 
-% guess = [kves kvisMult B];
-% 
-% % ************************************
-% % set all fixed to 1 for hand-tuning:
-% % fixed(:)=1;
-% % (can be used to fix some params and not others)
-% % ************************************
-% 
-% % plot error trajectory (prob doesn't work with parallel fit methods)
-% options.ploterr = 0;
-% 
-% [X, err_final, fit, fitInterp] = dots3DMP_fitDDM(data,options,guess,fixed);
-% 
-% % plot it!
-% %dots3DMP_plots_fit(data,fitInterp)
-% 
-% 
+
+    %   [ks sigma  B  Tnd]
+fixed = [0    0    0    0];
+
+% initial guess (or hand-tuned params)
+ks = 17;
+sigma = 0.03;
+B = 2;
+Tnd = 0.4;
+
+guess = [ks sigma B Tnd];
+
+% ************************************
+% set all fixed to 1 for hand-tuning:
+% fixed(:)=1;
+% (can be used to fix some params and not others)
+% ************************************
+
+% plot error trajectory (prob doesn't work with parallel fit methods)
+options.ploterr = 0;
+
+[X, err_final, fit, fitInterp] = dots3DMP_fitDDM(data,options,guess,fixed);
+
+% plot it!
+%dots3DMP_plots_fit(data,fitInterp)
+
+
 
 
 

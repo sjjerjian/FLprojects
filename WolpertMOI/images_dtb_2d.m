@@ -115,12 +115,11 @@ if R.plotflag
     subplot(3,1,2); plot(R.drift,P.up.p./(P.up.p+P.lo.p)); title('Relative prob of corr vs. incorr bound crossed (Pcorr)');
     subplot(3,1,3); plot(R.drift,P.up.mean_t); title('mean RT');
 
-
     % remake Fig. 5c-d of Kiani et al 2014 (steps analogous to makeLogOddsCorrMap_*)
     n = 100; % set n to 100+ for smooth plots, lower for faster plotting
     
     % (2) first an example PDF
-    c = round(length(R.drift)/2); % pick an intermediate drift rate
+    c = round(length(R.drift)/2) - 1; % pick an intermediate drift rate
     q = 50; % exponent for log cutoff (redefine zero as 10^-q, for better plots)
     Pmap = squeeze(P.up.distr_loser(c,:,:))';
     Pmap(Pmap<10^-q) = 10^-q;
@@ -138,8 +137,8 @@ if R.plotflag
     changeAxesFontSize(gca,24,24);
     % xlabel('Time (s)'); ylabel('Accumulated evidence of losing accumulator');
     % title('Probability density of losing accumulator');
-    if R.plotflag==2; export_fig('2dacc_PDF','-eps'); end
-    
+    if R.plotflag==2; ylim([-2.5 0]); export_fig('2dacc_PDF','-eps'); end
+        
     % (3) then the log odds corr map
     figure(50); set(gcf, 'Color', [1 1 1], 'Position', [100 100 450 350], 'PaperPositionMode', 'auto'); hold on;
     [~,h] = contourf(R.t,P.y,P.logOddsCorrMap,n); colormap(jet);
@@ -151,7 +150,7 @@ if R.plotflag
     changeAxesFontSize(gca,24,24);
     % xlabel('Time (s)'); ylabel('Accumulated evidence of losing accumulator');
     % title('Log odds correct vs. state of losing accumulator');
-    if R.plotflag==2; export_fig('2dacc_logoddscorr','-eps'); end
+    if R.plotflag==2; ylim([-2.5 0]); export_fig('2dacc_logoddscorr','-eps'); end
 
 end
 

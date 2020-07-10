@@ -21,7 +21,6 @@ kvis = [.666 1.5]*ks;
 
 sigmaVes = sigma; % std of momentary evidence
 sigmaVis = [sigma sigma]; % allow for separate sigmas for condition, coherence
-
 Tnd = 0.4; % non-decision time (or make this the mean of a dist?)
 
 maxdur = duration;
@@ -179,7 +178,6 @@ fit.conf = conf;
 fit.correct = (choice==2 & data.heading>0) | (choice==1 & data.heading<0);
 data.correct = (data.choice==2 & data.heading>0) | (data.choice==1 & data.heading<0);
 
-
 %% calculate error
 
 % Do ibs_basic?
@@ -240,8 +238,6 @@ LL_conf = nansum(log(L_conf(:)));
 
 err = -(LL_choice + LL_RT + LL_conf);
 
-%if call_num == 10, keyboard,end
-%err = -LL_choice;
 
 %% print progress report!
 fprintf('\n\n\n****************************************\n');
@@ -258,5 +254,4 @@ call_num = call_num + 1;
 
 
 end
-
 
