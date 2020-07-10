@@ -2,10 +2,7 @@ function [X, err_final, fit, fitInterp] = dots3DMP_fitDDM(data,options,guess,fix
 
 
 % parameter bounds for fitting
-%   [kves kvisMult B]
-% LB = [0.4 1 20 ];
 LB = guess/4;
-% UB = [3   9 120];
 UB = guess*4;
 
 % also set the "plausible" lower/upper bounds used by BADS
@@ -23,7 +20,7 @@ switch options.fitMethod
     case 'fms'
         fitOptions = optimset('Display', 'final', 'MaxFunEvals', 500*sum(fixed==0), 'MaxIter', ... 
             500*sum(fixed==0), 'TolX', 1e-3, 'TolFun', 1e-2, 'UseParallel', 'Always');
-        [X, ~] = fminsearch(@(x) dots3DMP_fitDDM_err(x,data,options), guess(fixed==0), fitOptions);
+        [X, ~] = fminsearch(@(x) dots3DMP_fit_2Dacc_err(x,data,options), guess(fixed==0), fitOptions);
 
     case 'global'
         % GlobalSearch from Global Optimization Toolbox
@@ -136,7 +133,7 @@ end
 % error value and model-generated data points (trial outcomes)
 keyboard
 options.ploterr = 0;
-[err_final, fit] = dots3DMP_fitDDM_err(X,data);
+[err_final, fit] = dots3DMP_fit_2Dacc_err(X,data);
 
 
 % *** now run it one more time with interpolated headings
