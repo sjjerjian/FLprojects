@@ -200,7 +200,7 @@ if exportfigs; export_fig('medianSplit4','-eps'); end
 %% for RT, try kiani 2014 analysis:
 % plot conf as a function of RT quantile, separately for abs(hdg)
 
-sim=0;
+sim=1;
 
 % FOR SIM ONLY: exclude capped values (maxDur+Tnd, often 2300)
 if sim
@@ -384,10 +384,10 @@ options.fitMethod = 'fms';
 % % % 
 
 
-options.fitMethod = 'fms';
+% options.fitMethod = 'fms';
 % options.fitMethod = 'global';
 % options.fitMethod = 'multi';
-% options.fitMethod = 'pattern';
+options.fitMethod = 'pattern';
 % options.fitMethod = 'bads';
 
     %    kves kvisMult B 
@@ -400,7 +400,11 @@ kves = 1.2;
 kvisMult = 4; % will be multiplied by coh to get kvis (this simplifies parameterization)
 B = 70;
 
-guess = [kves kvisMult B];
+ks = 17;
+sigma = 0.03;
+B = 1.5;
+
+guess = [ks sigma B];
 
 % ************************************
 % set all fixed to 1 for hand-tuning:
@@ -410,6 +414,7 @@ fixed(:)=0;
 
 % plot error trajectory (prob doesn't work with parallel fit methods)
 options.ploterr = 1;
+options.fh=500;
 
 [X, err_final, fit, fitInterp] = dots3DMP_fitDDM(data,options,guess,fixed);
 

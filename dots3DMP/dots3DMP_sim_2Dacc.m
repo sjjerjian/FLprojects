@@ -13,7 +13,7 @@ close all
 
 plotExampleTrials = 0;
 
-nreps = 500; % number of repetitions of each unique trial type
+nreps = 200; % number of repetitions of each unique trial type
             % start small to verify it's working, then increase
             % (ntrials depends on num unique trial types)
 
@@ -65,6 +65,9 @@ P =  images_dtb_2d(R);
     % process (Kiani et al. 2008)
 dur = ones(ntrials,1) * duration;
 
+% draw Tnd from Gaussian dist
+% muTnd = 300; sdTnd = 60;
+% Tnd = muTnd + randn(ntrials,1).*sdTnd;
 
 %% bounded evidence accumulation
 
