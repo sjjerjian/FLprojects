@@ -11,10 +11,10 @@ for h = 1:length(hdgs)
     confErr(h) = mean(data.conf(J));
     coffErrSE(h) = std(data.conf(J))/sqrt(sum(J));
 end
-figure;plot(hdgs,confCorr,'b-o',hdgs,confErr,'r-o');
+figure('position',[300 300 800 300]);subplot(131); plot(hdgs,confCorr,'b-o',hdgs,confErr,'r-o','linew',1.5);
 xlabel('heading (deg)');
-ylabel('confidence)');
-legend('corrects','errors');
+ylabel('confidence');
+changeAxesFontSize(gca,14,14);
 
 clear confCorr confErr
 ushdgs = hdgs(hdgs>0);
@@ -25,11 +25,22 @@ for h = 1:length(ushdgs)
     J = abs(data.heading)==ushdgs(h) & ~data.corr;
     confErr(h) = mean(data.conf(J));
     coffErrSE(h) = std(data.conf(J))/sqrt(sum(J));
+    
+    RTCorr(h) = mean(data.RT(I));
+    RTCorrSE(h) = std(data.RT(I))/sqrt(sum(I));
+    
+    RTErr(h) = mean(data.RT(J));
+    RTErrSE(h) = std(data.RT(J))/sqrt(sum(J));
+    
 end
-figure;plot(ushdgs,confCorr,'b-o',ushdgs,confErr,'r-o');
+subplot(132); plot(ushdgs,confCorr,'b-o',ushdgs,confErr,'r-o','linew',1.5);
 xlabel('|heading| (deg)');
-ylabel('confidence)');
-legend('corrects','errors');
+changeAxesFontSize(gca,14,14);
+
+subplot(133); plot(RTCorr,confCorr,'b-o',RTErr,confErr,'r-o','linew',1.5);
+xlabel('RT');
+legend('correct','error')
+changeAxesFontSize(gca,14,14);
 
 %% compare choice shifts vs conf shifts
 
@@ -326,8 +337,6 @@ if sim
     data = dataBackup;
 end
 
-end
-
 %% calculate subject's performance ('score') based on accuracy and metacog accuracy
 
 % what we don't want is simply to reward confidence scaling with heading
@@ -373,7 +382,7 @@ payout = score*8 + 12
 
 
 
-
+%%
 
 % options.fitMethod = 'fms';
 % options.fitMethod = 'global';

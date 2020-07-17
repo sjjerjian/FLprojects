@@ -25,30 +25,36 @@ mods = [1 2 3]; % stimulus modalities: ves, vis, comb
 duration = 2000; % stimulus duration (ms)
 
 % sensitivity constants for converting heading angle into mean of momentary evidence
-ks = 17; % scale factor, for quickly testing different k levels
+ks = 20; % scale factor, for quickly testing different k levels
   % set manually to get reasonable results from images_dtb_2d
 kves = ks;
 kvis = [.666*ks 1.5*ks]; % straddles vestibular reliability, by construction
+
+conftask = 1; % 1 - sacc endpoint, 2 - PDW
+theta = 1; % threshold for high bet in logOdds, ignored if conftask==1
     
-sigmaVes = 0.03; % std of momentary evidence
-sigmaVis = [0.03 0.03]; % allow for separate sigmas for condition, coherence
+sigmaVes = 0.05; % std of momentary evidence
+sigmaVis = [0.05 0.05]; % allow for separate sigmas for condition, coherence
     % set manually to get reasonable looking dv trajectories;
     % also affects peakiness/flatness of confidence curve
     
-B = 2; % bound height (also hand-tuned)
-Tnd = 0.4; % non-decision time (eventually make this the mean of a dist)
+B = 1.5; % bound height (also hand-tuned)
+
+% draw non-decision times from Gaussian dist
+% muTnd will be a parameter to fit, sdTnd can be fixed at reasonable value
+muTnd = 300; sdTnd = 60; % ms
+% Tnd = 0.4; % fixed val
 
 % assume the mapping is based on an equal amount of experience with the 
 % *three* levels of reliability (ves, vis-low, vis-high) hence k and sigma
 % are their averages
 k = mean([kves kvis]);
-% % sigma = mean([sigmaVes sigmaVis]); % images_dtb_2d doesn't take a sigma argument
 
 R.t = 0.001:0.001:duration/1000;
 R.Bup = B;
 R.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
 R.lose_flag = 1;
-R.plotflag = 0; % 1 = plot, 2 = plot and export_fig
+R.plotflag = 1; % 1 = plot, 2 = plot and export_fig
 
 P =  images_dtb_2d(R);
 % uses method of images to compute PDF of the 2D DV, as in van den Berg et
@@ -65,16 +71,15 @@ P =  images_dtb_2d(R);
     % process (Kiani et al. 2008)
 dur = ones(ntrials,1) * duration;
 
-% draw Tnd from Gaussian dist
-% muTnd = 300; sdTnd = 60;
-% Tnd = muTnd + randn(ntrials,1).*sdTnd;
+
+Tnds = muTnd + randn(ntrials,1).*sdTnd;
 
 %% bounded evidence accumulation
 
 % assume momentary evidence is proportional to sin(heading),
 % as in drugowitsch et al 2014
 
-% dv = cell(ntrials,1); % shouldn't need to store every trial's DV, but if you want to, it's here
+dv_all = cell(ntrials,1); % shouldn't need to store every trial's DV, but if you want to, it's here
 
 choice = nan(ntrials,1);
 RT = nan(ntrials,1);
@@ -97,7 +102,8 @@ S = [1 -1/sqrt(2) ; -1/sqrt(2) 1];
 
 tic
 for n = 1:ntrials
-
+    Tnd = Tnds(n) / 1000; % Tnd for nth trial in seconds
+    
     switch modality(n)
         case 1
             mu = kves * sind(hdg(n)) / 1000; % mean of momentary evidence
@@ -132,6 +138,7 @@ for n = 1:ntrials
     % dv(:,1) corresponds to evidence favoring rightward, not evidence
     % favoring the correct decision (as in Kiani eqn. 3 and images_dtb)
 
+    dv_all{n} = dv;
     % decision outcome
     cRT1 = find(dv(:,1)>=B, 1);
     cRT2 = find(dv(:,2)>=B, 1);
@@ -178,8 +185,13 @@ for n = 1:ntrials
     thisV = find(diffV==min(diffV));
     thisT = find(diffT==min(diffT));
     logOddsCorr(n) = P.logOddsCorrMap(thisV(1), thisT(1));
-    expectedPctCorr(n) = logistic(logOddsCorr(n)); % convert to pct corr
-    conf(n) = 2*expectedPctCorr(n) - 1; % convert to 0..1
+    
+    if conftask==1 % sacc endpoint
+        expectedPctCorr(n) = logistic(logOddsCorr(n)); % convert to pct corr
+        conf(n) = 2*expectedPctCorr(n) - 1; % convert to 0..1
+    elseif conftask==2 % PDW
+        conf(n) = logOddsCorr(n) > theta;
+    end
     
     if plotExampleTrials
         if modality(n)==1 && hdg(n)==1.25 && choice(n)==1 && doneWith1==0 % make a better plot for talk/poster;
@@ -285,16 +297,18 @@ options.fitMethod = 'fms';
 % options.fitMethod = 'pattern';
 % options.fitMethod = 'bads';
 
-    %   [ks sigma  B  Tnd]
-fixed = [0    0    0    0];
+    %   [ks sigma  B  Tnd theta]
+fixed = [1 1 0 1 1];
 
 % initial guess (or hand-tuned params)
-ks = 17;
+ks = 20;
 sigma = 0.03;
 B = 2;
-Tnd = 0.4;
+Tnd = 400;
+theta = 1;
 
-guess = [ks sigma B Tnd];
+% guess = [ks sigma B Tnd];
+guess = [ks sigma B Tnd theta];
 
 % ************************************
 % set all fixed to 1 for hand-tuning:
