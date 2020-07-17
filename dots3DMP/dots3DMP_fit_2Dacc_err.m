@@ -1,6 +1,9 @@
-function [err,fit] = dots3DMP_fit_2Dacc_err(param, data, options)
+function [err,fit] = dots3DMP_fit_2Dacc_err(param, guess, fixed, data, options)
 
 global call_num
+
+% keyboard
+param = getParam(param, guess, fixed);
 
 ntrials = length(data.heading);
 
@@ -12,28 +15,27 @@ deltas = unique(data.delta);
 duration = 2000; % stimulus duration (ms)
 dur = ones(ntrials,1) * duration;
 
-kves = param(1);
-kvis = param(2)*cohs;
-B = abs(param(3)); % don't accept negative bound heights
+ks    = param(1);
+sigma = param(2);
+B     = abs(param(3)); % don't accept negative bound heights
+muTnd = param(4);
 
-% what about sigma? assume 1 for now (later may need not just separate 
-% sigmas but full Drugowitsch paramaterization):
-sigmaVes = 1; % std of momentary evidence
-sigmaVis = [1 1]; % allow for separate sigmas for condition, coherence
+if numel(param)==5, theta = param(5); end
 
-Tnd = 0.4; % non-decision time (or make this the mean of a dist?)
+kves = ks;
+kvis = [.666 1.5]*ks;
 
-maxdur = duration;
+sigmaVes = sigma; % std of momentary evidence
+sigmaVis = [sigma sigma]; % allow for separate sigmas for condition, coherence
+% Tnd = 0.4; % non-decision time (or make this the mean of a dist?)
+
+sdTnd = 60; % fixed SD
+Tnds = muTnd + randn(ntrials,1).*sdTnd;
+
 % assume the mapping is based on an equal amount of experience with the 
 % *three* levels of reliability (ves, vis-low, vis-high) hence k and sigma
 % are their averages
-k = mean([kves kvis']);
-sigma = mean([sigmaVes sigmaVis]);
-% [~, ~, logOddsCorrMap, tAxis, vAxis] = makeLogOddsCorrMap_3DMP(hdgs,k,B,sigma,maxdur,0);
-% uses Fokker-Planck equation to propagate the probability density of the DV,
-% as in Kiani & Shadlen 2009. Required for readout of confidence, although
-% a simpler, non time-dependent relationship (conf proportional to accum
-% evidence) could be used
+k = mean([kves kvis]);
 
 R.t = 0.001:0.001:duration/1000;
 R.Bup = B;
@@ -77,7 +79,8 @@ S = [1 -1/sqrt(2) ; -1/sqrt(2) 1];
 % can only be changed with an update to the flux file
 
 for n = 1:ntrials
-
+    Tnd = Tnds(n) / 1000; % non-decision time for nth trial in seconds
+    
     switch modality(n)
         case 1
             mu = kves * sind(hdg(n)) / 1000; % mean of momentary evidence
@@ -111,7 +114,7 @@ for n = 1:ntrials
     % because Mu is signed according to heading (positive=right),
     % dv(:,1) corresponds to evidence favoring rightward, not evidence
     % favoring the correct decision (as in Kiani eqn. 3 and images_dtb)
-
+    
     % decision outcome
     cRT1 = find(dv(:,1)>=B, 1);
     cRT2 = find(dv(:,2)>=B, 1);
@@ -158,8 +161,13 @@ for n = 1:ntrials
     thisV = find(diffV==min(diffV));
     thisT = find(diffT==min(diffT));
     logOddsCorr(n) = P.logOddsCorrMap(thisV(1), thisT(1));
-    expectedPctCorr(n) = logistic(logOddsCorr(n)); % convert to pct corr
-    conf(n) = 2*expectedPctCorr(n) - 1; % convert to 0..1
+    
+    if ~exist('theta','var')
+        expectedPctCorr(n) = logistic(logOddsCorr(n)); % convert to pct corr
+        conf(n) = 2*expectedPctCorr(n) - 1; % convert to 0..1
+    else
+        conf(n) = logOddsCorr(n) > theta;
+    end
 end
 
 choice(choice==0) = sign(randn); % not needed under usual circumstances
@@ -193,7 +201,7 @@ n = nan(length(mods),length(cohs),length(deltas),length(hdgs));
 pRight = n;
 RTmean_fit = n; RTmean_data = n; sigmaRT = n;
 confMean_fit = n; confMean_data = n; sigmaConf = n;
-
+nCor = n;
 
 for m = 1:length(mods)
 for c = 1:length(cohs)
@@ -230,21 +238,23 @@ LL_choice = sum(log(Pr_model(choiceD))) + sum(log(1-Pr_model(~choiceD)));
 
 L_RT = 1./(sigmaRT*sqrt(2*pi)) .* exp(-(RTmean_fit - RTmean_data).^2 ./ (2*sigmaRT.^2));
 L_RT(L_RT==0) = min(L_RT(L_RT~=0));
-LL_RT = nansum(log(L_RT(:)));
+LL_RT = nansum(log(L_RT(:))); % sum over all conditions
 
 L_conf = 1./(sigmaConf*sqrt(2*pi)) .* exp(-(confMean_fit - confMean_data).^2 ./ (2*sigmaConf.^2));
 L_conf(L_conf==0) = min(L_conf(L_conf~=0));
-LL_conf = nansum(log(L_conf(:)));
+LL_conf = nansum(log(L_conf(:))); % sum over all conditions
 
 err = -(LL_choice + LL_RT + LL_conf);
 
-%if call_num == 10, keyboard,end
-%err = -LL_choice;
 
 %% print progress report!
 fprintf('\n\n\n****************************************\n');
 fprintf('run %d\n', call_num);
-fprintf('\tkves= %g\n\tkvisMult= %g\n\tB= %g\n', param(1), param(2), param(3));
+if exist('theta','var')
+    fprintf('\tks= %g\n\tsigma= %g\n\tB= %g\n\tTnd= %g\n\ttheta= %g\n', param(1), param(2), param(3), param(4), param(5));
+else
+    fprintf('\tks= %g\n\tsigma= %g\n\tB= %g\n\tTnd= %g\n', param(1), param(2), param(3), param(4));
+end
 fprintf('err: %f\n', err);
 if options.ploterr && strcmp(options.fitMethod,'fms')
     figure(options.fh); hold on
@@ -257,3 +267,9 @@ call_num = call_num + 1;
 
 end
 
+
+% retrieve the full parameter set given the adjustable and fixed parameters 
+function param2 = getParam ( param1 , guess , fixed )
+  param2(fixed==0) = param1;       %get adjustable parameters from param1
+  param2(fixed==1) = guess(fixed==1);   %get fixed parameters from guess
+end

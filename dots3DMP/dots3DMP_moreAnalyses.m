@@ -11,8 +11,9 @@ for h = 1:length(hdgs)
     confErr(h) = mean(data.conf(J));
     coffErrSE(h) = std(data.conf(J))/sqrt(sum(J));
 end
-figure;plot(hdgs,confCorr,'b-o',hdgs,confErr,'r-o');
+figure('position',[300 300 800 300]);subplot(131); plot(hdgs,confCorr,'b-o',hdgs,confErr,'r-o','linew',1.5);
 xlabel('heading (deg)');
+changeAxesFontSize(gca,14,14);
 ylabel('confidence)');
 legend('corrects','errors','Location','Southeast');
 
@@ -25,9 +26,22 @@ for h = 1:length(ushdgs)
     J = abs(data.heading)==ushdgs(h) & ~data.corr;
     confErr(h) = mean(data.conf(J));
     coffErrSE(h) = std(data.conf(J))/sqrt(sum(J));
+    
+    RTCorr(h) = mean(data.RT(I));
+    RTCorrSE(h) = std(data.RT(I))/sqrt(sum(I));
+    
+    RTErr(h) = mean(data.RT(J));
+    RTErrSE(h) = std(data.RT(J))/sqrt(sum(J));
+    
 end
-figure;plot(ushdgs,confCorr,'b-o',ushdgs,confErr,'r-o');
+subplot(132); plot(ushdgs,confCorr,'b-o',ushdgs,confErr,'r-o','linew',1.5);
 xlabel('|heading| (deg)');
+changeAxesFontSize(gca,14,14);
+
+subplot(133); plot(RTCorr,confCorr,'b-o',RTErr,confErr,'r-o','linew',1.5);
+xlabel('RT');
+legend('correct','error')
+changeAxesFontSize(gca,14,14);
 ylabel('confidence)');
 legend('corrects','errors','Location','Southeast');
 
@@ -233,8 +247,6 @@ if exportfigs; export_fig('medianSplit4','-eps'); end
 %% for RT, try kiani 2014 analysis:
 % plot conf as a function of RT quantile, separately for abs(hdg)
 
-if RTtask
-
 sim=1;
 
 % FOR SIM ONLY: exclude capped values (maxDur+Tnd, often 2300)
@@ -328,8 +340,6 @@ if sim
     data = dataBackup;
 end
 
-end
-
 %% calculate subject's performance ('score') based on accuracy and metacog accuracy
 
 % what we don't want is simply to reward confidence scaling with heading
@@ -375,7 +385,13 @@ payout = score*8 + 12
 
 
 
+%%
 
+% options.fitMethod = 'fms';
+% options.fitMethod = 'global';
+% options.fitMethod = 'multi';
+options.fitMethod = 'pattern';
+% options.fitMethod = 'bads';
 
 
 % %% check sample sizes for each trial type
@@ -421,9 +437,15 @@ payout = score*8 + 12
 
 
 
+ks = 17;
+sigma = 0.03;
+B = 1.5;
 
+guess = [ks sigma B];
 
-
+% plot error trajectory (prob doesn't work with parallel fit methods)
+options.ploterr = 1;
+options.fh=500;
 
 % %% fit DDM
 % 
