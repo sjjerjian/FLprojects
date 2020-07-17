@@ -1,6 +1,9 @@
-function [err,fit] = dots3DMP_fit_2Dacc_err(param, data, options)
+function [err,fit] = dots3DMP_fit_2Dacc_err(param, guess, fixed, data, options)
 
 global call_num
+
+% keyboard
+param = getParam(param, guess, fixed);
 
 ntrials = length(data.heading);
 
@@ -264,3 +267,9 @@ call_num = call_num + 1;
 
 end
 
+
+% retrieve the full parameter set given the adjustable and fixed parameters 
+function param2 = getParam ( param1 , guess , fixed )
+  param2(fixed==0) = param1;       %get adjustable parameters from param1
+  param2(fixed==1) = guess(fixed==1);   %get fixed parameters from guess
+end

@@ -9,7 +9,6 @@ UB = guess*4;
 PLB = guess/2;
 PUB = guess*2;
 
-
 global call_num; call_num=1;
 
 if all(fixed)
@@ -20,7 +19,7 @@ switch options.fitMethod
     case 'fms'
         fitOptions = optimset('Display', 'final', 'MaxFunEvals', 500*sum(fixed==0), 'MaxIter', ... 
             500*sum(fixed==0), 'TolX', 1e-3, 'TolFun', 1e-2, 'UseParallel', 'Always');
-        [X, ~] = fminsearch(@(x) dots3DMP_fit_2Dacc_err(x,data,options), guess(fixed==0), fitOptions);
+        [X, ~] = fminsearch(@(x) dots3DMP_fit_2Dacc_err(x,guess,fixed,data,options), guess(fixed==0), fitOptions);
 
     case 'global'
         % GlobalSearch from Global Optimization Toolbox
@@ -134,9 +133,8 @@ end
 
 % run err func again at the fitted/fixed params to generate a final
 % error value and model-generated data points (trial outcomes)
-keyboard
 options.ploterr = 0;
-[err_final, fit] = dots3DMP_fit_2Dacc_err(X,data,options);
+[err_final, fit] = dots3DMP_fit_2Dacc_err(X,guess,zeros(size(X)),data,options);
 
 
 % *** now run it one more time with interpolated headings
@@ -183,7 +181,7 @@ Dfit.RT = ones(size(Dfit.heading));
 Dfit.conf = ones(size(Dfit.heading));
 
 % [~,fitInterp] = dots3DMP_fitDDM_err(X,Dfit);
-[~, fitInterp] = dots3DMP_fit_2Dacc_err(X,Dfit,options);
+[~, fitInterp] = dots3DMP_fit_2Dacc_err(X,guess,zeros(size(X)),Dfit,options);
 
 
 end

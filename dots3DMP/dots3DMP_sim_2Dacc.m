@@ -298,17 +298,18 @@ options.fitMethod = 'fms';
 % options.fitMethod = 'bads';
 
     %   [ks sigma  B  Tnd theta]
-fixed = [1 1 0 1 1];
+% fixed = [0 0 0 0];
+fixed = [0 1 0 1];
 
 % initial guess (or hand-tuned params)
-ks = 20;
-sigma = 0.03;
+ks = 15;
+sigma = 0.05;
 B = 2;
-Tnd = 400;
-theta = 1;
+Tnd = 300;
+theta = 1; % PDW only
 
-% guess = [ks sigma B Tnd];
-guess = [ks sigma B Tnd theta];
+guess = [ks sigma B Tnd];
+% guess = [ks sigma B Tnd theta];
 
 % ************************************
 % set all fixed to 1 for hand-tuning:
@@ -317,12 +318,12 @@ guess = [ks sigma B Tnd theta];
 % ************************************
 
 % plot error trajectory (prob doesn't work with parallel fit methods)
-options.ploterr = 0;
+options.ploterr = 1;
 
 [X, err_final, fit, fitInterp] = dots3DMP_fitDDM(data,options,guess,fixed);
 
 % plot it!
-%dots3DMP_plots_fit(data,fitInterp)
+dots3DMP_plots_fit(data,fitInterp)
 
 
 
