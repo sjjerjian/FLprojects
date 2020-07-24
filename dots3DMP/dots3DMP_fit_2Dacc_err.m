@@ -2,7 +2,6 @@ function [err,fit] = dots3DMP_fit_2Dacc_err(param, guess, fixed, data, options)
 
 global call_num
 
-% keyboard
 param = getParam(param, guess, fixed);
 
 ntrials = length(data.heading);

@@ -25,7 +25,7 @@ mods = [1 2 3]; % stimulus modalities: ves, vis, comb
 duration = 2000; % stimulus duration (ms)
 
 % sensitivity constants for converting heading angle into mean of momentary evidence
-ks = 20; % scale factor, for quickly testing different k levels
+ks = 35; % scale factor, for quickly testing different k levels
   % set manually to get reasonable results from images_dtb_2d
 kves = ks;
 kvis = [.666*ks 1.5*ks]; % straddles vestibular reliability, by construction
@@ -33,8 +33,8 @@ kvis = [.666*ks 1.5*ks]; % straddles vestibular reliability, by construction
 conftask = 1; % 1 - sacc endpoint, 2 - PDW
 theta = 1; % threshold for high bet in logOdds, ignored if conftask==1
     
-sigmaVes = 0.05; % std of momentary evidence
-sigmaVis = [0.05 0.05]; % allow for separate sigmas for condition, coherence
+sigmaVes = 0.01; % std of momentary evidence
+sigmaVis = [0.01 0.01]; % allow for separate sigmas for condition, coherence
     % set manually to get reasonable looking dv trajectories;
     % also affects peakiness/flatness of confidence curve
     
@@ -60,6 +60,20 @@ P =  images_dtb_2d(R);
 % uses method of images to compute PDF of the 2D DV, as in van den Berg et
 % al. 2016 (similar to Kiani et al. 2014)
 
+
+% create acceleration and velocity profiles (arbitrary for now)
+% SJ 04/2020
+% Hou et al. 2019, peak vel = 0.37m/s, SD = 210ms
+% 07/2020 lab settings...160cm in 1.3s, sigma=0.14
+vel = normpdf(1:duration,duration/2,210);
+vel = 0.37*vel./max(vel);
+acc = gradient(vel)*1000; % multiply by 1000 to get from m/s/ms to m/s/s
+
+% normalize
+vel = vel./max(vel);
+acc = abs(acc./max(acc)); % (and abs)
+
+
 %% build trial list
 
 [hdg, modality, coh, delta, ntrials] = dots3DMP_create_trial_list(hdgs,mods,cohs,deltas,nreps);
@@ -70,7 +84,6 @@ P =  images_dtb_2d(R);
     % the simulation is concerned) fixed duration with internal bounded
     % process (Kiani et al. 2008)
 dur = ones(ntrials,1) * duration;
-
 
 Tnds = muTnd + randn(ntrials,1).*sdTnd;
 
@@ -106,16 +119,16 @@ for n = 1:ntrials
     
     switch modality(n)
         case 1
-            mu = kves * sind(hdg(n)) / 1000; % mean of momentary evidence
+            mu = acc .* kves * sind(hdg(n)) / 1000; % mean of momentary evidence
                 % (I'm guessing drift rate in images_dtb is per second, hence div by 1000)
             s = [sigmaVes sigmaVes]; % standard deviaton vector (see below)
         case 2
-            mu = kvis(cohs==coh(n)) * sind(hdg(n)) / 1000;
+            mu = vel .* kvis(cohs==coh(n)) * sind(hdg(n)) / 1000;
             s = [sigmaVis(cohs==coh(n)) sigmaVis(cohs==coh(n))];
         case 3
             % positive delta defined as ves to the left, vis to the right
-            muVes = kves               * sind(hdg(n)-delta(n)/2) / 1000;
-            muVis = kvis(cohs==coh(n)) * sind(hdg(n)+delta(n)/2) / 1000;
+            muVes = acc .* kves               * sind(hdg(n)-delta(n)/2) / 1000;
+            muVis = vel .* kvis(cohs==coh(n)) * sind(hdg(n)+delta(n)/2) / 1000;
 
             % optimal weights (Drugo et al.) 
             wVes = sqrt( kves^2 / (kvis(cohs==coh(n))^2 + kves^2) );
@@ -129,11 +142,13 @@ for n = 1:ntrials
             s = [sigmaComb sigmaComb];
     end
 
-    Mu = [mu,-mu]; % mean vector for 2D DV
-
+%     Mu = [mu,-mu]; % mean vector for 2D DV
+    Mu = [mu; -mu]';
+    
     % convert correlation to covariance matrix
     V = diag(s)*S*diag(s);
-    dv = [0 0; cumsum(mvnrnd(Mu,V,dur(n)-1))]; % bivariate normrnd
+%     dv = [0 0; cumsum(mvnrnd(Mu,V,dur(n)-1))]; % bivariate normrnd
+    dv = [0 0; cumsum(mvnrnd(Mu,V))];
     % because Mu is signed according to heading (positive=right),
     % dv(:,1) corresponds to evidence favoring rightward, not evidence
     % favoring the correct decision (as in Kiani eqn. 3 and images_dtb)
@@ -162,9 +177,13 @@ for n = 1:ntrials
             % if neither hits bound? for now take the (abs) maximum,
             % ie whichever was closest to hitting bound. (alternative
             % would be their average?)
+            % SJ 07/2020 finalV is technically distance of loser from bound (when winner
+            % hits), so in this case, should also account for where winner is wrt bound 
         whichWon = dv(end,:)==max(dv(end,:));
-        finalV(n) = dv(end,~whichWon); % the not-whichWon is the loser
-        % % finalV(n) = mean(dvEnds);
+%         finalV(n) = dv(end,~whichWon); % the not-whichWon is the loser
+        % % finalV(n) = mean(dvEnds); 
+        finalV(n) = dv(end,~whichWon) + B-dv(end,whichWon); % 
+
         hitBound(n) = 0;
         a = [1 -1];
         choice(n) = a(whichWon);
@@ -269,8 +288,6 @@ dots3DMP_plots
 
 % dots3DMP_parseData_splitConf
 % dots3DMP_plots_splitConf
-
-
 
 %% fit cumulative gaussians
 
