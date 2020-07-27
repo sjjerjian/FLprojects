@@ -25,7 +25,7 @@ mods = [1 2 3]; % stimulus modalities: ves, vis, comb
 duration = 2000; % stimulus duration (ms)
 
 % sensitivity constants for converting heading angle into mean of momentary evidence
-ks = 35; % scale factor, for quickly testing different k levels
+ks = 20; % scale factor, for quickly testing different k levels
   % set manually to get reasonable results from images_dtb_2d
 kves = ks;
 kvis = [.666*ks 1.5*ks]; % straddles vestibular reliability, by construction

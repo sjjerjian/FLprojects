@@ -60,7 +60,7 @@ for d = 1:length(dateRange)
                             if isfield(PDS.data{t}.stimulus,'dotPos')
                                 data.dotPos{T,1} = PDS.data{t}.stimulus.dotPos;
                             end
-
+                            
                             % dependent variables are stored in PDS.data.behavior
                             fnames = fieldnames(PDS.data{t}.behavior);
                             fnames(ismember(fnames,fieldExcludes)) = [];

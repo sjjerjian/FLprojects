@@ -13,8 +13,9 @@ for h = 1:length(hdgs)
 end
 figure('position',[300 300 800 300]);subplot(131); plot(hdgs,confCorr,'b-o',hdgs,confErr,'r-o','linew',1.5);
 xlabel('heading (deg)');
-ylabel('confidence');
 changeAxesFontSize(gca,14,14);
+ylabel('confidence)');
+legend('corrects','errors','Location','Southeast');
 
 clear confCorr confErr
 ushdgs = hdgs(hdgs>0);
@@ -41,6 +42,8 @@ subplot(133); plot(RTCorr,confCorr,'b-o',RTErr,confErr,'r-o','linew',1.5);
 xlabel('RT');
 legend('correct','error')
 changeAxesFontSize(gca,14,14);
+ylabel('confidence)');
+legend('corrects','errors','Location','Southeast');
 
 %% compare choice shifts vs conf shifts
 
@@ -270,9 +273,9 @@ titles = {'Ves-Low';'Vis-lo';'Vis-hi';'Comb-lo';'Comb-hi'};
 for c = 1:size(ucond,1)+1 % the extra one is for all conditions pooled
     for h = 1:length(uhdg)
         if c==size(ucond,1)+1
-            I = abs(data.heading)==uhdg(h);
+            I = abs(data.heading)==uhdg(h) & data.corr==0;
         else
-            I = abs(data.heading)==uhdg(h) & data.modality==ucond(c,1) & data.coherence==ucond(c,2);
+            I = abs(data.heading)==uhdg(h) & data.modality==ucond(c,1) & data.coherence==ucond(c,2) & data.corr==0;
         end
         theseRT = data.RT(I);
         theseConf = data.conf(I);
@@ -325,7 +328,7 @@ for c = 1:size(ucond,1)+1 % the extra one is for all conditions pooled
         if c==size(ucond,1)+1
             l = legend(g,L,'Location','South','Orientation','Horizontal');
             legend('boxoff');
-            export_fig(['kianiFig2-' num2str(h)],'-eps');
+%             export_fig(['kianiFig2-' num2str(h)],'-eps');
         else
             title(titles{c});
         end
