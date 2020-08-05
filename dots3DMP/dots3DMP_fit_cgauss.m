@@ -5,15 +5,21 @@ cgauss = @(b,hdg) 1/2 * ( 1 + erf( (hdg-b(1))./(b(2)*sqrt(2)) ) );
     % [ log(Pright(hdg)) + log(1-(~Pright(hdg))) ]
 cgauss_err = @(param,choice,hdg) -(sum(log(cgauss(param,hdg(choice))))+sum(log(1-cgauss(param,hdg(~choice))))); 
 
-
 % fit a (flipped) gaussian for conf and RT for now, until DDM fits are good
+% b(2) and b(3) are mu and sigma
+% b(1) and b(4) are top and bottom offsets
+
 flippedGauss = @(b,hdg) 1 - ( min(max(b(1),0),1) .* exp(-(hdg-b(2)).^2 ./ (2*b(3).^2)) + b(4));
+
+if conftask==1 % continuous, sacc endpoint    
     % for continuous values, error is sum squared error
-flippedGauss_err = @(param,SEP,hdg) sum((flippedGauss(param,hdg)-SEP).^2);
+    flippedGauss_err = @(param,SEP,hdg) sum((flippedGauss(param,hdg)-SEP).^2);
+else % PDW, probabilities
+    flippedGauss_err = @(param,pdw,hdg) -(sum(log(flippedGauss(param,hdg(pdw))))+sum(log(1-flippedGauss(param,hdg(~pdw))))); 
+end
 
 gauss = @(b,hdg) b(1) .* exp(-(hdg-b(2)).^2 ./ (2*b(3).^2)) + b(4);
 gauss_err = @(param,SEP,hdg) sum((gauss(param,hdg)-SEP).^2);
-
 
 unc = 0; % saves biases from fminunc instead of fminsearch (SEs always are fminunc, and plots are always fminsearch)
 
@@ -87,8 +93,15 @@ for c = 1:length(cohs)
                 I = data.modality==mods(m) & data.coherence==cohs(c) & data.delta==deltas(D);
             end
         end
-        beta = fminsearch(@(x) flippedGauss_err(x,data.conf(I),data.heading(I)), guess_fgauss);
-        [betaUnc,~,~,~,~,hessian] = fminunc(@(x) flippedGauss_err(x,data.conf(I),data.heading(I)), guess_fgauss);
+        
+        if conftask==1 % sacc endpoint
+            beta = fminsearch(@(x) flippedGauss_err(x,data.conf(I),data.heading(I)), guess_fgauss);
+            [betaUnc,~,~,~,~,hessian] = fminunc(@(x) flippedGauss_err(x,data.conf(I),data.heading(I)), guess_fgauss);
+        elseif conftask==2 % PDW
+            beta = fminsearch(@(x) flippedGauss_err(x,data.PDW(I)==1,data.heading(I)), guess_fgauss);
+            [betaUnc,~,~,~,~,hessian] = fminunc(@(x) flippedGauss_err(x,data.PDW(I)==1,data.heading(I)), guess_fgauss);
+        end
+            
         SE = sqrt(diag(inv(hessian)));
         amplConfse(m,c,D) = SE(1);
         muConfse(m,c,D) = SE(2);
@@ -166,8 +179,15 @@ for c = 1:length(cohs)
     % conf
     for d = 1:length(deltas)
         I = data.modality==3 & data.coherence==cohs(c) & data.delta==deltas(d);
-        beta = fminsearch(@(x) flippedGauss_err(x,data.conf(I),data.heading(I)), guess_fgauss);
-        [betaUnc,~,~,~,~,hessian] = fminunc(@(x) flippedGauss_err(x,data.conf(I),data.heading(I)), guess_fgauss);
+        
+        if conftask==1 % sacc endpoint
+            beta = fminsearch(@(x) flippedGauss_err(x,data.conf(I),data.heading(I)), guess_fgauss);
+            [betaUnc,~,~,~,~,hessian] = fminunc(@(x) flippedGauss_err(x,data.conf(I),data.heading(I)), guess_fgauss);
+        elseif conftask==2 % PDW
+            beta = fminsearch(@(x) flippedGauss_err(x,data.PDW(I)==1,data.heading(I)), guess_fgauss);
+            [betaUnc,~,~,~,~,hessian] = fminunc(@(x) flippedGauss_err(x,data.PDW(I)==1,data.heading(I)), guess_fgauss);
+        end
+            
         SE = sqrt(diag(inv(hessian)));
         amplConfse(3,c,d) = SE(1);
         muConfse(3,c,d) = SE(2);

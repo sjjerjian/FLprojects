@@ -11,6 +11,9 @@
 clear
 close all
 
+RTtask = 1;
+conftask = 1; % 1 - sacc endpoint, 2 - PDW
+
 plotExampleTrials = 0;
 
 nreps = 200; % number of repetitions of each unique trial type
@@ -30,7 +33,6 @@ ks = 20; % scale factor, for quickly testing different k levels
 kves = ks;
 kvis = [.666*ks 1.5*ks]; % straddles vestibular reliability, by construction
 
-conftask = 1; % 1 - sacc endpoint, 2 - PDW
 theta = 1; % threshold for high bet in logOdds, ignored if conftask==1
     
 sigmaVes = 0.01; % std of momentary evidence
@@ -60,7 +62,6 @@ P =  images_dtb_2d(R);
 % uses method of images to compute PDF of the 2D DV, as in van den Berg et
 % al. 2016 (similar to Kiani et al. 2014)
 
-
 % create acceleration and velocity profiles (arbitrary for now)
 % SJ 04/2020
 % Hou et al. 2019, peak vel = 0.37m/s, SD = 210ms
@@ -73,6 +74,13 @@ acc = gradient(vel)*1000; % multiply by 1000 to get from m/s/ms to m/s/s
 vel = vel./max(vel);
 acc = abs(acc./max(acc)); % (and abs)
 
+origParams.ks = ks;
+origParams.sigma = sigmaVes;
+origParams.B = B;
+origParams.Tnd = muTnd;
+if conftask==2
+    origParams.theta = theta; % PDW only
+end
 
 %% build trial list
 
@@ -269,7 +277,6 @@ pCorrect_total = (sum(choice==1 & hdg>0) + sum(choice==-1 & hdg<0)) / ntrials
 
 choice(choice==1) = 2; choice(choice==-1) = 1; % 1=left, 2=right
 
-conftask = 1;
 data.modality = modality;
 data.heading = hdg;
 data.coherence = coh;
@@ -278,7 +285,6 @@ data.choice = choice;
 data.RT = RT; % already in seconds
 data.conf = conf;
 
-RTtask = 1;
 
 
 %% plots
@@ -316,12 +322,12 @@ options.fitMethod = 'fms';
 
     %   [ks sigma  B  Tnd theta]
 % fixed = [0 0 0 0];
-fixed = [0 1 0 1];
+fixed = [0 1 1 1];
 
 % initial guess (or hand-tuned params)
-ks = 15;
-sigma = 0.05;
-B = 2;
+ks = 19.9;
+sigma = 0.01;
+B = 1.5;
 Tnd = 300;
 theta = 1; % PDW only
 
@@ -335,12 +341,12 @@ guess = [ks sigma B Tnd];
 % ************************************
 
 % plot error trajectory (prob doesn't work with parallel fit methods)
-options.ploterr = 1;
+options.ploterr = 0;
 
 [X, err_final, fit, fitInterp] = dots3DMP_fitDDM(data,options,guess,fixed);
 
 % plot it!
-dots3DMP_plots_fit(data,fitInterp)
+% dots3DMP_plots_fit(data,fitInterp)
 
 
 
