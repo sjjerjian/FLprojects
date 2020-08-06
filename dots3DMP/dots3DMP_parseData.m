@@ -38,7 +38,9 @@ for d = 1:length(deltas)+1 % add extra column for all trials irrespective of del
             confMean(m,c,d,h) = mean(data.conf(J));
             confSE(m,c,d,h) = std(data.conf(J))/sqrt(n(m,c,d,h));
         else % PDW
-            J = J & ~data.oneConfTargTrial;
+            if isfield(data,'oneConfTargTrial')
+                J = J & ~data.oneConfTargTrial;
+            end
             confMean(m,c,d,h) = sum(J & data.PDW==1) / sum(J); % 1 is high
             % SE gets calculated below
         end            

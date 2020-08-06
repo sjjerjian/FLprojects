@@ -19,10 +19,10 @@ sigma = param(2);
 B     = abs(param(3)); % don't accept negative bound heights
 muTnd = param(4);
 
-if numel(param)==5, theta = param(5); end
+if numel(param)==5, theta = param(5); end % only relevant for PDW
 
 kves = ks;
-kvis = [.666*ks 1.5*ks];
+kvis = ks * [2 4.5]/3;
 
 sigmaVes = sigma; % std of momentary evidence
 sigmaVis = [sigma sigma]; % allow for separate sigmas for condition, coherence
@@ -202,7 +202,7 @@ choiceD  = logical(data.choice-1);
 Pr_model = nan(ntrials,1);
 n = nan(length(mods),length(cohs),length(deltas),length(hdgs));
 
-pRight = n;
+pRight = n; PHighBet = n;
 RTmean_fit = n; RTmean_data = n; sigmaRT = n;
 confMean_fit = n; confMean_data = n; sigmaConf = n;
 nCor = n;
@@ -215,41 +215,57 @@ for d = 1:length(deltas)
         J = data.modality==mods(m) & data.coherence==cohs(c) & data.heading==hdgs(h) & data.delta==deltas(d);
         
         n(m,c,d,h) = sum(J);
-        nCor(m,c,d,h) = sum(J & data.correct); % use only correct trials for RT and conf fits
+        nCor(m,c,d,h) = sum(J & data.correct); % use only correct trials for RT and conf (sacc EP) fits
         
         pRight(m,c,d,h) = sum(J & fit.choice==2) / n(m,c,d,h); % 2 is rightward
         Pr_model(J) = pRight(m,c,d,h);
         
-        RTmean_fit(m,c,d,h) = mean(fit.RT(J & data.correct));
-        RTmean_data(m,c,d,h) = mean(data.RT(J & data.correct));
-        sigmaRT(m,c,d,h) = std(data.RT(J & data.correct))/sqrt(nCor(m,c,d,h));
+        if options.RTtask
+            RTmean_fit(m,c,d,h) = mean(fit.RT(J & data.correct));
+            RTmean_data(m,c,d,h) = mean(data.RT(J & data.correct));
+            sigmaRT(m,c,d,h) = std(data.RT(J & data.correct))/sqrt(nCor(m,c,d,h));
+        end
         
-        confMean_fit(m,c,d,h) = mean(fit.conf(J & data.correct));
-        confMean_data(m,c,d,h) = mean(data.conf(J & data.correct));
-        sigmaConf(m,c,d,h) = std(data.conf(J & data.correct))/sqrt(nCor(m,c,d,h));
-             
+        if options.conftask == 1 % sacc endpoint
+            confMean_fit(m,c,d,h) = mean(fit.conf(J & data.correct));
+            confMean_data(m,c,d,h) = mean(data.conf(J & data.correct));
+            sigmaConf(m,c,d,h) = std(data.conf(J & data.correct))/sqrt(nCor(m,c,d,h));
+        elseif options.conftask == 2 % PDW
+            PHighBet(m,c,d,h) = sum(J & fit.conf==1) / n(m,c,d,h); % 1 is high
+            Phi_model(J) = PHighBet(m,c,d,h);
+        end  
     end
 end
 end
 end
 
 % kluge to avoid log(0) issues
-% Pr_model(Pr_model==0) = min(Pr_model(Pr_model~=0)); 
-% Pr_model(Pr_model==1) = max(Pr_model(Pr_model~=1));
-Pr_model(Pr_model==0) = eps; 
-Pr_model(Pr_model==1) = 1-eps;
-
+Pr_model(Pr_model==0) = min(Pr_model(Pr_model~=0)); 
+Pr_model(Pr_model==1) = max(Pr_model(Pr_model~=1));
 LL_choice = sum(log(Pr_model(choiceD))) + sum(log(1-Pr_model(~choiceD)));
 
 % likelihood of mean RTs and mean confidence ratings for each condition, under Gaussian approximation
 
-L_RT = 1./(sigmaRT*sqrt(2*pi)) .* exp(-(RTmean_fit - RTmean_data).^2 ./ (2*sigmaRT.^2));
-L_RT(L_RT==0) = min(L_RT(L_RT~=0));
-LL_RT = nansum(log(L_RT(:))); % sum over all conditions
+LL_RT = 0;
+if options.RTtask
+    L_RT = 1./(sigmaRT*sqrt(2*pi)) .* exp(-(RTmean_fit - RTmean_data).^2 ./ (2*sigmaRT.^2));
+    L_RT(L_RT==0) = min(L_RT(L_RT~=0));
+    LL_RT = nansum(log(L_RT(:))); % sum over all conditions
+end
 
-L_conf = 1./(sigmaConf*sqrt(2*pi)) .* exp(-(confMean_fit - confMean_data).^2 ./ (2*sigmaConf.^2));
-L_conf(L_conf==0) = min(L_conf(L_conf~=0));
-LL_conf = nansum(log(L_conf(:))); % sum over all conditions
+LL_conf = 0;
+if options.conftask == 1 % sacc endpoint
+    L_conf = 1./(sigmaConf*sqrt(2*pi)) .* exp(-(confMean_fit - confMean_data).^2 ./ (2*sigmaConf.^2));
+    L_conf(L_conf==0) = min(L_conf(L_conf~=0));
+    LL_conf = nansum(log(L_conf(:))); % sum over all conditions
+elseif options.conftask ==2 % PDW
+    Phi_model(Phi_model==0) = min(Phi_model(Phi_model~=0)); 
+    Phi_model(Phi_model==1) = max(Phi_model(Phi_model~=1));
+    pdw = logical(data.conf);
+    LL_conf = sum(log(Phi_model(pdw))) + sum(log(1-Phi_model(~pdw)));
+else
+    
+end
 
 err = -(LL_choice + LL_RT + LL_conf);
 

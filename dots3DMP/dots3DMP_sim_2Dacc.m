@@ -11,8 +11,8 @@
 clear
 close all
 
-RTtask = 1;
-conftask = 1; % 1 - sacc endpoint, 2 - PDW
+RTtask = 0;
+conftask = 2; % 1 - sacc endpoint, 2 - PDW
 
 plotExampleTrials = 0;
 
@@ -28,10 +28,10 @@ mods = [1 2 3]; % stimulus modalities: ves, vis, comb
 duration = 2000; % stimulus duration (ms)
 
 % sensitivity constants for converting heading angle into mean of momentary evidence
-ks = 20; % scale factor, for quickly testing different k levels
+ks = 25; % scale factor, for quickly testing different k levels
   % set manually to get reasonable results from images_dtb_2d
 kves = ks;
-kvis = [.666*ks 1.5*ks]; % straddles vestibular reliability, by construction
+kvis = ks * [2 4.5]/3; % straddles vestibular reliability, by construction
 
 theta = 1; % threshold for high bet in logOdds, ignored if conftask==1
     
@@ -40,7 +40,7 @@ sigmaVis = [0.01 0.01]; % allow for separate sigmas for condition, coherence
     % set manually to get reasonable looking dv trajectories;
     % also affects peakiness/flatness of confidence curve
     
-B = 1.5; % bound height (also hand-tuned)
+B = 1; % bound height (also hand-tuned)
 
 % draw non-decision times from Gaussian dist
 % muTnd will be a parameter to fit, sdTnd can be fixed at reasonable value
@@ -56,7 +56,7 @@ R.t = 0.001:0.001:duration/1000;
 R.Bup = B;
 R.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
 R.lose_flag = 1;
-R.plotflag = 1; % 1 = plot, 2 = plot and export_fig
+R.plotflag = 0; % 1 = plot, 2 = plot and export_fig
 
 P =  images_dtb_2d(R);
 % uses method of images to compute PDF of the 2D DV, as in van den Berg et
@@ -100,7 +100,7 @@ Tnds = muTnd + randn(ntrials,1).*sdTnd;
 % assume momentary evidence is proportional to sin(heading),
 % as in drugowitsch et al 2014
 
-dv_all = cell(ntrials,1); % shouldn't need to store every trial's DV, but if you want to, it's here
+% dv_all = cell(ntrials,1); % shouldn't need to store every trial's DV, but if you want to, it's here
 
 choice = nan(ntrials,1);
 RT = nan(ntrials,1);
@@ -161,7 +161,7 @@ for n = 1:ntrials
     % dv(:,1) corresponds to evidence favoring rightward, not evidence
     % favoring the correct decision (as in Kiani eqn. 3 and images_dtb)
 
-    dv_all{n} = dv;
+%     dv_all{n} = dv;
     % decision outcome
     cRT1 = find(dv(:,1)>=B, 1);
     cRT2 = find(dv(:,2)>=B, 1);
@@ -187,11 +187,14 @@ for n = 1:ntrials
             % would be their average?)
             % SJ 07/2020 finalV is technically distance of loser from bound (when winner
             % hits), so in this case, should also account for where winner is wrt bound 
+            % a kluge here - imagine winner 'did' hit bound, then where
+            % would loser be relatively speaking (since logOdds map is
+            % fixed)
         whichWon = dv(end,:)==max(dv(end,:));
+        finalV(n) = dv(end,~whichWon) + B-dv(end,whichWon); % 
 %         finalV(n) = dv(end,~whichWon); % the not-whichWon is the loser
         % % finalV(n) = mean(dvEnds); 
-        finalV(n) = dv(end,~whichWon) + B-dv(end,whichWon); % 
-
+        
         hitBound(n) = 0;
         a = [1 -1];
         choice(n) = a(whichWon);
@@ -233,19 +236,19 @@ for n = 1:ntrials
 %             set(gca,'yTick',-0.5:0.5:2);
             set(gca,'xTick',0:500:2000);
             changeAxesFontSize(gca,18,18);
-            export_fig('ves_acc1','-eps');
+            %export_fig('ves_acc1','-eps');
             
-            figure(1001); set(gcf, 'Color', [1 1 1], 'Position', [100 100 350 375], 'PaperPositionMode', 'auto'); clf;
+            %figure(1001); set(gcf, 'Color', [1 1 1], 'Position', [100 100 350 375], 'PaperPositionMode', 'auto'); clf;
             plot(dv(1:round((RT(n)-Tnd)*1000),2),'r-','LineWidth',2); hold on; 
             plot(1:length(dv),ones(1,length(dv))*B,'k-','LineWidth',4);
             plot([round((RT(n)-Tnd)*1000) round((RT(n)-Tnd)*1000)],[dv(round((RT(n)-Tnd)*1000),2) B],'r--')
             xlabel('Time (ms)');
 %             ylabel('Accum. evidence for leftward');
-            ylim([-0.4*B B*1.1]); xlim([0 duration]);
+            %ylim([-0.4*B B*1.1]); xlim([0 duration]);
 %             set(gca,'yTick',-0.5:0.5:2);
-            set(gca,'xTick',0:500:2000);
-            changeAxesFontSize(gca,18,18);
-            export_fig('ves_acc2','-eps');
+            %set(gca,'xTick',0:500:2000);
+            %changeAxesFontSize(gca,18,18);
+            %export_fig('ves_acc2','-eps');
 
             doneWith1=1;
             n
@@ -285,7 +288,11 @@ data.choice = choice;
 data.RT = RT; % already in seconds
 data.conf = conf;
 
+if conftask==2
+    data.PDW=data.conf;
+end
 
+save('2DAcc_simdata_PDW_stimprof.mat','data','cohs','deltas','hdgs','mods','origParams','RTtask','conftask')
 
 %% plots
 
@@ -297,21 +304,11 @@ dots3DMP_plots
 
 %% fit cumulative gaussians
 
-dots3DMP_fit_cgauss
+%dots3DMP_fit_cgauss
+%dots3DMP_plots_cgauss
+% dots3DMP_plots_cgauss_forTalk % nicer looking versions
 
-
-%% and plot them
-
-dots3DMP_plots_cgauss
-
-
-
-%% nicer looking versions
-
-% dots3DMP_plots_cgauss_forTalk
-
-
-
+if 0
 %% now try fitting the fake data to recover the generative parameters
 
 options.fitMethod = 'fms';
@@ -322,17 +319,17 @@ options.fitMethod = 'fms';
 
     %   [ks sigma  B  Tnd theta]
 % fixed = [0 0 0 0];
-fixed = [0 1 1 1];
+fixed = [0 1 1 0 1];
 
 % initial guess (or hand-tuned params)
-ks = 19.9;
+ks = 22;
 sigma = 0.01;
-B = 1.5;
-Tnd = 300;
+B = 1;
+Tnd = 350;
 theta = 1; % PDW only
 
-guess = [ks sigma B Tnd];
-% guess = [ks sigma B Tnd theta];
+% guess = [ks sigma B Tnd];
+guess = [ks sigma B Tnd theta];
 
 % ************************************
 % set all fixed to 1 for hand-tuning:
@@ -343,12 +340,15 @@ guess = [ks sigma B Tnd];
 % plot error trajectory (prob doesn't work with parallel fit methods)
 options.ploterr = 0;
 
+options.RTtask = RTtask;
+options.conftask = conftask; % 1 - sacc endpoint, 2 - PDW
+
 [X, err_final, fit, fitInterp] = dots3DMP_fitDDM(data,options,guess,fixed);
 
 % plot it!
 % dots3DMP_plots_fit(data,fitInterp)
 
-
+end
 
 
 
