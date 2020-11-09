@@ -43,11 +43,11 @@ xlabel('RT');
 legend('correct','error')
 changeAxesFontSize(gca,14,14);
 ylabel('confidence)');
-legend('corrects','errors','Location','Southeast');
+legend('corrects','errors','Location','Northeast');
 
 %% compare choice shifts vs conf shifts
 
-exportfigs = 1;
+exportfigs = 0;
 
 % first just raw biases
 n = 1;

@@ -128,12 +128,13 @@ switch options.fitMethod
 
 end
 
-end
-
+% insert fixed params
 temp = X;
 X = zeros(size(fixed));
 X(fixed==0) = temp;
 X(fixed==1) = guess(fixed==1);
+end
+
 
 % run err func again at the fitted/fixed params to generate a final
 % error value and model-generated data points (trial outcomes)
@@ -177,7 +178,8 @@ Dfit.delta = delta;
 % plotted is fitInterp, not Dfit
 Dfit.choice = ones(size(Dfit.heading));
 Dfit.RT     = ones(size(Dfit.heading));
-Dfit.conf   = ones(size(Dfit.heading));
+Dfit.PDW   = ones(size(Dfit.heading));
+
 
 % [~,fitInterp] = dots3DMP_fitDDM_err(X,Dfit);
 [~, fitInterp] = dots3DMP_fit_2Dacc_err(X,X,false(size(X)),Dfit,options);

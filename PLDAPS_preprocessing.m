@@ -13,9 +13,9 @@ clear all
 
 %% decide which files to load
 
-% subject = 'hanzo';
-% paradigm = 'Dots';
-% dateRange = 20190401:20200315; % 
+subject = 'human';
+paradigm = 'dots3DMP';
+dateRange = 20200213:20200308; % 
 % 
 % % % Warning: error loading hanzo20191011Dots1341.PDS
 
@@ -29,9 +29,9 @@ clear all
 % paradigm = 'dots3DMP';
 % dateRange = 20200213:20200308; % RT
 
-% subject = 'human';
+% subject = 'lucio';
 % paradigm = 'dots3DMP';
-% dateRange = 20190612:20200308; % everything!
+% dateRange = 20200615:20200923; % everything!
 
 
 dateStr = num2str(dateRange(1));
@@ -39,7 +39,9 @@ for d = 2:length(dateRange)
     dateStr = [dateStr newline num2str(dateRange(d))];
 end
 
-localDir = ['/Users/chris/Documents/MATLAB/PLDAPS_data/' subject '/'];
+% localDir = ['/Users/chris/Documents/MATLAB/PLDAPS_data/' subject '/'];
+localDir = ['/Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data/' subject '/'];
+
 remoteDir = ['/var/services/homes/fetschlab/data/' subject '/'];
 
 

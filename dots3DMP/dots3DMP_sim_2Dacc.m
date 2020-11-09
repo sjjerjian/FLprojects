@@ -304,8 +304,8 @@ dots3DMP_plots
 
 %% fit cumulative gaussians
 
-%dots3DMP_fit_cgauss
-%dots3DMP_plots_cgauss
+dots3DMP_fit_cgauss
+dots3DMP_plots_cgauss
 % dots3DMP_plots_cgauss_forTalk % nicer looking versions
 
 if 0
@@ -346,7 +346,7 @@ options.conftask = conftask; % 1 - sacc endpoint, 2 - PDW
 [X, err_final, fit, fitInterp] = dots3DMP_fitDDM(data,options,guess,fixed);
 
 % plot it!
-% dots3DMP_plots_fit(data,fitInterp)
+% dots3DMP_plots_fit(data,fitInterp,conftask)
 
 end
 

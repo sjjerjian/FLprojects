@@ -103,39 +103,20 @@ if conftask==2
     confSE = sqrt( (confMean.*(1-confMean)) ./ n );
 end
 
-% copy vestib-only data to both coherences, to aid plotting
-n(1,2,:,:,:) = n(1,1,:,:,:);
-pRight(1,2,:,:,:) = pRight(1,1,:,:,:);
-pRightSE(1,2,:,:,:) = pRightSE(1,1,:,:,:);
-confMean(1,2,:,:,:) = confMean(1,1,:,:,:);
-confSE(1,2,:,:,:) = confSE(1,1,:,:,:);
-RTmean(1,2,:,:,:) = RTmean(1,1,:,:,:);
-RTse(1,2,:,:,:) = RTse(1,1,:,:,:);
-confMean(1,2,:,:,:) = confMean(1,1,:,:,:);
-confSE(1,2,:,:,:) = confSE(1,1,:,:,:);
-yVals(1,2,:,:,:) = yVals(1,1,:,:,:);
-plotLogistic(1,2,:,:) = plotLogistic(1,1,:,:);
-B(1,2,:,:) = B(1,1,:,:);
-stats(1,2,:,:) = stats(1,1,:,:);
-
-% some datasets have three cohs!
-if length(cohs)==3
-    n(1,3,:,:,:) = n(1,1,:,:,:);
-    pRight(1,3,:,:,:) = pRight(1,1,:,:,:);
-    pRightSE(1,3,:,:,:) = pRightSE(1,1,:,:,:);
-    confMean(1,3,:,:,:) = confMean(1,1,:,:,:);
-    confSE(1,3,:,:,:) = confSE(1,1,:,:,:);
-    RTmean(1,3,:,:,:) = RTmean(1,1,:,:,:);
-    RTse(1,3,:,:,:) = RTse(1,1,:,:,:);
-    confMean(1,3,:,:,:) = confMean(1,1,:,:,:);
-    confSE(1,3,:,:,:) = confSE(1,1,:,:,:);
-    yVals(1,3,:,:,:) = yVals(1,1,:,:,:);
-    plotLogistic(1,3,:,:) = plotLogistic(1,1,:,:);
-    B(1,3,:,:) = B(1,1,:,:);
-    stats(1,3,:,:) = stats(1,1,:,:);
-end
-
-if length(cohs)>3
-    error('can''t handle >3 cohs');
+% copy vestib-only data to all coherences, to aid plotting
+for c=1:length(cohs)
+    n(1,c,:,:,:) = n(1,1,:,:,:);
+    pRight(1,c,:,:,:) = pRight(1,1,:,:,:);
+    pRightSE(1,c,:,:,:) = pRightSE(1,1,:,:,:);
+    confMean(1,c,:,:,:) = confMean(1,1,:,:,:);
+    confSE(1,c,:,:,:) = confSE(1,1,:,:,:);
+    RTmean(1,c,:,:,:) = RTmean(1,1,:,:,:);
+    RTse(1,c,:,:,:) = RTse(1,1,:,:,:);
+    confMean(1,c,:,:,:) = confMean(1,1,:,:,:);
+    confSE(1,c,:,:,:) = confSE(1,1,:,:,:);
+    yVals(1,c,:,:,:) = yVals(1,1,:,:,:);
+    plotLogistic(1,c,:,:) = plotLogistic(1,1,:,:);
+    B(1,c,:,:) = B(1,1,:,:);
+    stats(1,c,:,:) = stats(1,1,:,:);
 end
 

@@ -261,7 +261,7 @@ if options.conftask == 1 % sacc endpoint
 elseif options.conftask ==2 % PDW
     Phi_model(Phi_model==0) = min(Phi_model(Phi_model~=0)); 
     Phi_model(Phi_model==1) = max(Phi_model(Phi_model~=1));
-    pdw = logical(data.conf);
+    pdw = logical(data.PDW);
     LL_conf = sum(log(Phi_model(pdw))) + sum(log(1-Phi_model(~pdw)));
 else
     

@@ -8,25 +8,26 @@ sr = 30000;
 
 %% load necessary data and clean up a bit
 
-% recfolder = '2020-09-25_12-42-53_e';
-recfolder = '2020-09-24_14-29-21_e';
+recfolder = '2020-10-06_15-19-44_exp';
+% recfolder = '2020-09-24_14-29-21_e';
 
-cd(sprintf('/Volumes/homes/fetschlab/data/hanzo_neuro/New_%s',recfolder));
-% 
+cd(sprintf('/Volumes/homes/fetschlab/data/hanzo_neuro/%s',recfolder));
+
 % for ch=8:31
 %     spikes_file = sprintf('SEp157.0n%d.spikes',ch);
-%     [spikes,tSpike,info]=load_open_ephys_data(spikes_file);
+%     [~,~,info]=load_open_ephys_data(spikes_file);
 %     if any(info.sortedId)
 %         ch
 %     end
 % end
     
-ch=30;
+ch=9;
 spikes_file = sprintf('SEp157.0n%d.spikes',ch);    
 [spikes,tSpike,info]=load_open_ephys_data(spikes_file);
 [~, ~, ~, events] = load_open_ephys_data('messages.events', 1); 
 [ttlBits, ttlTime] = load_open_ephys_data('all_channels.events');
 
+%%
 % load PLDAPS
 % dont use clean version, as it is excluding trials missing choices which is causing
 % mismatch in number of trials
