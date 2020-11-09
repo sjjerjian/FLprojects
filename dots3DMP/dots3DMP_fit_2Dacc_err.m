@@ -240,8 +240,11 @@ end
 end
 
 % kluge to avoid log(0) issues
-Pr_model(Pr_model==0) = min(Pr_model(Pr_model~=0)); 
-Pr_model(Pr_model==1) = max(Pr_model(Pr_model~=1));
+% Pr_model(Pr_model==0) = min(Pr_model(Pr_model~=0)); 
+% Pr_model(Pr_model==1) = max(Pr_model(Pr_model~=1));
+Pr_model(Pr_model==0) = eps; 
+Pr_model(Pr_model==1) = 1-eps;
+
 LL_choice = sum(log(Pr_model(choiceD))) + sum(log(1-Pr_model(~choiceD)));
 
 % likelihood of mean RTs and mean confidence ratings for each condition, under Gaussian approximation

@@ -11,8 +11,8 @@
 clear
 close all
 
-RTtask = 0;
-conftask = 2; % 1 - sacc endpoint, 2 - PDW
+RTtask = 1;
+conftask = 1; % 1 - sacc endpoint, 2 - PDW
 
 plotExampleTrials = 0;
 
@@ -191,10 +191,10 @@ for n = 1:ntrials
             % would loser be relatively speaking (since logOdds map is
             % fixed)
         whichWon = dv(end,:)==max(dv(end,:));
-        finalV(n) = dv(end,~whichWon) + B-dv(end,whichWon); % 
 %         finalV(n) = dv(end,~whichWon); % the not-whichWon is the loser
         % % finalV(n) = mean(dvEnds); 
-        
+        finalV(n) = dv(end,~whichWon) + B-dv(end,whichWon); % 
+
         hitBound(n) = 0;
         a = [1 -1];
         choice(n) = a(whichWon);
@@ -326,6 +326,7 @@ ks = 22;
 sigma = 0.01;
 B = 1;
 Tnd = 350;
+
 theta = 1; % PDW only
 
 % guess = [ks sigma B Tnd];
@@ -339,7 +340,6 @@ guess = [ks sigma B Tnd theta];
 
 % plot error trajectory (prob doesn't work with parallel fit methods)
 options.ploterr = 0;
-
 options.RTtask = RTtask;
 options.conftask = conftask; % 1 - sacc endpoint, 2 - PDW
 
