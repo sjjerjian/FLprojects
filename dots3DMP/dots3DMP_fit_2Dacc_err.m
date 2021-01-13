@@ -2,7 +2,6 @@ function [err,fit] = dots3DMP_fit_2Dacc_err(param, guess, fixed, data, options)
 
 global call_num
 
-% keyboard
 param = getParam(param, guess, fixed);
 
 ntrials = length(data.heading);
@@ -23,11 +22,10 @@ muTnd = param(4);
 if numel(param)==5, theta = param(5); end
 
 kves = ks;
-kvis = [.666 1.5]*ks;
+kvis = [.666*ks 1.5*ks];
 
 sigmaVes = sigma; % std of momentary evidence
 sigmaVis = [sigma sigma]; % allow for separate sigmas for condition, coherence
-% Tnd = 0.4; % non-decision time (or make this the mean of a dist?)
 
 sdTnd = 60; % fixed SD
 Tnds = muTnd + randn(ntrials,1).*sdTnd;
@@ -83,16 +81,16 @@ for n = 1:ntrials
     
     switch modality(n)
         case 1
-            mu = kves * sind(hdg(n)) / 1000; % mean of momentary evidence
+            mu = acc .* kves * sind(hdg(n)) / 1000; % mean of momentary evidence
                 % (I'm guessing drift rate in images_dtb is per second, hence div by 1000)
             s = [sigmaVes sigmaVes]; % standard deviaton vector (see below)
         case 2
-            mu = kvis(cohs==coh(n)) * sind(hdg(n)) / 1000;
+            mu = vel .* kvis(cohs==coh(n)) * sind(hdg(n)) / 1000;
             s = [sigmaVis(cohs==coh(n)) sigmaVis(cohs==coh(n))];
         case 3
             % positive delta defined as ves to the left, vis to the right
-            muVes = kves               * sind(hdg(n)-delta(n)/2) / 1000;
-            muVis = kvis(cohs==coh(n)) * sind(hdg(n)+delta(n)/2) / 1000;
+            muVes = acc .* kves               * sind(hdg(n)-delta(n)/2) / 1000;
+            muVis = vel .* kvis(cohs==coh(n)) * sind(hdg(n)+delta(n)/2) / 1000;
 
             % optimal weights (Drugo et al.) 
             wVes = sqrt( kves^2 / (kvis(cohs==coh(n))^2 + kves^2) );
@@ -106,11 +104,13 @@ for n = 1:ntrials
             s = [sigmaComb sigmaComb];
     end
 
-    Mu = [mu,-mu]; % mean vector for 2D DV
-     
+%     Mu = [mu,-mu]; % mean vector for 2D DV
+    Mu = [mu; -mu]';
+    
     % convert correlation to covariance matrix
     V = diag(s)*S*diag(s);
-    dv = [0 0; cumsum(mvnrnd(Mu,V,dur(n)-1))]; % bivariate normrnd
+%     dv = [0 0; cumsum(mvnrnd(Mu,V,dur(n)-1))]; % bivariate normrnd
+    dv = [0 0; cumsum(mvnrnd(Mu,V))];
     % because Mu is signed according to heading (positive=right),
     % dv(:,1) corresponds to evidence favoring rightward, not evidence
     % favoring the correct decision (as in Kiani eqn. 3 and images_dtb)
@@ -138,9 +138,13 @@ for n = 1:ntrials
             % if neither hits bound? for now take the (abs) maximum,
             % ie whichever was closest to hitting bound. (alternative
             % would be their average?)
+            % SJ 07/2020 finalV is technically distance of loser from bound (when winner
+            % hits), so in this case, should also account for where winner is wrt bound 
         whichWon = dv(end,:)==max(dv(end,:));
-        finalV(n) = dv(end,~whichWon); % the not-whichWon is the loser
-        % % finalV(n) = mean(dvEnds);
+%         finalV(n) = dv(end,~whichWon); % the not-whichWon is the loser
+        % % finalV(n) = mean(dvEnds); 
+        finalV(n) = dv(end,~whichWon) + B-dv(end,whichWon); % 
+
         hitBound(n) = 0;
         a = [1 -1];
         choice(n) = a(whichWon);
@@ -230,8 +234,11 @@ end
 end
 
 % kluge to avoid log(0) issues
-Pr_model(Pr_model==0) = min(Pr_model(Pr_model~=0)); 
-Pr_model(Pr_model==1) = max(Pr_model(Pr_model~=1));
+% Pr_model(Pr_model==0) = min(Pr_model(Pr_model~=0)); 
+% Pr_model(Pr_model==1) = max(Pr_model(Pr_model~=1));
+Pr_model(Pr_model==0) = eps; 
+Pr_model(Pr_model==1) = 1-eps;
+
 LL_choice = sum(log(Pr_model(choiceD))) + sum(log(1-Pr_model(~choiceD)));
 
 % likelihood of mean RTs and mean confidence ratings for each condition, under Gaussian approximation

@@ -108,8 +108,9 @@ else
     end
     end
 end
-data = rmfield(data,'saccEndPoint'); % either way, this gets removed
-
+if isfield(data,'saccEndPoint')
+    data = rmfield(data,'saccEndPoint'); % either way, this gets removed
+end
 
 disp('done.');
 

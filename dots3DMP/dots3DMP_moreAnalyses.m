@@ -247,7 +247,7 @@ if exportfigs; export_fig('medianSplit4','-eps'); end
 %% for RT, try kiani 2014 analysis:
 % plot conf as a function of RT quantile, separately for abs(hdg)
 
-sim=1;
+sim=0;
 
 % FOR SIM ONLY: exclude capped values (maxDur+Tnd, often 2300)
 if sim

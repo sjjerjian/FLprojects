@@ -1,6 +1,6 @@
 % very simple PPC/likelihood-based decoding
 
-dirAxis = 0:360;
+dirAxis = 0:359;
 clr = {'k-','b-','g-','c-','m-','r-'};
 P = nan(nTrials,length(dirAxis));
 choice = nan(nTrials,1);
@@ -16,7 +16,7 @@ kappaGuess = 5; % inverse variance term
 betaAll = nan(nTrials,3); % matrix for storing the fitted params
 errAll = nan(nTrials,1);
 
-gamma = 10; % threshold on inverse variance for betting high (arbitrary)
+gamma = 1; % threshold on inverse variance for betting high (arbitrary)
 
 % The model assumes a readout mechanism that 'knows' the tuning curves.
 % The idea is to compute the likelihood function (P(r|S) as a function

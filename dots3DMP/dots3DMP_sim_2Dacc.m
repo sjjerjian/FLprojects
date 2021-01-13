@@ -11,6 +11,9 @@
 clear
 close all
 
+RTtask = 1;
+conftask = 1; % 1 - sacc endpoint, 2 - PDW
+
 plotExampleTrials = 0;
 
 nreps = 200; % number of repetitions of each unique trial type
@@ -30,11 +33,10 @@ ks = 20; % scale factor, for quickly testing different k levels
 kves = ks;
 kvis = [.666*ks 1.5*ks]; % straddles vestibular reliability, by construction
 
-conftask = 1; % 1 - sacc endpoint, 2 - PDW
 theta = 1; % threshold for high bet in logOdds, ignored if conftask==1
     
-sigmaVes = 0.05; % std of momentary evidence
-sigmaVis = [0.05 0.05]; % allow for separate sigmas for condition, coherence
+sigmaVes = 0.01; % std of momentary evidence
+sigmaVis = [0.01 0.01]; % allow for separate sigmas for condition, coherence
     % set manually to get reasonable looking dv trajectories;
     % also affects peakiness/flatness of confidence curve
     
@@ -60,6 +62,26 @@ P =  images_dtb_2d(R);
 % uses method of images to compute PDF of the 2D DV, as in van den Berg et
 % al. 2016 (similar to Kiani et al. 2014)
 
+% create acceleration and velocity profiles (arbitrary for now)
+% SJ 04/2020
+% Hou et al. 2019, peak vel = 0.37m/s, SD = 210ms
+% 07/2020 lab settings...160cm in 1.3s, sigma=0.14
+vel = normpdf(1:duration,duration/2,210);
+vel = 0.37*vel./max(vel);
+acc = gradient(vel)*1000; % multiply by 1000 to get from m/s/ms to m/s/s
+
+% normalize
+vel = vel./max(vel);
+acc = abs(acc./max(acc)); % (and abs)
+
+origParams.ks = ks;
+origParams.sigma = sigmaVes;
+origParams.B = B;
+origParams.Tnd = muTnd;
+if conftask==2
+    origParams.theta = theta; % PDW only
+end
+
 %% build trial list
 
 [hdg, modality, coh, delta, ntrials] = dots3DMP_create_trial_list(hdgs,mods,cohs,deltas,nreps);
@@ -70,7 +92,6 @@ P =  images_dtb_2d(R);
     % the simulation is concerned) fixed duration with internal bounded
     % process (Kiani et al. 2008)
 dur = ones(ntrials,1) * duration;
-
 
 Tnds = muTnd + randn(ntrials,1).*sdTnd;
 
@@ -106,16 +127,16 @@ for n = 1:ntrials
     
     switch modality(n)
         case 1
-            mu = kves * sind(hdg(n)) / 1000; % mean of momentary evidence
+            mu = acc .* kves * sind(hdg(n)) / 1000; % mean of momentary evidence
                 % (I'm guessing drift rate in images_dtb is per second, hence div by 1000)
             s = [sigmaVes sigmaVes]; % standard deviaton vector (see below)
         case 2
-            mu = kvis(cohs==coh(n)) * sind(hdg(n)) / 1000;
+            mu = vel .* kvis(cohs==coh(n)) * sind(hdg(n)) / 1000;
             s = [sigmaVis(cohs==coh(n)) sigmaVis(cohs==coh(n))];
         case 3
             % positive delta defined as ves to the left, vis to the right
-            muVes = kves               * sind(hdg(n)-delta(n)/2) / 1000;
-            muVis = kvis(cohs==coh(n)) * sind(hdg(n)+delta(n)/2) / 1000;
+            muVes = acc .* kves               * sind(hdg(n)-delta(n)/2) / 1000;
+            muVis = vel .* kvis(cohs==coh(n)) * sind(hdg(n)+delta(n)/2) / 1000;
 
             % optimal weights (Drugo et al.) 
             wVes = sqrt( kves^2 / (kvis(cohs==coh(n))^2 + kves^2) );
@@ -129,11 +150,13 @@ for n = 1:ntrials
             s = [sigmaComb sigmaComb];
     end
 
-    Mu = [mu,-mu]; % mean vector for 2D DV
-
+%     Mu = [mu,-mu]; % mean vector for 2D DV
+    Mu = [mu; -mu]';
+    
     % convert correlation to covariance matrix
     V = diag(s)*S*diag(s);
-    dv = [0 0; cumsum(mvnrnd(Mu,V,dur(n)-1))]; % bivariate normrnd
+%     dv = [0 0; cumsum(mvnrnd(Mu,V,dur(n)-1))]; % bivariate normrnd
+    dv = [0 0; cumsum(mvnrnd(Mu,V))];
     % because Mu is signed according to heading (positive=right),
     % dv(:,1) corresponds to evidence favoring rightward, not evidence
     % favoring the correct decision (as in Kiani eqn. 3 and images_dtb)
@@ -162,9 +185,13 @@ for n = 1:ntrials
             % if neither hits bound? for now take the (abs) maximum,
             % ie whichever was closest to hitting bound. (alternative
             % would be their average?)
+            % SJ 07/2020 finalV is technically distance of loser from bound (when winner
+            % hits), so in this case, should also account for where winner is wrt bound 
         whichWon = dv(end,:)==max(dv(end,:));
-        finalV(n) = dv(end,~whichWon); % the not-whichWon is the loser
-        % % finalV(n) = mean(dvEnds);
+%         finalV(n) = dv(end,~whichWon); % the not-whichWon is the loser
+        % % finalV(n) = mean(dvEnds); 
+        finalV(n) = dv(end,~whichWon) + B-dv(end,whichWon); % 
+
         hitBound(n) = 0;
         a = [1 -1];
         choice(n) = a(whichWon);
@@ -199,6 +226,13 @@ for n = 1:ntrials
             figure(1000); set(gcf, 'Color', [1 1 1], 'Position', [100 100 350 375], 'PaperPositionMode', 'auto'); clf;
             
             plot(dv(1:round((RT(n)-Tnd)*1000),1),'k-','LineWidth',2); hold on; 
+            
+%             % temp:
+%             tM = 200;
+%             plot(1:tM,dv(1:tM,1),'k-','LineWidth',2); hold on; 
+%             plot(tM:round((RT(n)-Tnd)*1000),dv(tM:round((RT(n)-Tnd)*1000),1),'r-','LineWidth',2); hold on; 
+%             xlim([0 1000]);
+
             plot(1:length(dv),ones(1,length(dv))*B,'k-','LineWidth',4);
             xlabel('Time (ms)');
 %             ylabel('Accum. evidence for rightward');
@@ -250,7 +284,6 @@ pCorrect_total = (sum(choice==1 & hdg>0) + sum(choice==-1 & hdg<0)) / ntrials
 
 choice(choice==1) = 2; choice(choice==-1) = 1; % 1=left, 2=right
 
-conftask = 1;
 data.modality = modality;
 data.heading = hdg;
 data.coherence = coh;
@@ -259,7 +292,6 @@ data.choice = choice;
 data.RT = RT; % already in seconds
 data.conf = conf;
 
-RTtask = 1;
 
 
 %% plots
@@ -269,8 +301,6 @@ dots3DMP_plots
 
 % dots3DMP_parseData_splitConf
 % dots3DMP_plots_splitConf
-
-
 
 %% fit cumulative gaussians
 
@@ -299,12 +329,12 @@ options.fitMethod = 'fms';
 
     %   [ks sigma  B  Tnd theta]
 % fixed = [0 0 0 0];
-fixed = [0 1 0 1];
+fixed = [0 1 1 1];
 
 % initial guess (or hand-tuned params)
-ks = 15;
-sigma = 0.05;
-B = 2;
+ks = 19.9;
+sigma = 0.01;
+B = 1.5;
 Tnd = 300;
 theta = 1; % PDW only
 
@@ -318,12 +348,12 @@ guess = [ks sigma B Tnd];
 % ************************************
 
 % plot error trajectory (prob doesn't work with parallel fit methods)
-options.ploterr = 1;
+options.ploterr = 0;
 
 [X, err_final, fit, fitInterp] = dots3DMP_fitDDM(data,options,guess,fixed);
 
 % plot it!
-dots3DMP_plots_fit(data,fitInterp)
+% dots3DMP_plots_fit(data,fitInterp)
 
 
 

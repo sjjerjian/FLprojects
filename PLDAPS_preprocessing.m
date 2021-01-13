@@ -13,13 +13,15 @@ clear all
 
 %% decide which files to load
 
-% subject = 'hanzo';
-% paradigm = 'Dots';
-% dateRange = 20190401:20200315; % 
-% 
-% % % Warning: error loading hanzo20191011Dots1341.PDS
+subject = 'hanzo';
+paradigm = 'Dots';
+dateRange = 20201201:20201202;
+% dateRange = 20200101:20200731;
+% dateRange = 20200728:20200922;
+% dateRange = 20200101:20200731;
 
 
+% % Warning: error loading hanzo20191011Dots1341.PDS
 
 % subject = 'human';
 % paradigm = 'dots3DMP';
@@ -57,8 +59,14 @@ createDataStructure
 
 %% optional: save data struct to a mat file so you don't have to repeat the time consuming step
 file = [subject '_' num2str(dateRange(1)) '-' num2str(dateRange(end)) '.mat'];
+
+data = rmfield(data,'dotPos'); % CAREFUL
+
 save([localDir(1:length(localDir)-length(subject)-1) file], 'data');
 
+% otherwise for larger files will need: 
+% save([localDir(1:length(localDir)-length(subject)-1) file], 'data','-v7.3');
 
 
+disp('done.');
 

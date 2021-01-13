@@ -1,6 +1,5 @@
 function [X, err_final, fit, fitInterp] = dots3DMP_fitDDM(data,options,guess,fixed)
 
-
 % parameter bounds for fitting
 LB = guess/4;
 UB = guess*4;
@@ -17,9 +16,9 @@ else
     
 switch options.fitMethod
     case 'fms'
-        fitOptions = optimset('Display', 'final', 'MaxFunEvals', 500*sum(fixed==0), 'MaxIter', ... 
+        fitOptions = optimset('Display', 'iter', 'MaxFunEvals', 500*sum(fixed==0), 'MaxIter', ... 
             500*sum(fixed==0), 'TolX', 1e-3, 'TolFun', 1e-2, 'UseParallel', 'Always');
-        [X, ~] = fminsearch(@(x) dots3DMP_fit_2Dacc_err(x,guess,fixed,data,options), guess(fixed==0), fitOptions);
+        [X, ~, exitflag] = fminsearch(@(x) dots3DMP_fit_2Dacc_err(x,guess,fixed,data,options), guess(fixed==0), fitOptions);
 
     case 'global'
         % GlobalSearch from Global Optimization Toolbox
@@ -28,7 +27,7 @@ switch options.fitMethod
             'FinDiffType','central',...
             'UseParallel','always');
         problem = createOptimProblem('fmincon','x0',guess(fixed==0),'objective',...
-            @(x) dots3DMP_fitDDM_err(x,data,options),'lb',LB(fixed==0),...
+            @(x) dots3DMP_fit_2Dacc_err(x,guess,fixed,data,options),'lb',LB(fixed==0),...
             'ub',UB(fixed==0),'options',fitOptions);
         gs = GlobalSearch;
         [X,~,~,~,~] = run(gs,problem);      
@@ -40,9 +39,10 @@ switch options.fitMethod
             'FinDiffType','central',...
             'UseParallel','always');
         problem = createOptimProblem('fmincon','x0',guess(fixed==0),'objective',...
-            @(x) dots3DMP_fitDDM_err(x,data,options),'lb',LB(fixed==0),...
+            @(x) dots3DMP_fit_2Dacc_err(x,guess,fixed,data,options),'lb',LB(fixed==0),...
             'ub',UB(fixed==0),'options',fitOptions);
-        ms = MultiStart('UseParallel','always');
+        ms = MultiStart('FunctionTolerance',2e-4,'XTolerance',5e-3,...
+            'StartPointsToRun','bounds-ineqs','UseParallel','always');
         [X,~,~,~,~] = run(ms,problem,200);    
     
     case 'pattern'
@@ -53,7 +53,7 @@ switch options.fitMethod
 %         [X,~,~,~] = patternsearch(@(x) dots3DMP_fitDDM_err(x,data,options),...
 %             guess(fixed==0),[],[],[],[],LB(fixed==0),UB(fixed==0),[],fitOptions);
         
-        [X,~,~,~] = patternsearch(@(x) dots3DMP_fit_2Dacc_err(x,data,options),...
+        [X,~,~,~] = patternsearch(@(x) dots3DMP_fit_2Dacc_err(x,guess,fixed,data,options),...
             guess(fixed==0),[],[],[],[],LB(fixed==0),UB(fixed==0),[],fitOptions);
         
     case 'bads'
