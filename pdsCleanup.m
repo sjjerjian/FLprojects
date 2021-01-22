@@ -24,7 +24,7 @@ fprintf(['\ncleaning up ' remoteFiles{n} '...']);
 try
     load([localDir remoteFiles{n}],'-mat');
 catch me
-    fprintf(' Could not load! Check file. Skipping...\n');
+    warning(' Could not load! File may be corrupt. Skipping...');
     return
 end
 

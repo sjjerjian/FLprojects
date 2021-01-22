@@ -2,8 +2,9 @@ function b = fitDDM_simple(stimval,choice,rt)
 
 % fit choice+RT data to simple 1D DDM
 % CRF circa 2013
+% see Shadlen et al, 2006 book chapter
 
-% stimStr: stimulus strength (eg coh), on a signed axis
+% stimval: stimulus strength (eg coh), on a signed axis
 % choice: 0 (left) or 1 (right)
 
 % the model has three free parameters:
@@ -11,11 +12,11 @@ function b = fitDDM_simple(stimval,choice,rt)
 % B : height of the bound, or threshold, for decision termination
 % Tnd : non-decision time (ms)
 
-% mean of momentary evidence is k*stimStr
+% mean of momentary evidence is k*stimval
 % standard deviation of momentary evidence is assumed to be 1
 
-%     keyboard
-    
+keyboard
+
 us = unique(stimval);
 pRight = nan(length(us),1);
 pRight_se = nan(length(us),1);
@@ -30,8 +31,8 @@ for s = 1:length(us)
     else
         pRight(s) = sum(choice(I)==1) / sum(I); % 2 is rightward
         pRight_se(s) = sqrt(pRight(s)*(1-pRight(s)) / sum(I)); % formula for standard error of a proportion
-        RTmean(s) = mean(rt(I));
-        RTse(s) = std(rt(I))/sqrt(sum(I));
+        RTmean(s) = nanmean(rt(I));
+        RTse(s) = nanstd(rt(I))/sqrt(sum(~isnan(rt(I))));
     end
 end
 removeStimvals = isnan(pRight);
@@ -54,7 +55,7 @@ figure; errorbar(us,RTmean,RTse,'ro-');
 % params: initial guess
     % when stimval is coherence from -1..1, k is around 0.5
     % so to estimate k for a different X variable, say heading, 
-    % simply scale it down by a factor of max(stimStr)
+    % simply scale it down by a factor of max(stimval)
     % (this is tricky though because it trades off w the bound)
 
 x = [0.5/max(stimval) 30 300]; % k, B, Tnd

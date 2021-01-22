@@ -77,8 +77,8 @@ for d = 1:length(dateRange)
                     clear PDS
                 end
             
-            catch
-                warning(['error loading ' allFiles(f).name ' -- skipping']);
+            catch me
+                warning(['Could not load ' allFiles(f).name '. File may be corrupt -- skipping']);
             end
 
         end

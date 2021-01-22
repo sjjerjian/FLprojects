@@ -46,7 +46,7 @@ options.plot = false;
 [X, LL_final, data, fit] = fitDDM_wConfidence_simple(D,options,guess,fixed);
 
 
-% plot data and compare to fits
+%% plot data and compare to fits
 
 ucoh = unique(data.strength);
 pRight = nan(length(ucoh),1);
