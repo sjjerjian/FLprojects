@@ -28,8 +28,7 @@ function [err,data] = err_fcn_combined_wConf(param, data, options)
 % % %     end
     
         % define the grid resolution for time and decision variable
-    dt = 0.1; % 0.1 ms seems to work best for FP4 even though
-              % we don't store the vars at this resolution
+    dt = 0.1; % 0.1 ms seems to work best for FP4, even though we don't store the vars at this resolution
     dx = min(0.1, B/100);
         % define the time axis 
     max_dur = max(data.dur);
@@ -170,15 +169,13 @@ function [err,data] = err_fcn_combined_wConf(param, data, options)
         if n>20; set(h,'LineColor','none'); end
         xlabel('t (ms)'); ylabel('x');
     end
-
-    % add a new field to data to make sure that we don't repeat the calculations for
-    % trials with similar duration, and stimulus strength
-    data.processed = zeros(size(data.strength));
-    data.expectedPright = nan(size(data.strength));
-    data.expectedPhigh = nan(size(data.strength));
     
     
     % accumulate log likelihood
+    data.expectedPright = nan(size(data.strength));
+    data.expectedPrightHigh = nan(size(data.strength));
+    data.expectedPrightLow = nan(size(data.strength));
+    data.expectedPhigh = nan(size(data.strength));
     try
         n = 0;
         LL = 0;
@@ -187,7 +184,6 @@ function [err,data] = err_fcn_combined_wConf(param, data, options)
             Ptb = Ptb_coh(:,:,s); % time * bound
             Pxt = Pxt_coh(:,:,s); % xmesh * time
 
-            keyboard
             % calculate probabilities of the four outcomes: right/left x high/low,
             % as a function of time (dur)
             PrightHigh = cumsum(Ptb(:,2).*(bet_high_tb(:,2)==1)) + ...
@@ -203,6 +199,7 @@ function [err,data] = err_fcn_combined_wConf(param, data, options)
                         sum(Pxt(xmesh<0,:).*(bet_high_xt(xmesh<0,:)==0),1)' + ...
                         0.5*(Pxt(xmesh==0,:).*(bet_high_xt(xmesh==0,:)==0))';
 
+% % %             % temp: plot the probability of the 4 outcomes as a function of time
 % % %             figure; hold on; 
 % % %             plot(PrightHigh,'b-'); plot(PrightLow,'b--');
 % % %             plot(PleftHigh,'r-'); plot(PleftLow,'r--');
@@ -226,7 +223,7 @@ function [err,data] = err_fcn_combined_wConf(param, data, options)
                 PleftLow = PleftLow./Ptot;
             end
 
-            %adjust the probabilities for the base rate of low-conf bets:
+            % adjust the probabilities for the base rate of low-conf bets:
             % the idea is that Phigh and Plow each get adjusted down/up in
             % proportion to how close they are to 1 or 0, respectively
             Phigh = PrightHigh + PleftHigh;
@@ -241,7 +238,7 @@ function [err,data] = err_fcn_combined_wConf(param, data, options)
             PleftLow = (PleftLow./Plow) .* Plow2;
             
             % offset to avoid negative P, then renormalize
-                %[even this shouldn't be necessary now!]
+            %[even this shouldn't be necessary now!]
             minP = min([PrightHigh ; PrightLow ; PleftHigh; PleftLow]);
             if minP<0
                 warning('shouldn''t happen'); keyboard
@@ -255,17 +252,16 @@ function [err,data] = err_fcn_combined_wConf(param, data, options)
             PrightLow = PrightLow./Ptot;
             PleftHigh = PleftHigh./Ptot;
             PleftLow = PleftLow./Ptot;
-
             
-                %mark the trials that should be processed now
+            % calculate expected p(Right) and P(high), given the durs
             I = data.strength==strength_set(s);
-            % calculate expected p(Right) and P(high), for basic
-            % comparison plots vs data (can do all 4 combos too)
             dur = data.dur(I);
             data.expectedPright(I) = (PrightHigh(dur) + PrightLow(dur)) ./ (PrightHigh(dur) + PrightLow(dur) + PleftHigh(dur) + PleftLow(dur));
             data.expectedPhigh(I) = (PrightHigh(dur) + PleftHigh(dur)) ./ (PrightHigh(dur) + PrightLow(dur) + PleftHigh(dur) + PleftLow(dur));
-
-                %update log-likelihood 
+            data.expectedPrightHigh(I) = PrightHigh(dur) ./ (PrightHigh(dur) + PleftHigh(dur));
+            data.expectedPrightLow(I) = PrightLow(dur) ./ (PrightLow(dur) + PleftLow(dur));
+            
+            % update log-likelihood 
             dur_rightHigh = data.dur(I & data.choice==1 & data.conf==1);
             dur_rightLow = data.dur(I & data.choice==1 & data.conf==0);
             dur_leftHigh = data.dur(I & data.choice==0 & data.conf==1);
@@ -291,16 +287,18 @@ function [err,data] = err_fcn_combined_wConf(param, data, options)
 
     err = -LL;
 
-    %print progress report!
-    fprintf('\n\n\n****************************************\n');
-    fprintf('run %d\n', call_num);
-    fprintf('\tk= %g\n\tB= %g\n\ttheta= %g\n\talpha= %g\n', k, B, theta, alpha);
-    fprintf('err: %f\n', err);
-    fprintf('number of processed trials: %d\n', n);
+    %print progress report
+    if options.feedback
+        fprintf('\n\n\n****************************************\n');
+        fprintf('run %d\n', call_num);
+        fprintf('\tk= %g\n\tB= %g\n\ttheta= %g\n\talpha= %g\n', k, B, theta, alpha);
+        fprintf('err: %f\n', err);
+        fprintf('number of processed trials: %d\n', n);
+    end
 
-    if options.feedback>0
+    if options.feedback==2
         figure(options.fh);
-        plot(call_num, err, '.','MarkerSize',12);
+        plot(call_num, err, '.','MarkerSize',14);
         drawnow;
     end
     call_num = call_num + 1;

@@ -1,7 +1,7 @@
 function b = fitDDM_simple(stimval,choice,rt)
 
 % fit choice+RT data to simple 1D DDM
-% CRF circa 2013
+% CF circa 2013
 % see Shadlen et al, 2006 book chapter
 
 % stimval: stimulus strength (eg coh), on a signed axis
@@ -15,7 +15,7 @@ function b = fitDDM_simple(stimval,choice,rt)
 % mean of momentary evidence is k*stimval
 % standard deviation of momentary evidence is assumed to be 1
 
-keyboard
+rt = rt*1000; % initial guesses (and other assumptions?) assume ms not s
 
 us = unique(stimval);
 pRight = nan(length(us),1);
@@ -49,16 +49,17 @@ choice(removeTrials) = [];
 stimval(removeTrials) = [];
 rt(removeTrials) = [];
 
-figure; errorbar(us,pRight,pRight_se,'o-');
-figure; errorbar(us,RTmean,RTse,'ro-');
+% figure; errorbar(us,pRight,pRight_se,'o-');
+% figure; errorbar(us,RTmean,RTse,'ro-');
 
 % params: initial guess
-    % when stimval is coherence from -1..1, k is around 0.5
+    % when stimval is coherence from -1..1, k is around 0.4
     % so to estimate k for a different X variable, say heading, 
-    % simply scale it down by a factor of max(stimval)
+    % simply scale it up/down by a factor of max(stimval) (*2 to account
+    % for the fact that max(stimval) is about half the theoretical max)
     % (this is tricky though because it trades off w the bound)
 
-x = [0.5/max(stimval) 30 300]; % k, B, Tnd
+x = [0.4/(2*max(stimval)) 30 300]; % k, B, Tnd
 
 % for debugging/teaching:
 initialErr = err_fcn_combined(x,choice,stimval,RTmean,RTse)
@@ -107,20 +108,22 @@ Tnd = x(3);
  % sometimes ones and zeros are not treated as logicals, so force them to be
 choice=logical(choice);
 
-% calculate expected probability of rightward choice given model params
-% Eq. from Shadlen et al. 2006 book chapter:
+% calculate expected probability of rightward choice, and expected mean RT,
+% given model params; Eqs. from Shadlen et al. 2006 book chapter:
 Pr_model = 1 ./ (1 + exp(-2*k*B*stimval));
 meanPr_model = 1 ./ (1 + exp(-2*k*B*unique(stimval)));
 
 meanRT_model = B./(k*unique(stimval)) .* tanh(k*B*unique(stimval)) + Tnd;
-meanRT_model(unique(stimval)==0) = B^2 + Tnd;
+meanRT_model(unique(stimval)==0) = B^2 + Tnd; % the limit as coh->0
+
 
 % likelihood is the expected Pright for trials with a rightward choice,
-% plus 1-Pright for trials with a leftward choice.
-% The joint probability would be computed as the product, so total logL is
-% the sum of the logs
+% plus 1-Pright for trials with a leftward choice. The joint probability
+% would be computed as the product, so total logL is the sum of the logs
 LL_choice = sum(log(Pr_model(choice))) + sum(log(1-Pr_model(~choice)));
 
+
+% *****************************
 % Alternatively, you can compute LL on the proportions, not individual
 % trials. In general this is not ideal, but it may be necessary in this
 % case because we're fitting the mean RTs and combining LL for RT and
@@ -135,16 +138,19 @@ end
     % ^ n's are generally too big for explicit factorial; approximate with gammaln
 % % % LL_choice = sum( gammaln(n+1) - gammaln(r+1) - gammaln(n-r+1) + r.*log(meanPr_model'+eps) + (n-r).*log(1-meanPr_model'+eps) );
     % ^ comment out for now, see below
+% *****************************
 
+    
 % With choices, we could get away with a relatively simple calculation of
 % the likelihood because binary outcomes with some probability have a known
 % distribution, called the Bernoulli distribution (a special case of the
 % binomial distribution for n = 1).
 
 % For RT it's harder because we don't know the underlying distribution of
-% individual RTs. The sampling distribution of *mean* RT is, conveniently,
-% Gaussian, by the central limit theorem. So we'll use the Gaussian
-% approximation to calculate likelihood of mean RTs under the model params.
+% the random variable of which each RT is a realization. The sampling
+% distribution of *mean* RT is, conveniently, Gaussian, by the central
+% limit theorem. So we'll use the Gaussian approximation to calculate
+% likelihood of mean RTs under the model params.
 
 % Palmer et al. 2005, Eq. 3 & A.34+A.35 (assume zero variance in Tr aka Tnd
 mu = abs(k*us); % this is mu-prime in Palmer
@@ -152,9 +158,13 @@ VarRT = (B*tanh(B*mu) - B*mu.*sech(B*mu)) ./ mu.^3;
 VarRT(us==0) = 2/3 * B^4; % Eq. limiting case for coh=0
 sigmaRT = sqrt(VarRT./n'); % equation in text above Eq 3
 
-% % or, simply grab the standard error of the mean from the data, which we 
-% % passed into this function (not sure when this is okay)
-% sigmaRT = sigmaRT_fromData;
+
+% % *****************************
+% % OR, simply grab the standard error of the mean from the data, which we 
+% % passed into this function (not sure when this is a valid approach)
+sigmaRT = sigmaRT_fromData;
+% % *****************************
+
 
 % either way, LL is calculated with the Gaussian equation (Palmer Eq 3):
 L_RT = 1./(sigmaRT*sqrt(2*pi)) .* exp(-(meanRT_model - meanRT).^2 ./ (2*sigmaRT.^2));
@@ -162,7 +172,7 @@ L_RT = 1./(sigmaRT*sqrt(2*pi)) .* exp(-(meanRT_model - meanRT).^2 ./ (2*sigmaRT.
     % otherwise the log will give you infinity
     L_RT(L_RT==0) = min(L_RT(L_RT~=0));
 LL_RT = sum(log(L_RT));
-     % alternate version: don't know where this comes from
+     % alternate version: don't remember where this comes from
 % LL_RT = -( sum((meanRT - meanRT_model).^2./(2.*sigmaRT.^2)) + length(meanRT)./2.*log(2.*pi) + sum(log(sigmaRT)) )
 
 % Lastly, although we want to maximize the likelihood, optimization
@@ -171,11 +181,10 @@ LL_RT = sum(log(L_RT));
 
 err = -(LL_choice + LL_RT);
 
-
-% but wait -- LL_choice is almost an order of magnitude greater than LL_RT,
-% even though we did both on the means not indiv trials. Is this okay? If
-% we use indiv trials for choice, it puts LL_choice closer to the value of
-% LL_RT -- is that better? 
+% interesting that these two components of LL are of the same order of
+% magnitude, even though choice LL is computed on individual trials, and on
+% the means for RT.  If we did LL_RT on indiv trials, wouldn't they
+% contribute vastly differently to the total LL?
 
 
 end

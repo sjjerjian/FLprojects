@@ -1,7 +1,7 @@
                                   
 % Miguel's (Hanzo) data
 
-clear all
+clear all; close all
 load Hanzo_Confidence
 
 validTrials = ~isnan(signCoherence) & ~isnan(RT) & ~isnan(choice) & ...
@@ -27,11 +27,19 @@ options.fitMethod = 'fms';
 fixed = [0 0 0 0];
 
 
-% initial guess (or hand-tuned params)
-k = 0.5; % sensitivity parameter
-B = 30; % bound height
-theta = 1.6; % criterion (in log odds correct) for betting high
-alpha = 0.1; % base rate of low-bet choices
+% % initial guess (or hand-tuned params)
+% k = 0.5; % sensitivity parameter
+% B = 30; % bound height
+% theta = 1.6; % criterion (in log odds correct) for betting high
+% alpha = 0.1; % base rate of low-bet choices
+
+
+% best-fit values, but visually worse! get to the bottom of this!
+k = 0.62; % sensitivity parameter
+B = 14.65; % bound height
+theta = 1.21; % criterion (in log odds correct) for betting high
+alpha = 0.12; % base rate of low-bet choices
+
 
 guess = [k B theta alpha];
 
@@ -40,8 +48,10 @@ guess = [k B theta alpha];
 fixed(:)=1;
 % ************************************
 
-options.feedback = false;
-options.plot = false;
+
+options.feedback = 1; % 1 = text output to cmd window, 2 = that and plot LL across runs
+options.plot = 0; % plot the marginal PDFs, logOddsCorr map, and high/low bet regions (only makes sense for fixed(:)=1)
+
 
 [X, LL_final, data, fit] = fitDDM_wConfidence_simple(D,options,guess,fixed);
 

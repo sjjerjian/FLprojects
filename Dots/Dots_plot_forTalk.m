@@ -1,5 +1,7 @@
 
+
 % Dots_fit_cgauss % fix this later
+
 useGauss = 0;
 
 figure(105); set(gcf,'Color',[1 1 1],'Position',[50 20 360 320],'PaperPositionMode','auto'); clf;

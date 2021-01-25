@@ -9,16 +9,16 @@ clear all; close all
 subject = 'hanzo';
 
 % all Hanzo good data
-% dateRange = 20190401:20200315; % good (PDW, not RT)
-% OR
-% dateRange = 20200101:20200731; % large rightward bias on low bets, where
-                                 % does it come from?
-% dateRange = 20200101:20200315; % same. gotta go month by month
+% dateRange = 20190401:20201231; % all 'good' data
 
 % Hanzo for R01
 % dateRange = 20200728:20200930; % great PDW; misnamed (not really up to 9/30)
-dateRange = 20200820:20200922; % really nice RT
+% dateRange = 20200820:20200922; % nice RT, but PDW kinda flat
 % dateRange = 20200901:20200922; % good for both, with TrNo<600 or even 800
+
+% some indiv months
+dateRange = 20190501:20190531; % var dur example
+% dateRange = 20201101:20201130; % RT example
 
 folder = '/Users/chris/Documents/MATLAB/PLDAPS_data/';
 file = [subject '_' num2str(dateRange(1)) '-' num2str(dateRange(end)) '.mat'];
@@ -111,7 +111,7 @@ se = sqrt(pHighSEcorr_all^2 + pHighSEerr_all^2);
 t = mu/se; 
 df = sum(~isnan(data.PDW))-length(B2); 
 pval_ttest_pHighCorrErr = 2*(1-tcdf(t,df)) % two-tailed
-% should really use a two-sample Z test for proportions...
+% [should really use a two-sample Z test for proportions?]
 
 
 
@@ -119,13 +119,108 @@ pval_ttest_pHighCorrErr = 2*(1-tcdf(t,df)) % two-tailed
 
 Dots_plot
 
-% for nicer looking graphs:
+
+% % for nicer looking graphs:
 % Dots_plot_forTalk
 
 
-%% fit simple DDM [code merge in progress]
+%% if var dur, check conf/accuracy vs. dur
+if sum(isnan(data.RT))>0.8*length(data.RT) % arbitrary minimum proportion of non-RT trials; eventually make it a flag
+    Dots_TDA;
+end
 
-% fitDDM_simple(data.scoh,data.choice-1,data.RT); % choice-1 because coded as 1=left, 2=right
+
+
+%% fit simple DDM
+
+% for RT data, can start here (ignores PDW, but a decent tutorial, based on
+% Shadlen et al. 2006 and Palmer et al. 2005)
+if sum(isnan(data.RT))<0.8*length(data.RT) % arbitrary minimum proportion of RT trials; eventually make it a flag
+    b = fitDDM_simple(data.scoh,data.choice-1,data.RT); % (choice-1 because coded as 1=left, 2=right)
+end
+
+
+%% for var-dur + PDW, switch to Kiani 09 method
+
+if sum(isnan(data.RT))>0.8*length(data.RT) % arbitrary minimum proportion of non-RT trials; eventually make it a flag
+
+    % rename some vars:
+    D.strength = data.scoh;
+    D.dur = round(data.duration*1000); % must be integers, in ms
+    D.choice = data.choice-1; 
+    D.conf = data.PDW;
+
+    options.fitMethod = 'fms'; % fminsearch
+    % options.fitMethod = 'global';
+    % options.fitMethod = 'multi';
+    % options.fitMethod = 'pattern';
+
+    % params: 
+    %        1 2 3
+    %       [k B theta alpha]
+    fixed = [0 0 0 0]; % can fix some params and fit the others
+
+    % % initial guess (or hand-tuned params)
+    k = 0.6; % sensitivity parameter
+    B = 15; % bound height
+    theta = 1.2; % criterion (in log odds correct) for betting high
+    alpha = 0.2; % base rate of low-bet choices
+
+    guess = [k B theta alpha];
+
+    % ************************************
+    % set all fixed to 1 for hand-tuning:
+    fixed(:)=1;
+    % ************************************
+
+    options.feedback = 1; % 1 = text output to cmd window, 2 = that and plot LL across runs
+    options.plot = 0; % plot the marginal PDFs, logOddsCorr map, and high/low bet regions (only makes sense for fixed(:)=1)
+
+    % fit it!
+    [X, LL_final, D, fit] = fitDDM_wConfidence_simple(D,options,guess,fixed);
+        
+    % plot the fits and compare to data
+    cohs_fit = unique(fit.strength);
+    pRight_model = nan(length(cohs_fit),1);
+    pRightHigh_model = nan(length(cohs_fit),1);
+    pRightLow_model = nan(length(cohs_fit),1);
+    pHigh_model = nan(length(cohs_fit),1);
+    for c = 1:length(cohs_fit)
+        I = fit.strength==cohs_fit(c);
+        pRight_model(c) = mean(fit.expectedPright(I));
+        pRightHigh_model(c) = mean(fit.expectedPrightHigh(I));
+        pRightLow_model(c) = mean(fit.expectedPrightLow(I));
+        pHigh_model(c) = mean(fit.expectedPhigh(I));
+    end
+    
+    figure; set(gcf,'Position',[86 925 1070 420]);
+    subplot(1,2,1);
+%     errorbar(cohs,pRight,pRightSE,'bo');
+%     hold on; plot(cohs_fit,pRight_model,'c--');
+    errorbar(cohs, pRightHigh, pRightSEhigh, 'bo', 'MarkerFaceColor', 'b'); hold on;
+    errorbar(cohs, pRightLow, pRightSElow, 'bo', 'MarkerFaceColor', 'w');
+    plot(cohs_fit,pRightHigh_model,'c-');
+    plot(cohs_fit,pRightLow_model,'c--');
+    xlabel('motion strength (%coh)');
+    ylabel('proportion rightward choices');
+
+    subplot(1,2,2); errorbar(cohs,pHigh,pHighSE,'ro');
+    hold on; plot(cohs_fit,pHigh_model,'m--'); ylim([0 1]);
+    xlabel('motion strength (%coh)');
+    ylabel('proportion high bets');
+    
+end
+
+
+%% for fitting RT+PDW, need to switch to 2D (anticorrelated race) model, e.g. Kiani et al. 2014
+if sum(isnan(data.RT))<0.8*length(data.RT) % arbitrary minimum proportion of RT trials; eventually make it a flag
+
+    % [to be merged from dots3DMP track]
+
+end
+
+
+
 
 
 

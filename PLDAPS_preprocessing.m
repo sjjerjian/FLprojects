@@ -40,8 +40,10 @@ paradigm = 'Dots';
 % dateRange = 20201101:20201130; % beautiful
 % dateRange = 20201201:20201231; % not as nice but small N
 
-dateRange = 20190401:20201231; % all 'good' data
+% dateRange = 20190401:20201231; % all 'good' data
 
+% dateRange = 20190401:20191130; % 'early'
+% dateRange = 20200801:20201231; % 'late';
 
 % % Warning: error loading hanzo20191011Dots1341.PDS
 % % Warning: error loading hanzo20200910Dots1221.PDS
