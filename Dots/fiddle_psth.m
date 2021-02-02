@@ -51,7 +51,7 @@ end
 % get rid of 5 and 3, 4 becomes 3
 data = data([1 2 4]);
 
-for s = 1:length(data)
+for s = 2 %:length(data) % just do one at a time for demo purposes
    
 %     % group cohs for simpler plots
 %     data{s}.coherence(data{s}.coherence>0.25) = 2;
@@ -130,12 +130,13 @@ for s = 1:length(data)
         ylabel('Firing rate (spikes/s)');
         ylim([0 YMax(s*10+n)]);
         changeAxesFontSize(gca, 22, 22);
-%         legend([h(1) h(2) h(3) h(4)],'strong left motion','weak left motion','weak right motion','strong right motion','Location','Northeast'); legend('boxoff');
-%         keyboard
+        legend([h(1) h(4) h(8) h(11)],'strong left motion','weak left motion','weak right motion','strong right motion','Location','Northeast'); legend('boxoff');
+              % ^ hard coded for 11 cohs, can try to make it more general?
+%         keyboard % to move legend before exporting fig
 %         export_fig([num2str(s*10+n) '_cohs_A'], '-eps');
         
             % aligned RT
-        figure(s*10+n+1000); set(gcf, 'Color', 'w', 'Position', [100+20*(s*10+n) 800 335 500], 'PaperPositionMode', 'auto');
+        figure(s*10+n+1000); set(gcf, 'Color', 'w', 'Position', [600+20*(s*10+n) 800 335 500], 'PaperPositionMode', 'auto');
         psth = calc_mean(raster_RT{n},data{s}.coherence', cohs')*1e3;
         psth = smoothRaster(psth, convKernel);
         tAxis = -(size(raster_RT{n},2)-offset-1) : offset;
@@ -159,7 +160,7 @@ for s = 1:length(data)
         
             % aligned dots-on
         clear psth;
-        J = abs(data{s}.coherence)<0.128; % weak motion only
+        J = abs(data{s}.coherence)<=0.032; % weak motion only, or else there's a confound; can also use residuals!
         I = J & data{s}.choice==1 & data{s}.pdw==1; % left-high
         psth(1,:) = smoothRaster(nanmean(raster_dotsOn{n}(I,:))*1e3, convKernel);
         I = J & data{s}.choice==1 & data{s}.pdw==0; % left-low
@@ -187,7 +188,7 @@ for s = 1:length(data)
 %         export_fig([num2str(s*10+n) '_confP_A'], '-eps');
 
             % aligned RT
-        figure(s*100+n+1000); set(gcf, 'Color', 'w', 'Position', [100+20*(s*10+n) 200 335 500], 'PaperPositionMode', 'auto');
+        figure(s*100+n+1000); set(gcf, 'Color', 'w', 'Position', [600+20*(s*10+n) 200 335 500], 'PaperPositionMode', 'auto');
         clear psth
         I = J & data{s}.choice==1 & data{s}.pdw==1; % left-high
         psth(1,:) = smoothRaster(nanmean(raster_RT{n}(I,:))*1e3, convKernel);
