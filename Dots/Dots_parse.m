@@ -35,15 +35,15 @@ for c = 1:length(cohs)
     % choice
     J = data.scoh==cohs(c);
     n1(c) = sum(J);
-    pRight(c) = sum(J & data.choice==2) / n1(c); % 1 is left, 2 is right
+    pRight(c) = sum(J & data.choice==1) / n1(c); % 0 is left, 1 is right
     
     JJ = data.scoh==cohs(c) & data.PDW==1;
     n2(c) = sum(JJ);
-    pRightHigh(c) = sum(JJ & data.choice==2) / n2(c); 
+    pRightHigh(c) = sum(JJ & data.choice==1) / n2(c); 
     
     JJJ = data.scoh==cohs(c) & data.PDW==0;
     n3(c) = sum(JJJ);
-    pRightLow(c) = sum(JJJ & data.choice==2) / n3(c); 
+    pRightLow(c) = sum(JJJ & data.choice==1) / n3(c); 
     
     % RT
     K = ~isnan(data.RT); % need to start tagging non-RT trials as NaN!
@@ -84,19 +84,19 @@ pHighSEerr = sqrt( (pHighErr.*(1-pHighErr)) ./ nPDW3 );
 
 % fit logistic regression
 X = data.scoh;
-y = data.choice==2; % 2 is right
+y = data.choice==1; % 1 is right
 [B1, ~, stats1] = glmfit(X, y, 'binomial');
 
 yVals1 = glmval(B1,xVals,'logit');
 
 I = data.PDW==1;
 X = data.scoh(I);
-y = data.choice(I)==2; % 2 is right
+y = data.choice(I)==1;
 [B2, ~, stats2] = glmfit(X, y, 'binomial');
 yVals2 = glmval(B2,xVals,'logit');
 
 I = data.PDW==0;
 X = data.scoh(I);
-y = data.choice(I)==2; % 2 is right
+y = data.choice(I)==1;
 [B3, ~, stats3] = glmfit(X, y, 'binomial');
 yVals3 = glmval(B3,xVals,'logit');

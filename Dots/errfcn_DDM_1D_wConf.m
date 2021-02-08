@@ -1,31 +1,32 @@
-function [err,data] = err_fcn_combined_wConf(param, data, options)
-
+function [err,data,fit] = errfcn_DDM_1D_wConf(param, guess, fixed, data, options)
+    
     tic
 
     global call_num
 
-%     param = getParam(param,guess,fixed); % ignore this for now
+    param = getParam(param, guess, fixed);
+
     k = param(1);
     B = abs(param(2)); % don't accept negative bound heights
     sigma = 1;
     theta = abs(param(3)); %or negative thetas
-    theta2 = theta; % allows expanded model with separate thetas for each choice
-    alpha = param(4); % base rate of low-conf choices (exploration?)
+    theta2 = theta; % allows expanded model with separate thetas for each choice (currently unused)
+    alpha = param(4); % base rate of low-conf choices
 
-        % get the stimulus strength levels, the frequency of each level and the maximum stimulus duration
-        % Note that strength must be signed for the algorithm to work properly 
-    strength_set = unique(data.strength);
-    strength_set_freq = nan(length(strength_set),1);        
-    for s = 1 : length(strength_set)
-        strength_set_freq(s) = sum(data.strength==strength_set(s))/length(data.strength);
+    % get the stimulus coh levels, the frequency of each level and the maximum stimulus duration
+    % Note that coh must be signed for the algorithm to work properly 
+    coh_set = unique(data.scoh);
+    coh_set_freq = nan(length(coh_set),1);        
+    for s = 1 : length(coh_set)
+        coh_set_freq(s) = sum(data.scoh==coh_set(s))/length(data.scoh);
     end
     
-% % %     % Miguel's idea: freq for marg should be based on unsigned coh
-% % %     strength_set_unsigned = unique(abs(data.strength));
-% % %     strength_set_freq = nan(length(strength_set_unsigned),1);        
-% % %     for s = 1 : length(strength_set_unsigned)
-% % %         strength_set_freq(s) = sum(abs(data.strength)==strength_set_unsigned(s))/length(data.strength);
-% % %     end
+%     % Miguel's idea: freq for marg should be based on unsigned coh
+%     coh_set_unsigned = unique(abs(data.scoh));
+%     coh_set_freq = nan(length(coh_set_unsigned),1);        
+%     for s = 1 : length(coh_set_unsigned)
+%         coh_set_freq(s) = sum(abs(data.scoh)==coh_set_unsigned(s))/length(data.scoh);
+%     end
     
         % define the grid resolution for time and decision variable
     dt = 0.1; % 0.1 ms seems to work best for FP4, even though we don't store the vars at this resolution
@@ -54,10 +55,10 @@ function [err,data] = err_fcn_combined_wConf(param, data, options)
 
         % initialize:
     % probability of bound crossing as a function of time
-    Ptb_coh = zeros(max_dur, 2, length(strength_set));                % time * bound * signed_coh
+    Ptb_coh = zeros(max_dur, 2, length(coh_set));                % time * bound * signed_coh
     Ptb_coh_forMarginals = Ptb_coh;
     % probability density of decision variable (x) across time
-    Pxt_coh = zeros(length(xmesh), max_dur, length(strength_set));    % xmesh * time * signed_coh
+    Pxt_coh = zeros(length(xmesh), max_dur, length(coh_set));    % xmesh * time * signed_coh
     Pxt_coh_forMarginals = Pxt_coh;
     % marginal densities
     Ptb_marginal = zeros(max_dur, 2, 2);                            % time * bound * motion_direction(1 right, 2 left)
@@ -66,8 +67,8 @@ function [err,data] = err_fcn_combined_wConf(param, data, options)
 
        
         %run FP4 to calculate Ptb and Pxt for each coherence and stimulation condition 
-    for s = 1 : length(strength_set)
-        mu = k * strength_set(s);
+    for s = 1 : length(coh_set)
+        mu = k * coh_set(s);
         uinit = delta; % start with delta function
         % b_change is for time-varying (e.g. collapsing) bounds, which must be re-initialized after each call of FP4
         [b_change, ~] = bcinit(B,t,dt,'flat',NaN,NaN);
@@ -79,8 +80,8 @@ function [err,data] = err_fcn_combined_wConf(param, data, options)
 
         % repeat for marginals [in a separate loop to allow them to be computed
         % differently, for some more complicated models]
-    for s = 1 : length(strength_set)
-        mu = k * strength_set(s);
+    for s = 1 : length(coh_set)
+        mu = k * coh_set(s);
         uinit = delta;      %start with delta function
         [b_change, ~] = bcinit(B,t,dt,'flat',NaN,NaN);
         [~, ~, Ptb, ~, Pxt] = FP4(xmesh, uinit, mu, sigma, b_change, b_margin, dt);
@@ -90,17 +91,17 @@ function [err,data] = err_fcn_combined_wConf(param, data, options)
     
         % calculate the marginals (marginalize over coherence, separately for
         % each motion direction -- this depends on frequency of presentation)
-    for s = 1 : length(strength_set)
-        F = strength_set_freq(strength_set==strength_set(s));
-% % %         F = strength_set_freq(strength_set_unsigned==abs(strength_set(s))); % MVL
+    for s = 1 : length(coh_set)
+        F = coh_set_freq(coh_set==coh_set(s));
+% % %         F = coh_set_freq(coh_set_unsigned==abs(coh_set(s))); % MVL
         
             %now use Ptb and Pxt to calculate/update the marginal. 
         Pxt = Pxt_coh_forMarginals(:,:,s);
         Ptb = Ptb_coh_forMarginals(:,:,s);
-        if strength_set(s)>0         %rightward motion
+        if coh_set(s)>0         %rightward motion
             Ptb_marginal(:,:,1) = Ptb_marginal(:,:,1) + F*Ptb; % time * bound
             Pxt_marginal(:,:,1) = Pxt_marginal(:,:,1) + F*Pxt; % xmesh * time
-        elseif strength_set(s)<0     %leftward motion
+        elseif coh_set(s)<0     %leftward motion
             Ptb_marginal(:,:,2) = Ptb_marginal(:,:,2) + F*Ptb; % time * bound
             Pxt_marginal(:,:,2) = Pxt_marginal(:,:,2) + F*Pxt; % xmesh * time
         else                    %ambiguous motion
@@ -172,14 +173,14 @@ function [err,data] = err_fcn_combined_wConf(param, data, options)
     
     
     % accumulate log likelihood
-    data.expectedPright = nan(size(data.strength));
-    data.expectedPrightHigh = nan(size(data.strength));
-    data.expectedPrightLow = nan(size(data.strength));
-    data.expectedPhigh = nan(size(data.strength));
+    data.expectedPright = nan(size(data.scoh));
+    data.expectedPrightHigh = nan(size(data.scoh));
+    data.expectedPrightLow = nan(size(data.scoh));
+    data.expectedPhigh = nan(size(data.scoh));
     try
         n = 0;
         LL = 0;
-        for s = 1 : length(strength_set)
+        for s = 1 : length(coh_set)
             
             Ptb = Ptb_coh(:,:,s); % time * bound
             Pxt = Pxt_coh(:,:,s); % xmesh * time
@@ -254,7 +255,7 @@ function [err,data] = err_fcn_combined_wConf(param, data, options)
             PleftLow = PleftLow./Ptot;
             
             % calculate expected p(Right) and P(high), given the durs
-            I = data.strength==strength_set(s);
+            I = data.scoh==coh_set(s);
             dur = data.dur(I);
             data.expectedPright(I) = (PrightHigh(dur) + PrightLow(dur)) ./ (PrightHigh(dur) + PrightLow(dur) + PleftHigh(dur) + PleftLow(dur));
             data.expectedPhigh(I) = (PrightHigh(dur) + PleftHigh(dur)) ./ (PrightHigh(dur) + PrightLow(dur) + PleftHigh(dur) + PleftLow(dur));
@@ -262,10 +263,10 @@ function [err,data] = err_fcn_combined_wConf(param, data, options)
             data.expectedPrightLow(I) = PrightLow(dur) ./ (PrightLow(dur) + PleftLow(dur));
             
             % update log-likelihood 
-            dur_rightHigh = data.dur(I & data.choice==1 & data.conf==1);
-            dur_rightLow = data.dur(I & data.choice==1 & data.conf==0);
-            dur_leftHigh = data.dur(I & data.choice==0 & data.conf==1);
-            dur_leftLow = data.dur(I & data.choice==0 & data.conf==0);
+            dur_rightHigh = data.dur(I & data.choice==1 & data.PDW==1);
+            dur_rightLow = data.dur(I & data.choice==1 & data.PDW==0);
+            dur_leftHigh = data.dur(I & data.choice==0 & data.PDW==1);
+            dur_leftLow = data.dur(I & data.choice==0 & data.PDW==0);
             minP = 1e-300;
             LL = LL + sum(log(max(PrightHigh(dur_rightHigh),minP))) + sum(log(max(PrightLow(dur_rightLow),minP))) + ...
                       sum(log(max(PleftHigh(dur_leftHigh),minP)))   + sum(log(max(PleftLow(dur_leftLow),minP)));
@@ -286,6 +287,7 @@ function [err,data] = err_fcn_combined_wConf(param, data, options)
     end
 
     err = -LL;
+    fit = data; % fit isn't needed here, but keep for consistency w 2D
 
     %print progress report
     if options.feedback
@@ -296,7 +298,7 @@ function [err,data] = err_fcn_combined_wConf(param, data, options)
         fprintf('number of processed trials: %d\n', n);
     end
 
-    if options.feedback==2
+    if options.feedback==2 && strcmp(options.fitMethod,'fms')
         figure(options.fh);
         plot(call_num, err, '.','MarkerSize',14);
         drawnow;
@@ -306,4 +308,11 @@ function [err,data] = err_fcn_combined_wConf(param, data, options)
 end
 
 
+
+
+% retrieve the full parameter set given the adjustable and fixed parameters 
+function param2 = getParam(param1, guess, fixed)
+  param2(fixed==0) = param1(fixed==0);       %get adjustable parameters from param1
+  param2(fixed==1) = guess(fixed==1);   %get fixed parameters from guess
+end
 

@@ -1,6 +1,9 @@
                                   
 % Miguel's (Hanzo) data
 
+% KEEPING THIS ALIVE TO DIAGNOSE FIT ISSUE: why by eye a set of params
+% looks better but gives worse likelihoods
+
 clear all; close all
 load Hanzo_Confidence
 

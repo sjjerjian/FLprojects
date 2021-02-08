@@ -17,8 +17,8 @@ subject = 'hanzo';
 % dateRange = 20200901:20200922; % good for both, with TrNo<600 or even 800
 
 % some indiv months
-dateRange = 20190501:20190531; % var dur example
-% dateRange = 20201101:20201130; % RT example
+% dateRange = 20190501:20190531; % var dur example
+dateRange = 20201101:20201130; % RT example
 
 folder = '/Users/chris/Documents/MATLAB/PLDAPS_data/';
 file = [subject '_' num2str(dateRange(1)) '-' num2str(dateRange(end)) '.mat'];
@@ -57,7 +57,9 @@ data.scoh(data.direction==180) = -data.scoh(data.direction==180);
 
 % random fixes
 data.scoh(abs(data.scoh)<0.001)=0;
-
+if max(data.choice)==2
+    data.choice = data.choice-1; % ensure choice is 0 or 1 (sometimes coded as 1..2)
+end
 
 % % quick look at blocks, for when some need to be excluded
 % blocks = unique(data.filename);
@@ -119,104 +121,207 @@ pval_ttest_pHighCorrErr = 2*(1-tcdf(t,df)) % two-tailed
 
 Dots_plot
 
-
 % % for nicer looking graphs:
 % Dots_plot_forTalk
 
 
-%% if var dur, check conf/accuracy vs. dur
-if sum(isnan(data.RT))>0.8*length(data.RT) % arbitrary minimum proportion of non-RT trials; eventually make it a flag
-    Dots_TDA;
-end
+% %% if var dur, check conf/accuracy vs. dur
+% if sum(isnan(data.RT))>0.8*length(data.RT) % arbitrary minimum proportion of non-RT trials; eventually make it a flag
+%     Dots_TDA; % time-dependent accuracy function
+% end
 
 
 
-%% fit simple DDM
+%% fit simplest DDM
 
 % for RT data, can start here (ignores PDW, but a decent tutorial, based on
 % Shadlen et al. 2006 and Palmer et al. 2005)
 if sum(isnan(data.RT))<0.8*length(data.RT) % arbitrary minimum proportion of RT trials; eventually make it a flag
-    b = fitDDM_simple(data.scoh,data.choice-1,data.RT); % (choice-1 because coded as 1=left, 2=right)
+    [b,~] = fitDDM_simple(data.scoh,data.choice,round(data.RT*1000));
 end
+% seems to find local minima often -- may need multiple starting points
 
 
-%% for var-dur + PDW, switch to Kiani 09 method
 
-if sum(isnan(data.RT))>0.8*length(data.RT) % arbitrary minimum proportion of non-RT trials; eventually make it a flag
+%% fit DDM with confidence (with or without RT)
 
-    % rename some vars:
-    D.strength = data.scoh;
-    D.dur = round(data.duration*1000); % must be integers, in ms
-    D.choice = data.choice-1; 
-    D.conf = data.PDW;
 
-    options.fitMethod = 'fms'; % fminsearch
-    % options.fitMethod = 'global';
-    % options.fitMethod = 'multi';
-    % options.fitMethod = 'pattern';
+%****** first select which model to fit ********
+%
+% options.errfcn = @errfcn_DDM_1D_wConf; modelID=1; % 1D DDM with threshold on log odds, usually for var dur [Kiani 09 (FP4)]
+options.errfcn = @errfcn_DDM_2D_wConf; modelID=2; % 2D DDM aka anticorrelated race, for RT+conf [Kiani 14 / van den Berg 16 (WolpertMOI)]
+%
+%***********************************************
 
-    % params: 
-    %        1 2 3
-    %       [k B theta alpha]
-    fixed = [0 0 0 0]; % can fix some params and fit the others
 
-    % % initial guess (or hand-tuned params)
-    k = 0.6; % sensitivity parameter
-    B = 15; % bound height
-    theta = 1.2; % criterion (in log odds correct) for betting high
-    alpha = 0.2; % base rate of low-bet choices
+options.feedback = 1; % 1 = text output to cmd window, 2 = that, plus plot LL across runs
+options.plot = 0; % plot the marginal PDFs, logOddsCorr map, and high/low bet regions (only makes sense for fixed(:)=1)
 
-    guess = [k B theta alpha];
+% choose optimization method
+options.fitMethod = 'fms'; % fminsearch
+% options.fitMethod = 'global';
+% options.fitMethod = 'multi';
+% options.fitMethod = 'pattern';
+% % options.fitMethod = 'bads'; % not implemented yet, see dots3DMP for work-in-progress
 
-    % ************************************
-    % set all fixed to 1 for hand-tuning:
-    fixed(:)=1;
-    % ************************************
-
-    options.feedback = 1; % 1 = text output to cmd window, 2 = that and plot LL across runs
-    options.plot = 0; % plot the marginal PDFs, logOddsCorr map, and high/low bet regions (only makes sense for fixed(:)=1)
-
-    % fit it!
-    [X, LL_final, D, fit] = fitDDM_wConfidence_simple(D,options,guess,fixed);
+% params: 
+switch modelID
+    case 1 %errfcn_DDM_1D_wConf
         
-    % plot the fits and compare to data
-    cohs_fit = unique(fit.strength);
-    pRight_model = nan(length(cohs_fit),1);
-    pRightHigh_model = nan(length(cohs_fit),1);
-    pRightLow_model = nan(length(cohs_fit),1);
-    pHigh_model = nan(length(cohs_fit),1);
-    for c = 1:length(cohs_fit)
-        I = fit.strength==cohs_fit(c);
-        pRight_model(c) = mean(fit.expectedPright(I));
-        pRightHigh_model(c) = mean(fit.expectedPrightHigh(I));
-        pRightLow_model(c) = mean(fit.expectedPrightLow(I));
-        pHigh_model(c) = mean(fit.expectedPhigh(I));
-    end
-    
-    figure; set(gcf,'Position',[86 925 1070 420]);
-    subplot(1,2,1);
-%     errorbar(cohs,pRight,pRightSE,'bo');
-%     hold on; plot(cohs_fit,pRight_model,'c--');
-    errorbar(cohs, pRightHigh, pRightSEhigh, 'bo', 'MarkerFaceColor', 'b'); hold on;
-    errorbar(cohs, pRightLow, pRightSElow, 'bo', 'MarkerFaceColor', 'w');
-    plot(cohs_fit,pRightHigh_model,'c-');
-    plot(cohs_fit,pRightLow_model,'c--');
-    xlabel('motion strength (%coh)');
-    ylabel('proportion rightward choices');
+        % initial guess (or hand-tuned params)
+        k = 0.6; % sensitivity parameter
+        B = 15; % bound height
+        theta = 1.2; % criterion (in log odds correct) for betting high
+        alpha = 0.2; % base rate of low-bet choices
 
-    subplot(1,2,2); errorbar(cohs,pHigh,pHighSE,'ro');
-    hold on; plot(cohs_fit,pHigh_model,'m--'); ylim([0 1]);
-    xlabel('motion strength (%coh)');
-    ylabel('proportion high bets');
-    
+        guess = [k B theta alpha];
+        fixed = [0 0 0     0]; % can fix some params and fit the others, or fix all to hand-tune
+
+        data.dur = round(data.duration*1000); % dur must be integer valued (in ms)
+        
+    case 2 %errfcn_DDM_2D_wConf
+        
+        k = 7;
+        B = 1.5;
+        theta = 1;
+        alpha = 0.2; % base rate of low-bet choices
+        Tnd = 0.3; % non-decision time
+
+        guess = [k B theta alpha Tnd];
+        fixed = [0 0 0     0     0];
+        
+%    case [others yet to be written: extrema, snapshot, SDT models,...]
+
 end
 
+% ************************************
+% set all fixed to 1 for hand-tuning:
+fixed(:)=0;
+% ************************************
 
-%% for fitting RT+PDW, need to switch to 2D (anticorrelated race) model, e.g. Kiani et al. 2014
-if sum(isnan(data.RT))<0.8*length(data.RT) % arbitrary minimum proportion of RT trials; eventually make it a flag
+% fit it!
+[X, err_final, fit] = Dots_fitDDM_wrapper(guess,fixed,data,options);
 
-    % [to be merged from dots3DMP track]
 
+%% plot DDM fits + compare to data
+
+% to generate smooth curves, call errfcn again with interpolated
+% coh axis (and resampled durs if var dur task)
+
+switch modelID
+    case 1 %errfcn_DDM_1D_wConf
+
+        ncohsteps = 33; % should be odd so there's a zero
+        g_str = linspace(min(data.scoh),max(data.scoh),ncohsteps);
+        ndursamples = 1000;
+        rand_dur = randsample(data.dur, ndursamples, 'true');
+
+        fitInterp = struct;
+        fitInterp.scoh = repmat(g_str', ndursamples, 1);
+        for j = 1:ndursamples
+            fitInterp.dur((j-1)*ncohsteps+1 : (j-1)*ncohsteps+ncohsteps) = rand_dur(j);
+        end
+        fitInterp.dur = fitInterp.dur';
+        % just fill these with ones, since error calc doesn't matter, and
+        % after this only expectedPright/High is used for the plot
+        fitInterp.choice = ones(size(fitInterp.scoh));
+        fitInterp.PDW = ones(size(fitInterp.scoh));
+
+        options.plot = 0; options.feedback=0; fixed(:)=1;
+        [~,~,fitInterp] = options.errfcn(X,X,fixed,fitInterp,options);
+                
+        cohs_fit = unique(fitInterp.scoh);
+        pRight_model = nan(length(cohs_fit),1);
+        pRightHigh_model = nan(length(cohs_fit),1);
+        pRightLow_model = nan(length(cohs_fit),1);
+        pHigh_model = nan(length(cohs_fit),1);
+        for c = 1:length(cohs_fit)
+            I = fitInterp.scoh==cohs_fit(c);
+            pRight_model(c) = mean(fitInterp.expectedPright(I));
+            pRightHigh_model(c) = mean(fitInterp.expectedPrightHigh(I));
+            pRightLow_model(c) = mean(fitInterp.expectedPrightLow(I));
+            pHigh_model(c) = mean(fitInterp.expectedPhigh(I));
+        end
+
+        figure; set(gcf,'Position',[86 925 1070 420]);
+        subplot(1,2,1);
+        % NOTE: data vals here come from dotsParse
+        h(1) = errorbar(cohs, pRightHigh, pRightSEhigh, 'bo', 'MarkerFaceColor', 'b'); hold on;
+        h(2) = errorbar(cohs, pRightLow, pRightSElow, 'bo', 'MarkerFaceColor', 'w');
+        plot(cohs_fit,pRightHigh_model,'c-');
+        plot(cohs_fit,pRightLow_model,'c--');
+        xlabel('motion strength (%coh)');
+        ylabel('proportion rightward choices');
+        legend(h,'high bet','low bet','Location','Northwest');
+
+        subplot(1,2,2); errorbar(cohs,pHigh,pHighSE,'ro');
+        hold on; plot(cohs_fit,pHigh_model,'m--'); ylim([0 1]);
+        xlabel('motion strength (%coh)');
+        ylabel('proportion high bets');    
+        
+    case 2 %errfcn_DDM_2D_wConf
+        
+        ncohsteps = 99; % should be odd so there's a zero
+        g_str = linspace(min(data.scoh),max(data.scoh),ncohsteps);
+        nreps = 200;
+
+        fitInterp = struct;
+        fitInterp.scoh = repmat(g_str', nreps, 1);
+        fitInterp.coherence = abs(fitInterp.scoh);
+
+        % just fill these with ones, since error calc doesn't matter, and
+        % they will be replaced with model values
+        fitInterp.choice = ones(size(fitInterp.scoh));
+        fitInterp.PDW = ones(size(fitInterp.scoh));
+        fitInterp.correct = ones(size(fitInterp.scoh));
+        fitInterp.RT = ones(size(fitInterp.scoh));
+
+        options.plot = 0; options.feedback=0; fixed(:)=1;
+        [~,~,fitInterp] = options.errfcn(X,X,fixed,fitInterp,options);
+        
+        cohs_fit = unique(fitInterp.scoh);
+        n = nan(length(cohs_fit),1);
+        pRightHigh_model = n;
+        pRightLow_model = n;
+        pHigh_model = n;
+        RTmean_model = n;
+        sigmaRT_model = n;
+
+        % this parse + plot step could be streamlined, by making the above
+        % scripts into functions that take data (or fitInterp) as argument
+        for c = 1:length(cohs_fit)
+            J = fitInterp.scoh==cohs_fit(c);
+
+            nCor(c) = sum(J & fitInterp.correct); % use only correct trials for RT
+
+            pRightHigh_model(c) = sum(J & fitInterp.choice==1 & fitInterp.PDW==1) / sum(J & fitInterp.PDW==1);
+            pRightLow_model(c) = sum(J & fitInterp.choice==1 & fitInterp.PDW==0) / sum(J & fitInterp.PDW==0);
+            pHigh_model(c) = sum(J & fitInterp.PDW==1) / sum(J);
+
+            RTmean_model(c) = mean(fitInterp.RT(J & fitInterp.correct));
+            sigmaRT_model(c) = std(fitInterp.RT(J & fitInterp.correct))/sqrt(nCor(c));
+        end
+        
+        figure; set(gcf,'Position',[100 925 1470 420]);
+        subplot(1,3,1);
+        % NOTE: data vals here come from dotsParse
+        h(1) = errorbar(cohs, pRightHigh, pRightSEhigh, 'bo', 'MarkerFaceColor', 'b'); hold on;
+        h(2) = errorbar(cohs, pRightLow, pRightSElow, 'bo', 'MarkerFaceColor', 'w');
+        plot(cohs_fit,pRightHigh_model,'c-');
+        plot(cohs_fit,pRightLow_model,'c--');
+        xlabel('motion strength (%coh)');
+        ylabel('proportion rightward choices');
+        legend(h,'high bet','low bet','Location','Northwest');
+
+        subplot(1,3,2); errorbar(cohs,pHigh,pHighSE,'ro');
+        hold on; plot(cohs_fit,pHigh_model,'m--'); ylim([0 1]);
+        xlabel('motion strength (%coh)');
+        ylabel('proportion high bets'); 
+        
+        subplot(1,3,3); errorbar(cohs,RTmean,RTse,'ro');
+        hold on; plot(cohs_fit,RTmean_model,'m--');
+        xlabel('motion strength (%coh)');
+        ylabel('reaction time (s)'); 
 end
 
 
