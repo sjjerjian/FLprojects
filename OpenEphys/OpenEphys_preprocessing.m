@@ -13,7 +13,20 @@ clear all
 
 subject = 'hanzo';
 paradigm = 'Dots';
-dateRange = 20201201:20201202;
+
+dateRange = 20201102:20201102;
+
+
+% dateRange = 20201001:20201031;
+% dateRange = 20201101:20201130;
+% dateRange = 20201201:20201231;
+% dateRange = 20210101:20210131;
+% dateRange = 20210201:20210228;
+% dateRange = 20210301:20210331;
+
+
+% dateRange = 20210101:20210309;
+
 
 dateStr = num2str(dateRange(1));
 for d = 2:length(dateRange)
@@ -28,32 +41,38 @@ remoteDir = ['/var/services/homes/fetschlab/data/' subject '_neuro/'];
 % will skip files that already exist locally, unless overwrite set to 1
 
 overwriteLocalFiles = 0; % set to 1 to always use the server copy
-getDataFromServer % now also includes pdsCleanup to reduce file size and complexity
+
+tic
+getDataFromServer_sortedOnly % searches for .psort files and only downloads them and their associated chans/runs
+toc
+
+% save currentFileList so you don't have to repeat the time consuming step
+if exist('currentFilename','var')
+
+if sum(diff(dateRange)>1)==0
+    file = [subject '_neuro_' num2str(dateRange(1)) '-' num2str(dateRange(end)) '.mat'];
+elseif sum(diff(dateRange)>1)==1
+    file = [subject '_neuro_' num2str(dateRange(1)) '-' num2str(dateRange(diff(dateRange)>1)) '+' num2str(dateRange(find(diff(dateRange)>1)+1)) '-' num2str(dateRange(end)) '.mat'];
+else
+    warning('Multiple breaks in date range, could overwrite existing file with different intervening dates!');
+    disp('Press a key to continue');
+    pause
+    file = [subject '_neuro_' num2str(dateRange(1)) '---' num2str(dateRange(end)) '.mat'];
+end
+
+save([localDir(1:length(localDir)-length(subject)-1) file], 'data');
+
+end
+
+
 
 
 %% data browser (work in progress, may be abandoned)
 
-oephysDataBrowser
+% % oephysDataBrow÷ser
 
 
 
 
 
-% TBD:
-%
-% createDataStructure
-%
-% 
-% %% optional: save data struct to a mat file so you don't have to repeat the time consuming step
-% file = [subject '_' num2str(dateRange(1)) '-' num2str(dateRange(end)) '.mat'];
-% 
-% data = rmfield(data,'dotPos'); % CAREFUL
-% 
-% save([localDir(1:length(localDir)-length(subject)-1) file], 'data');
-% 
-% % otherwise for larger files will need: 
-% % save([localDir(1:length(localDir)-length(subject)-1) file], 'data','-v7.3');
-% 
-% 
-% disp('done.');
-% 
+

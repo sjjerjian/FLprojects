@@ -43,7 +43,7 @@ for d = 1:length(dateRange)
                             else
                                 data.subj{T,1} = subject;
                             end
-
+                            
                             % independent variables are stored in PDS.conditions.stimulus
                             fnames = fieldnames(PDS.conditions{t}.stimulus);
                             fnames(ismember(fnames,fieldExcludes)) = [];
@@ -71,7 +71,14 @@ for d = 1:length(dateRange)
                                 if strcmp(fnames{F},'correct'), data.correct(T,1) = 0; end
                                 eval(['data.' fnames{F} '(T,1) = PDS.data{t}.behavior.' fnames{F} ';']);
                             end
-
+                            
+                            % noticed a couple extra things we need, not in either place -CF 02-2021
+                            try
+                                data.oneTargPDW(T,1) = PDS.data{t}.postTarget.markOneConf;
+                                data.delayToPDW(T,1) = PDS.data{t}.postTarget.delayToConfidence;
+                            catch
+                            end
+                            
                         end
                     end
                     clear PDS

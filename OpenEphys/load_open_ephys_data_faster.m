@@ -82,7 +82,7 @@ fseek(fid,0,'eof');
 filesize = ftell(fid);
 
 
-% CF: for default event files, the header contains evaluatable commands
+% CF: for ordinary event files, the header contains evaluatable commands
 % which generate the struct 'info'. This is not true for our network events
 % files ("messages"), so we skip this in that case, and run a separate
 % loading routine in the second switch-case stack below
@@ -224,6 +224,7 @@ end
 
 % CF, based on our early modified version of load_open_ephys_data
 function events = readMessages(raw)
+    
     str = char(raw');
     char10 = [1; find(raw==10)]; % 'carriage return' character
     edata = cell(length(char10)-1,1);
