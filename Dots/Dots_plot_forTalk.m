@@ -35,8 +35,8 @@ if useGauss
 else
     errorbar(cohs, RTmean, RTse, 'o-', 'Color', 'b', 'MarkerFaceColor', 'w', 'MarkerSize', 10, 'LineWidth', 2);
 end
-ylim([0.3 0.8]); xlim([-0.55 0.55]);
-set(gca,'xtick',-0.50:0.25:0.50,'ytick',0.3:0.1:0.8,'tickdir','out','box','off');
+ylim([0.3 0.7]); xlim([-0.55 0.55]);
+set(gca,'xtick',-0.50:0.25:0.50,'ytick',0.3:0.1:0.7,'tickdir','out','box','off');
 xlabel('Motion strength (% coh)'); ylabel('Reaction time (s)');
 changeAxesFontSize(gca,20,20);
 export_fig('dots_RT','-eps');

@@ -17,6 +17,8 @@ close all
 subject = 'hanzo';
 paradigm = 'Dots';
 
+dateRange = 20210208:20210212; % last week
+
 % % month by month
 % dateRange = 20190301:20190331; % skip, too early?
 % dateRange = 20190401:20190430; % early days; some bias, no slope eff -- but got to V shape pretty fast!
@@ -50,9 +52,14 @@ paradigm = 'Dots';
 % % Warning: error loading hanzo20201102Dots1409.PDS
 
 
+% dateRange = [20190501:20190831 20191101:20191130];
+
+% dateRange = 20200801:20201130; % good!
+
+
+
+
 % now do Genji!
-
-
 
 
 % subject = 'human';
@@ -77,10 +84,10 @@ localDir = ['/Users/chris/Documents/MATLAB/PLDAPS_data/' subject '/'];
 remoteDir = ['/var/services/homes/fetschlab/data/' subject '/'];
 
 
-%% get PDS files from server
+%% get PDS files from server -- DON'T FORGET VPN
 % will skip files that already exist locally, unless overwrite set to 1
 
-overwriteLocalFiles = 0; % set to 1 to always use the server copy
+overwriteLocalFiles = 1; % set to 1 to always use the server copy
 getDataFromServer % now also includes pdsCleanup to reduce file size and complexity
 
 
@@ -90,7 +97,19 @@ createDataStructure
 
 
 %% optional: save data struct to a mat file so you don't have to repeat the time consuming step
-file = [subject '_' num2str(dateRange(1)) '-' num2str(dateRange(end)) '.mat'];
+
+if sum(diff(dateRange)>1)==0
+    file = [subject '_' num2str(dateRange(1)) '-' num2str(dateRange(end)) '.mat'];
+elseif sum(diff(dateRange)>1)==1
+    file = [subject '_' num2str(dateRange(1)) '-' num2str(dateRange(diff(dateRange)>1)) '+' num2str(dateRange(find(diff(dateRange)>1)+1)) '-' num2str(dateRange(end)) '.mat'];
+else
+    warning('Multiple breaks in date range, could overwrite existing file with different intervening dates!');
+    disp('Press a key to continue');
+    pause
+    file = [subject '_' num2str(dateRange(1)) '---' num2str(dateRange(end)) '.mat'];
+end
+    
+
 
 try
 data = rmfield(data,'dotPos'); % CAREFUL

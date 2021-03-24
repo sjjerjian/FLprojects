@@ -3,9 +3,16 @@
 % in progress, begun 10-19-20 CF
 % must set localDir and currentFileList before running (getDataFromServer does the latter)
 
+
+keyboard
+
+% 2021-02-16_16-21-35_map_Ch16_Sorting.psort
+
+
 close all
 
 channelMapping = [fliplr(9:24) 25:32];
+channelMapping = [channelMapping channelMapping+32]; % for 2-probe expts
 
 for m = 1:length(currentFileList)
     files = dir([localDir currentFileList{m}]);
@@ -33,7 +40,11 @@ for m = 1:length(currentFileList)
                     run = str2double(files(n).name(und(end)+1:dot-1));
                 end
                 figure((m-1)*100+run); set(gcf,'Color',[1 1 1],'Position',[300+20*m 300+20*run 800 1000],'PaperPositionMode','auto');
-                subplot(24,1,chan-8); plot(data(1:30000));
+                try
+                    subplot(24,1,chan-8); plot(data(1:30000));
+                catch
+                    subplot(24,1,chan); plot(data(1:30000));
+                end
                 set(gca,'yticklabel',[],'box','off');
                 ylabel(num2str(chan));
                 if chan==9

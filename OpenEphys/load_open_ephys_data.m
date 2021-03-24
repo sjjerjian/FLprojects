@@ -57,7 +57,6 @@ function [data, timestamps, info, events] = load_open_ephys_data(filename, CFeve
 %     <http://www.gnu.org/licenses/>.
 %
 
-
 p = inputParser;
 p.addRequired('filename');
 p.addParameter('Indices',[],@(x) isempty(x) || isrow(x) && all(diff(x) > 0) ...
@@ -159,7 +158,7 @@ if (strcmp(filetype, 'events') && ~exist('CFevents', 'var')) || strcmp(filetype,
 elseif strcmp(filetype, 'events') && CFevents == 1
             % ^ CF: apparently the intended use is to pass evaluatable commands
             % in the header of events files. We'll just skip that for now.
-
+            
     raw = fread(fid, inf, 'char*1');
     str = char(raw');
     char10 = [1; find(raw==10)]; % 'carriage return' character
@@ -177,16 +176,18 @@ elseif strcmp(filetype, 'events') && CFevents == 1
         end
         %keyboard
         if strcmp(thisStr, 'Direction')
+            keyboard
             trInd_Direction(D,1) = n; %mvl: index of all "TrialStart"
             D = D+1;
         end
     end
     
+    
 %     excludes = {'Processor','Software','IsRecording'};
     events.TrialNum = nan(T-1,1);
-    timedEvents = {'TrialStart','MotionStart','MotionEnd','Breakfix','GoodTrial','Direction'};
-    trialParams = {'Coherence','Direction','Duration','GoodOrBadTrial', 'Speed', 'Diameter'};
-    both = {'ApertureX','ApertureY'};
+    timedEvents = {'MotionStart','MotionEnd','Breakfix','GoodTrial'};
+    trialParams = {'Coherence','Duration','GoodOrBadTrial', 'Speed', 'Diameter', 'choice', 'PDW'};
+    both = {'ApertureX','ApertureY','TrialStart','Direction'};
     for k = 1:length(timedEvents)
     	eval(['events.' timedEvents{k} '=nan(T-1,1);']);
     end
@@ -194,7 +195,12 @@ elseif strcmp(filetype, 'events') && CFevents == 1
     	eval(['events.' trialParams{k} '=nan(T-1,1);']);
     end
     for k = 1:length(both)
-    	eval(['events.' both{k} '=cell(T-1,1);']);
+        if strcmp(both{k}, 'ApertureX') || strcmp(both{k}, 'ApertureY')
+            eval(['events.' both{k} '=cell(T-1,1);']);
+        else
+            eval(['events.' both{k} '=nan(T-1,1);']);
+            eval(['events.T' both{k} '=nan(T-1,1);']);
+        end
     end
     
     trInd(end+1) = length(char10); % add an extra dummy index for end of last trial
@@ -224,29 +230,36 @@ elseif strcmp(filetype, 'events') && CFevents == 1
                     val = str2double(edata{n}(sp(2)+1:end-1));
                     %eval(['events.' thisStr '{t}(1,end+1)=ts;']);
                     events.ApertureY{t}(end+1) = val;
+                else
+                    val = str2double(edata{n}(sp(2)+1:end-1));
+                    eval(['events.' thisStr '(t)=val;']);
+                    ts = str2double(edata{n}(1:sp(1)-1));
+                    eval(['events.T' thisStr '(t)=ts;']);
                 end
             end % otherwise skip it (Processor, Software, IsRecording, etc)
         end
     end
     
-    trInd_Direction(end+1) = length(char10);
-    for t = 1:D-1 % loop over trials
-        % the first event in a trial is TrialStart, by definition, and this
-        % line also contains the trial number, which may differ from the
-        % index n, so we should keep track of it:
-        sp = strfind(edata{trInd_Direction(t)}, ' '); %find spaces, which should seperate the Time of Event, Even Name, and Any other Info (ex. Coherence Value)
-        %events.TrialNum(t) = str2double(edata{trInd_Direction(t)}(sp(2)+1:end-1)); %mvl:get trial number
-        for n = trInd_Direction(t):trInd_Direction(t+1)-1 % for each trial, loop over events (all events within each 'TrialStart')
-            sp = strfind(edata{n},' ');
-            thisStr = edata{n}(sp(1)+1:sp(2)-1);
-            if ismember(thisStr,'Direction') %mvl% Is the event message a TimedEvent or Parameter Event
-                ts = str2double(edata{n}(1:sp(1)-1)); %mvl: Everything before the first space (which should contain the time)
-                eval(['events.T' thisStr '(t)=ts;']);
+    if exist('trInd_Direction', 'var')
+        trInd_Direction(end+1) = length(char10);
+        for t = 1:D-1 % loop over trials
+            % the first event in a trial is TrialStart, by definition, and this
+            % line also contains the trial number, which may differ from the
+            % index n, so we should keep track of it:
+            sp = strfind(edata{trInd_Direction(t)}, ' '); %find spaces, which should seperate the Time of Event, Even Name, and Any other Info (ex. Coherence Value)
+            %events.TrialNum(t) = str2double(edata{trInd_Direction(t)}(sp(2)+1:end-1)); %mvl:get trial number
+            for n = trInd_Direction(t):trInd_Direction(t+1)-1 % for each trial, loop over events (all events within each 'TrialStart')
+                sp = strfind(edata{n},' ');
+                thisStr = edata{n}(sp(1)+1:sp(2)-1);
+                if ismember(thisStr,'Direction') %mvl% Is the event message a TimedEvent or Parameter Event
+                    ts = str2double(edata{n}(1:sp(1)-1)); %mvl: Everything before the first space (which should contain the time)
+                    eval(['events.T' thisStr '(t)=ts;']);
+                end
+                if ismember(thisStr,'Direction') %mvl: whatever isnt fill is left off as NaN, which is convinient
+                    val = str2double(edata{n}(sp(2)+1:end-1));
+                    eval(['events.' thisStr '(t)=val;']);
+                end % otherwise skip it (Processor, Software, IsRecording, etc)
             end
-            if ismember(thisStr,'Direction') %mvl: whatever isnt fill is left off as NaN, which is convinient
-                val = str2double(edata{n}(sp(2)+1:end-1));
-                eval(['events.' thisStr '(t)=val;']);
-            end % otherwise skip it (Processor, Software, IsRecording, etc)
         end
     end
     
