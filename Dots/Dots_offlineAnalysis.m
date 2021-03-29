@@ -5,7 +5,7 @@
 % skip this cell to analyze a data struct already in the workspace!
 %*****************************
 
-clear all; close all
+clear; close all
 
 % these will specify which (previously saved) mat file to load
 subject = 'hanzo';
@@ -25,11 +25,11 @@ folder = '/Users/chris/Documents/MATLAB/PLDAPS_data/';
 % dateRange = 20201101:20201130; % RT example
 
 % should be best!
-% dateRange = 20200801:20201130;
+dateRange = 20200801:20201130;
 
-dateRange = 20210208:20210212; % last week
+% dateRange = 20210208:20210212; % last week
 
-maxTrialNum = 600; % set to ~600-800 to omit late trials
+% maxTrialNum = 700; % set to ~600-800 to omit late trials
 
 if sum(diff(dateRange)>1)==0
     file = [subject '_' num2str(dateRange(1)) '-' num2str(dateRange(end)) '.mat'];
@@ -91,12 +91,13 @@ end
 removethese = ismember(data.filename,blocks(nTrialsByBlock<10));
 
 % remove early/late trials
-removethese = removethese | data.trialNum>maxTrialNum;
-fnames = fieldnames(data);
-for F = 1:length(fnames)
-    eval(['data.' fnames{F} '(removethese) = [];']);
+if exist('maxTrialNum','var')
+    removethese = removethese | data.trialNum>maxTrialNum;
+    fnames = fieldnames(data);
+    for F = 1:length(fnames)
+        eval(['data.' fnames{F} '(removethese) = [];']);
+    end
 end
-
 
 
 %% parse data
@@ -138,7 +139,7 @@ Dots_plot
 
 
 % % for nicer looking graphs:
-% Dots_plot_forTalk
+Dots_plot_forTalk
 
 
 % %% if var dur, check conf/accuracy vs. dur

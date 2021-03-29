@@ -17,7 +17,7 @@ close all
 subject = 'hanzo';
 paradigm = 'Dots';
 
-dateRange = 20210208:20210212; % last week
+% dateRange = 20210208:20210212; % last week
 
 % % month by month
 % dateRange = 20190301:20190331; % skip, too early?

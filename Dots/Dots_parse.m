@@ -1,4 +1,5 @@
 cohs = unique(data.scoh);
+    if cohs(end)==1; cohs(end)=[]; end % weird. it's only 4 trials.
 dirs = unique(data.direction);
 
 n = nan(length(cohs),1);
