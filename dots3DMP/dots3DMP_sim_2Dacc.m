@@ -229,6 +229,13 @@ for n = 1:ntrials
             figure(1000); set(gcf, 'Color', [1 1 1], 'Position', [100 100 350 375], 'PaperPositionMode', 'auto'); clf;
             
             plot(dv(1:round((RT(n)-Tnd)*1000),1),'k-','LineWidth',2); hold on; 
+            
+%             % temp:
+%             tM = 200;
+%             plot(1:tM,dv(1:tM,1),'k-','LineWidth',2); hold on; 
+%             plot(tM:round((RT(n)-Tnd)*1000),dv(tM:round((RT(n)-Tnd)*1000),1),'r-','LineWidth',2); hold on; 
+%             xlim([0 1000]);
+
             plot(1:length(dv),ones(1,length(dv))*B,'k-','LineWidth',4);
             xlabel('Time (ms)');
 %             ylabel('Accum. evidence for rightward');

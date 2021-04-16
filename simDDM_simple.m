@@ -1,6 +1,7 @@
-%% simple monte-carlo style simulation of a 1D drift-diffusion model in the 
+%% simDDM_simple.m
+% simple monte-carlo style simulation of a 1D drift-diffusion model in the 
 % context of a motion discrimination task (see e.g. Shadlen et al. 2006)
-% -CF circa 2015
+% CRF circa 2015
 
 clear all; close all;
 
@@ -19,11 +20,13 @@ timeAxis = 0:dT:maxdur;
 coh = randsample(cohs,ntrials,'true')';
 
 
-%%
+%% params
 k = 0.3; % coefficient converting coherence to units of momentary evidence
 B = 25; % height of the bound, or threshold, for decision termination
 sigma = 1; % standard deviation of momentary evidence
 
+
+%% the diffusion process
 
 % initialize variables
 dv = nan(ntrials,length(timeAxis)); % the DV as a function of n and time
@@ -32,8 +35,6 @@ RT = nan(ntrials,1); % reaction time
 finalV = nan(ntrials,1); % endpoint of the DV
 hitBound = nan(ntrials,1);
 
-
-%% the diffusion process
 tic
 for n = 1:ntrials
     % mean of momentary evidence
@@ -72,11 +73,8 @@ for n = 1:ntrials
 end
 toc
 
-
-
+% quick sanity check to see if params give reasonable performance
 pCorrect_total = (sum(choice==1 & coh>0) + sum(choice==-1 & coh<0)) / ntrials;
-
-
 
 
 %% plot proportion "rightward" (choice=1) and reaction time as a function of coherence

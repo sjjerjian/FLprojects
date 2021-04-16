@@ -8,10 +8,11 @@ clear; close all;
 % and nTrials
 nNeurons = 360;
 nTrials = 1000;
+dirDist_sigma = 90;
 
 disp('loading...');
 tic
-load(sprintf('simMT_nNeu=%d_nTr=%d.mat', nNeurons, nTrials));
+load(sprintf('simMT_nNeu=%d_nTr=%d_sigma=%d.mat', nNeurons, nTrials,dirDist_sigma));
 disp('done.');
 toc
 
@@ -46,14 +47,9 @@ if sum(ustim)>0; simMT_plotResults_ustim; end
 
 %% classic PPC or likelihood re/decoding (Ma et al., Jazayeri & Movshon)
 disp('running PPC...');
-simMT_decode_PPC
+% simMT_decode_PPC
+simMT_decode_PPC_orig
 disp('done');
-
-% temp: quickly try different gammas
-gamma = 10;
-pdw(betaAll(:,2)>=gamma) = 1;
-pdw(betaAll(:,2)<gamma) = 0;
-simMT_plotResults
 
 if sum(ustim)<10
     simMT_plotResults
@@ -62,6 +58,17 @@ else
 end
 % no shift in confidence curve for ustim, because it's only based on
 % variance of posterior! obviously this doesn't work...
+
+
+
+%% temp: quickly try different gammas
+gamma = 10;
+pdw(betaAll(:,2)>=gamma) = 1;
+pdw(betaAll(:,2)<gamma) = 0;
+simMT_plotResults
+
+
+
 
 
 %% sampling (Hoyer & Hyvarinen, Fiser et al. (Haefner, Berkes))

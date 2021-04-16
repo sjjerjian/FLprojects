@@ -1,6 +1,7 @@
 function [err,fit] = dots3DMP_fit_2Dacc_err(param, guess, fixed, data, options)
 
 global call_num
+keyboard
 
 param = getParam(param, guess, fixed);
 
@@ -39,7 +40,7 @@ R.t = 0.001:0.001:duration/1000;
 R.Bup = B;
 R.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
 R.lose_flag = 1;
-R.plotflag = 0; % 1 = plot, 2 = plot and export_fig
+R.plotflag = 1; % 1 = plot, 2 = plot and export_fig
 
 P =  images_dtb_2d(R);
 
@@ -235,6 +236,7 @@ for d = 1:length(deltas)
             Phi_model(J) = PHighBet(m,c,d,h);
         end  
     end
+    
 end
 end
 end
@@ -290,12 +292,11 @@ end
 call_num = call_num + 1;
 
 
-
 end
 
 
 % retrieve the full parameter set given the adjustable and fixed parameters 
 function param2 = getParam ( param1 , guess , fixed )
-  param2(fixed==0) = param1;       %get adjustable parameters from param1
+  param2(fixed==0) = param1(fixed==0);       %get adjustable parameters from param1
   param2(fixed==1) = guess(fixed==1);   %get fixed parameters from guess
 end

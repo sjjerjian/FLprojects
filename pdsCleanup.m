@@ -6,7 +6,6 @@
 % VERSION 2.0: 08-30-19 CF
 % must be run by getDataFromServer
 
-
 % important toggles; most or all of these disk-space hogging data 
 % can be removed for simple behavioral analyses
 removeAnalogData = 1;
@@ -24,7 +23,7 @@ fprintf(['\ncleaning up ' remoteFiles{n} '...']);
 try
     load([localDir remoteFiles{n}],'-mat');
 catch me
-    fprintf(' Could not load! Check file. Skipping...\n');
+    warning(' Could not load! File may be corrupt. Skipping...');
     return
 end
 
@@ -87,7 +86,7 @@ for t = 1:length(PDS.data) % loop over trials for this file
     try PDS.data{t}.behavior.timeTargDisappears = PDS.data{t}.task.timeTargDisappears; catch; end
     try PDS.data{t}.behavior.probOfMemorySaccade = PDS.data{t}.task.probOfMemorySaccade; catch; end
     try PDS.data{t} = rmfield(PDS.data{t},'task'); catch; end
-    try PDS.data{t} = rmfield(PDS.data{t},'postTarget'); catch; end                               
+% % %     try PDS.data{t} = rmfield(PDS.data{t},'postTarget'); catch; end % turns out we need this                              
     try PDS.data{t} = rmfield(PDS.data{t},'flagNextTrial'); catch; end                               
     try PDS.data{t} = rmfield(PDS.data{t},'iFrame'); catch; end                               
     try PDS.data{t} = rmfield(PDS.data{t},'state'); catch; end                               
