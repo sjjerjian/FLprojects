@@ -247,7 +247,7 @@ if exportfigs; export_fig('medianSplit4','-eps'); end
 %% for RT, try kiani 2014 analysis:
 % plot conf as a function of RT quantile, separately for abs(hdg)
 
-sim=1;
+sim=0;
 
 % FOR SIM ONLY: exclude capped values (maxDur+Tnd, often 2300)
 if sim
@@ -447,80 +447,82 @@ guess = [ks sigma B];
 options.ploterr = 1;
 options.fh=500;
 
-% %% fit DDM
-% 
+
+%% fit DDM
+
 % options.fitMethod = 'fms';
-% % options.fitMethod = 'global';
-% % options.fitMethod = 'multi';
-% % options.fitMethod = 'pattern';
-% 
-% % params: 
-% 
-% % % % 
-% % % % 
-% % % % % Drugowitsch model has 12 params, plus 8 for biases and lapse rates
-% % % % % we'll skip the latter, and we can drop the 3 Tnd terms until we are fitting RT
-% % % % % so we have 9 params:
-% % % % 
-% % % %     %    aVis gammaVis bVis thetaVis kVes thetaVes gammaCom bCom thetaCom
-% % % % fixed = [0    0        0    0        0    0        0        0    0       ];
-% % % % 
-% % % % % per Drugowitsch, variance of momentary evidence scales with coherence as:
-% % % % % var(c) ~ 1 + bVis*coh^gammaVis;
-% % % % 
-% % % % % similarly,
-% % % % % kVis ~ aVis*cVis^gammaVis
-% % % % 
-% % % % % the bound gets a free parameter (theta) for each modality, but this is
-% % % % % only because the variance is what really changes across conditions, and
-% % % % % this is absorbed into the definition of (normalized) bounds. I'm still
-% % % % % not sure about this...
-% % % %  
-% % % % % initial guess (or hand-tuned params)
-% % % % aVis = 0.5; % sensitivity parameter, multiplies coh
-% % % % gammaVis = 1; % determines scaling of sensitivity (and variance) by coh
-% % % % bVis = 30; % bound height
-% % % % theta = 1.6; % criterion (in log odds correct) for betting high
-% % % % alpha = 0.1; % base rate of low-bet choices
-% % % % 
-% % % % guess = [aVis gammaVis bVis thetaVis kVes thetaVes gammaCom bCom thetaCom];
-% % % % 
-% % % % 
-% % % % 
-% % % % 
-% 
-% 
-% % options.fitMethod = 'fms';
-% % options.fitMethod = 'global';
-% % options.fitMethod = 'multi';
-% % options.fitMethod = 'pattern';
+% options.fitMethod = 'global';
+% options.fitMethod = 'multi';
+% options.fitMethod = 'pattern';
+
+% params: 
+
+% % % 
+% % % 
+% % % % Drugowitsch model has 12 params, plus 8 for biases and lapse rates
+% % % % we'll skip the latter, and we can drop the 3 Tnd terms until we are fitting RT
+% % % % so we have 9 params:
+% % % 
+% % %     %    aVis gammaVis bVis thetaVis kVes thetaVes gammaCom bCom thetaCom
+% % % fixed = [0    0        0    0        0    0        0        0    0       ];
+% % % 
+% % % % per Drugowitsch, variance of momentary evidence scales with coherence as:
+% % % % var(c) ~ 1 + bVis*coh^gammaVis;
+% % % 
+% % % % similarly,
+% % % % kVis ~ aVis*cVis^gammaVis
+% % % 
+% % % % the bound gets a free parameter (theta) for each modality, but this is
+% % % % only because the variance is what really changes across conditions, and
+% % % % this is absorbed into the definition of (normalized) bounds. I'm still
+% % % % not sure about this...
+% % %  
+% % % % initial guess (or hand-tuned params)
+% % % aVis = 0.5; % sensitivity parameter, multiplies coh
+% % % gammaVis = 1; % determines scaling of sensitivity (and variance) by coh
+% % % bVis = 30; % bound height
+% % % theta = 1.6; % criterion (in log odds correct) for betting high
+% % % alpha = 0.1; % base rate of low-bet choices
+% % % 
+% % % guess = [aVis gammaVis bVis thetaVis kVes thetaVes gammaCom bCom thetaCom];
+% % % 
+% % % 
+% % % 
+% % % 
+
+
+options.fitMethod = 'fms';
+% options.fitMethod = 'global';
+% options.fitMethod = 'multi';
+% options.fitMethod = 'pattern';
 % options.fitMethod = 'bads';
-% 
-%     %    kves kvisMult B 
-% fixed = [0    0        0];
-% 
-% % one small diff: in sim, kvis is just coh, here it will multiply coh
-% 
-% % initial guess (or hand-tuned params)
-% kves = 1.2;
-% kvisMult = 4; % will be multiplied by coh to get kvis (this simplifies parameterization)
-% B = 70;
-% 
-% guess = [kves kvisMult B];
-% 
-% % ************************************
-% % set all fixed to 1 for hand-tuning:
-% fixed(:)=0;
-% % (can be used to fix some params and not others)
-% % ************************************
-% 
-% % plot error trajectory (prob doesn't work with parallel fit methods)
-% options.ploterr = 1;
-% 
-% [X, err_final, fit, fitInterp] = dots3DMP_fitDDM(data,options,guess,fixed);
-% 
-% % plot it!
-% dots3DMP_plots_fit(data,fitInterp)
+
+    %    kves kvisMult B muTnd
+fixed = [0    0        0  0   ];
+
+% one small diff: in sim, kvis is just coh, here it will multiply coh
+
+% initial guess (or hand-tuned params)
+kves = 1.2;
+kvisMult = 4; % will be multiplied by coh to get kvis (this simplifies parameterization)
+B = 70;
+muTnd = 0.3; % s
+
+guess = [kves kvisMult B muTnd];
+
+% ************************************
+% set all fixed to 1 for hand-tuning:
+fixed(:)=0;
+% (can be used to fix some params and not others)
+% ************************************
+
+% plot error trajectory (prob doesn't work with parallel fit methods)
+options.ploterr = 1;
+
+[X, err_final, fit, fitInterp] = dots3DMP_fitDDM(data,options,guess,fixed);
+
+% plot it!
+dots3DMP_plots_fit(data,fitInterp)
 
 
 

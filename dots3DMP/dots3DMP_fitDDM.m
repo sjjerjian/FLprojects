@@ -17,8 +17,8 @@ else
 switch options.fitMethod
     case 'fms'
         fitOptions = optimset('Display', 'iter', 'MaxFunEvals', 500*sum(fixed==0), 'MaxIter', ... 
-            500*sum(fixed==0), 'TolX', 1e-2, 'TolFun', 1e2/2, 'UseParallel', 'Always');
-        [X, ~, exitflag] = fminsearch(@(x) dots3DMP_fit_2Dacc_err(x,guess,fixed,data,options), guess(fixed==0), fitOptions);
+            500*sum(fixed==0), 'TolX', 1e-3, 'TolFun', 1e-2, 'UseParallel', 'Always');
+        [X, ~, ~] = fminsearch(@(x) dots3DMP_fit_2Dacc_err(x,guess,fixed,data,options), guess(fixed==0), fitOptions);
 
     case 'global'
         % GlobalSearch from Global Optimization Toolbox
@@ -166,6 +166,10 @@ deltas = unique(data.delta);
 nreps = 200;
 [hdg, modality, coh, delta, ~] = dots3DMP_create_trial_list(hdgs,mods,cohs,deltas,nreps);
 
+% now replicate times nreps
+condlist = [hdg modality coh delta];
+trialTable = repmat(condlist,nreps,1);
+
 Dfit.heading = hdg;  
 Dfit.modality = modality;  
 Dfit.coherence = coh;  
@@ -182,7 +186,8 @@ Dfit.conf   = ones(size(Dfit.heading));
 
 
 % [~,fitInterp] = dots3DMP_fitDDM_err(X,Dfit);
-[~, fitInterp] = dots3DMP_fit_2Dacc_err(X,X,false(size(X)),Dfit,options);
+% [~, fitInterp] = dots3DMP_fit_2Dacc_err(X,X,false(size(X)),Dfit,options);
+[~, fitInterp] = dots3DMP_fit_2Dacc_err(X,guess,zeros(size(X)),Dfit,options); 
 
 end
 

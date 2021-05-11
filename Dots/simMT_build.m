@@ -2,18 +2,50 @@
 % standard set of random-dot motion stimuli
 % CF 2014-2020
 
+% 07/2020: modified to incorporate Webb & Ledgeway style
+% spatiotemporal flexibility (distribution of dot directions,
+% optionally varying across time).
+% [still TBD: their version of temporal dynamics.]
+
+% The way this works is we build the spike rates by taking a 
+% weighted sum of the tuning curve evaluated at each dir (theta), where the
+% weights equal the proportion of dot directions in the stimulus. This
+% should generalize the transparent motion Miguel implemented, modulo a
+% scaling factor.
+
+% Unlike Webb, we can still use coherence: basically it just determines
+% which family of tuning curves is used to construct the weighted sum.
+% (i.e., lowering coherence does so in all directions equally)
+
+% To implement the correlation matrix, the rate from the weighted sum
+% becomes the equivalent of the tuning curve value, so in place of
+% tuning{c}(:,dirAxis==dir(t)) we substitute the weighted sum (Webb et
+% al. (2011)'s Ri(D), eq. 3)
+
 
 %% build an experiment
-clear all
+clear
 close all
 
 tic
 
 % plot flags
-plotMT = 0;
-plotCorr = 0;
+plotMT = 1;
+plotCorr = 1;
+
+% noiseModel = 'indepPoisson';
+% noiseModel = 'corrMat_Mazurek02';
+noiseModel = 'corrMat_Shadlen96';
 
 nTrials = 1000;
+
+% signed motion coherence; negative is leftward
+cohs = [-0.512 -0.256 -0.128 -0.064 -0.032 -1e-8 1e-8 0.032 0.064 0.128 0.256 0.512];
+coh = randsample(cohs,nTrials,'true')';
+
+dir = nan(size(coh));
+dir(coh<0) = 180;
+dir(coh>0) = 0;
 
 % viewing duration drawn from truncated exponential distribution
 dur = zeros(nTrials,1);
@@ -24,16 +56,8 @@ for n = 1:nTrials
     end
 end
 
-% dur(:) = 1000; % temp: set dur to 1s (or any fixed value) to verify fano
-% factor (below)
-
-% signed motion coherence; negative is leftward
-cohs = [-0.512 -0.256 -0.128 -0.064 -0.032 -1e-8 1e-8 0.032 0.064 0.128 0.256 0.512];
-coh = randsample(cohs,nTrials,'true')';
-
-dir = nan(size(coh));
-dir(coh<0) = 180;
-dir(coh>0) = 0;
+% % temp: set dur to 1s (or any fixed value) to verify fano factor (below)
+% dur(1:nTrials,1) = 1000;
 
 toc
 
@@ -44,7 +68,7 @@ tic
 % nNeurons = 180;
 nNeurons = 360;
 
-dirAxis = 0:360;
+dirAxis = 0:359;
 K = 3; % inverse variance term (will scale with coh)
 ampl = 60;  % actual peak FR will be about half of this, at 51.2% coh
 offset = 0; % this is not the same as spontaneous firing rate, which is of 
@@ -52,8 +76,7 @@ offset = 0; % this is not the same as spontaneous firing rate, which is of
             % firing rates to get close to zero for nonpreferred (null)
             % direction at high coherence, as MT does
 
-prefDirs = linspace(dirAxis(1),dirAxis(end),nNeurons+1);
-    prefDirs(end) = [];
+prefDirs = linspace(dirAxis(1),dirAxis(end),nNeurons);
 poscohs = cohs(cohs>0);
 tuning = cell(1,length(poscohs));
 if plotMT
@@ -71,7 +94,9 @@ for c = 1:length(poscohs)
                  %^ rows are neurons, columns are dirs           
     end
     if plotMT
-        plot(tuning{c}(round(nNeurons/2),:)); ylim([0 45]); hold on; 
+        h(c) = plot(tuning{c}(round(nNeurons/2),:)); hold on;
+        Ltxt{c} = num2str(poscohs(c));
+        legend(h,Ltxt);
     end
 end
 
@@ -79,105 +104,156 @@ end
 % this will be used below during spike train generation
 baseline = mean(mean(tuning{1}));
 
-% As an example, define two pools of neurons supplying evidence for the two
-% alternatives; later can replace this with a smoothly varying weighting
-% function (more realistic)
+% Define two pools of neurons supplying evidence for the two alternatives;
+% later can replace this with an arbitrary weight vector or smoothly
+% varying weighting function (more realistic)
 rightpool = prefDirs<60 | prefDirs>300; % within 60 deg of zero
 leftpool = prefDirs>120 & prefDirs<240; % within 60 deg of 180
 if plotMT
     figure(3); set(gcf,'Position', [300 300 1200 480]);
-    subplot(1,2,1); plot(dirAxis,tuning{end}(rightpool,:)); title('tuning curves: right pool'); ylim([0 45]);
+    subplot(1,2,1); plot(dirAxis,tuning{end}(rightpool,:)); title('tuning curves: right pool');
     xlabel('direction (deg)'); ylabel('firing rate (sp/s)');
-    subplot(1,2,2); plot(dirAxis,tuning{end}(leftpool,:)); title('tuning curves: left pool'); ylim([0 45]);
+    subplot(1,2,2); plot(dirAxis,tuning{end}(leftpool,:)); title('tuning curves: left pool');
     xlabel('direction (deg)'); ylabel('firing rate (sp/s)');
 end
 
 toc
 
-%% make spike trains
+%% assign spike counts based on tuning curve and noise model
 
-% % independent Poisson (slow! and unrealistic)
-% Counts = nan(nTrials, nNeurons);
-% tic
-% for t = 1:nTrials
-%     c = poscohs == abs(coh(t));
-%     for n = 1:nNeurons
-%         lambda = tuning{c}(n,dirAxis==dir(t)) / 1000; % /1000 because tuning is in spikes/s and we're sampling every 1 ms
-%         Counts(t,n) = sum(poissrnd(lambda, 1, dur(t)));
-%     end
+% Here is where we will bring in a distribution of directions like Webb et
+% al. The idea is to replace the occurences of tuning{c}(n,dirAxis==dir(t))
+% below with a rate generated as a weighted sum according to the desired
+% direction distribution (for now, assumed constant over time)
+
+% % TEMP: uncomment to test different sigmas and plot mean hill of activity
+% sigs = [eps 20 40 80];
+% for S = 1:length(sigs)
+% dirDist_sigma = sigs(S); % set to eps to mimic the old method, ie all dots in same dir
+
+dirDist_sigma = 45; % set to eps to mimic the old method, ie all dots in same dir
+dirDist_cutoff = 90; % truncate dist at presented dir plus and minus this value (must be <=180)
+dirDist_nModes = 1; % for bi/tri-modal ('transparent'), yet to be implemented
+
+dirDist{2} = normpdf(dirAxis,180,dirDist_sigma); % normal dist, one mode
+      % ^ start with mean of 180 to avoid having to wrap around 0/360
+dirDist{2}(dirAxis<=180-dirDist_cutoff | dirAxis>=180+dirDist_cutoff) = 0; % truncate
+dirDist{2} = dirDist{2}/sum(dirDist{2}); % renormalize
+
+% rotate for rightward (dir=0) trials
+dirDist{1}(1:180) = dirDist{2}(181:end);
+dirDist{1}(181:360) = dirDist{2}(1:180);
+
+RiD = cell(1,length(poscohs));
+for c = 1:length(poscohs)
+    RiD{c} = zeros(nNeurons,2); % only need the two directions being shown [1=right(0), 2=left(180)]
+    for n = 1:nNeurons
+        RiD{c}(n,1) = sum(tuning{c}(n,:).*dirDist{1}); % why does Webb need the Rmax term here?
+        RiD{c}(n,2) = sum(tuning{c}(n,:).*dirDist{2});
+    end
+end
+
+% % TEMP: uncomment to test different sigmas and plot mean hill of activity
+% % plot (mean) hill of activity
+% figure(12); plot(RiD{6}(:,2)); hold on;
+% 
+% % does sigma change the total mean FR?
+% % No.
+% meanFR(S) = mean(RiD{6}(:,2))
+% 
+% % what about separately for the two pools?
+% % this does change, but of course it does, and no amount of rescaling can
+% % fix that. The question is, does it also predict an effect on confidence
+% % beyond that.
+% meanFR_left(S) = mean(RiD{6}(leftpool,2))
+% meanFR_right(S) = mean(RiD{6}(rightpool,2))
+% 
+% pause
+% 
 % end
-% toc
 
 
-% OR, spike trains according to correlation matrix
-
-
-% first create corr mat
-maxCorr = 0.2;
-    % pairwise correlation varies smoothly from maxCorr to zero based on
+% create corr mat, if needed below
+if ~strcmp(noiseModel,'indepPoisson')
+    maxCorr = 0.2;
+    % pairwise correlation varies linearly from maxCorr to zero based on
     % tuning similarity (pref dir proximity)
-fano = 1.8; % fano factor = variance/mean ratio (forced to be 1 for poisson,
-            % but for real neurons it's often 1.5-1.8)
-c=linspace(maxCorr,0.0,nNeurons/2); c=[c fliplr(c)];
-Cor=toeplitz(c); % aka diagonal-constant matrix, shortcut for making the kind of corr mat we want
-Cor(logical(eye(size(Cor)))) = 1; % set main diagonal to be 1
-tmpCor = Cor; tmpCor(tmpCor==1)=NaN; % for better color range when plotting
-if plotCorr
-    figure(4); imagesc(tmpCor); set(gca,'ydir','normal'); axis square; colorbar;
-    title('spike count correlation matrix: intended');
-    xlabel('neuron ID (pref dir)'); ylabel('neuron ID (pref dir)');
+    fano = 1.8; % fano factor = variance/mean ratio (forced to be 1 for poisson,
+                % but for real neurons it's often 1.5-2)
+    c=linspace(maxCorr,0.0,nNeurons/2); c=[c fliplr(c)];
+    Cor=toeplitz(c); % aka diagonal-constant matrix, shortcut for making the kind of corr mat we want
+    Cor(logical(eye(size(Cor)))) = 1; % set main diagonal to be 1
+    tmpCor = Cor; tmpCor(tmpCor==1)=NaN; % for better color range when plotting
+    if plotCorr
+        figure(4); imagesc(tmpCor); set(gca,'ydir','normal'); axis square; colorbar;
+        title('spike count correlation matrix: intended');
+        xlabel('neuron ID (pref dir)'); ylabel('neuron ID (pref dir)');
+    end
+    plotCorr = 0;
 end
 
+switch noiseModel
 
-% then use corr mat to generate spike counts across the population.
-% here are two (old) methods; there may be better ones more recently
+    % independent Poisson (simplest, but slow and unrealistic)
+    case 'indepPoisson'
+        Counts = nan(nTrials, nNeurons);
+        tic
+        for t = 1:nTrials
+            c = poscohs == abs(coh(t));
+            for n = 1:nNeurons
+                lambda = RiD{c}(n,dir(t)==[0 180]) / 1000; % /1000 because tuning is in spikes/s and we're sampling every 1 ms
+                Counts(t,n) = sum(poissrnd(lambda, 1, dur(t)));
+            end
+        end
+        toc
 
-% % (1) Mazurek et al. 2002 Nat Neurosci (intuitive, but slower)
-% % % % for g = 1:20 % TEMP: to test that average corr value is as desired
-% Counts = nan(nTrials, nNeurons);
-% tic
-% for t = 1:nTrials
-%     i = dir(t);
-%     c = poscohs == abs(coh(t));
-%     m = tuning{c}(:,dirAxis==dir(t)); % mean
-%     T = dur(t)/1000;
-%         % now we have a vector of mean counts and a correlation matrix based on
-%         % tuning similarity. So to get a covariance matrix just multiply by the
-%         % product of ith and jth s.d. where s.d. is sqrt(fano*m*T)
-%     sd = sqrt(fano*m*T);
-%     Cov = repmat(sd,1,nNeurons) .* repmat(sd,1,nNeurons)' .* Cor;
-%     Counts(t,:) = round(mvnrnd(m*T, Cov)); % multivariate normal random numbers
-% end
-% Counts(Counts<0)=0;
-% toc
-% % % % % plot pairwise responses for similar and unsimilar neurons, for a fixed stimulus (or not)
-% % % % whichTr = abs(coh)<0.001;
-% % % % durToNorm = dur(whichTr);
-% % % % corrs1(g) = corr(Counts(whichTr,1)./durToNorm, Counts(whichTr,2)./durToNorm);
-% % % % corrs2(g) = corr(Counts(whichTr,1)./durToNorm, Counts(whichTr,19)./durToNorm);
-% % % % % figure; plot(Counts(whichTr,1),Counts(whichTr,2),'x'); title(num2str(corrs1(g)));
-% % % % % figure; plot(Counts(whichTr,1),Counts(whichTr,19),'o'); title(num2str(corrs2(g)));
-% % % % end
-% % % % mean(corrs1)
-% % % % mean(corrs2) % TEMP: to test that average corr value is as desired
+    % or, create spikes according to desired correlation matrix
+    case 'corrMat_Mazurek02' % method of Mazurek et al. 2002 Nat Neurosci (intuitive, but slower)
+        % % % for g = 1:20 % TEMP: to test that average corr value is as desired
+        Counts = nan(nTrials, nNeurons);
+        tic
+        for t = 1:nTrials
+            i = dir(t);
+            c = poscohs == abs(coh(t));
+            m = RiD{c}(:,dir(t)==[0 180]); % mean
+            T = dur(t)/1000;
+                % now we have a vector of mean counts and a correlation matrix based on
+                % tuning similarity. So to get a covariance matrix just multiply by the
+                % product of ith and jth s.d. where s.d. is sqrt(fano*m*T)
+            sd = sqrt(fano*m*T);
+            Cov = repmat(sd,1,nNeurons) .* repmat(sd,1,nNeurons)' .* Cor;
+            Counts(t,:) = round(mvnrnd(m*T, Cov)); % multivariate normal random numbers
+        end
+        Counts(Counts<0)=0;
+        toc
+        % % % % plot pairwise responses for similar and unsimilar neurons, for a fixed stimulus (or not)
+        % % % whichTr = abs(coh)<0.001;
+        % % % durToNorm = dur(whichTr);
+        % % % corrs1(g) = corr(Counts(whichTr,1)./durToNorm, Counts(whichTr,2)./durToNorm);
+        % % % corrs2(g) = corr(Counts(whichTr,1)./durToNorm, Counts(whichTr,19)./durToNorm);
+        % % % % figure; plot(Counts(whichTr,1),Counts(whichTr,2),'x'); title(num2str(corrs1(g)));
+        % % % % figure; plot(Counts(whichTr,1),Counts(whichTr,19),'o'); title(num2str(corrs2(g)));
+        % % % end
+        % % % mean(corrs1)
+        % % % mean(corrs2) % TEMP: to test that average corr value is as desired
 
+    case 'corrMat_Shadlen96' % method of Shadlen et al. 1996 J Neurosci, Appendix 1 (>2x faster)
+        tic
+        rootQ = sqrtm(Cor);
+        Counts = nan(nTrials, nNeurons);
+        for t = 1:nTrials
+            c = poscohs==abs(coh(t));
+            T = dur(t)/1000;
+            m = RiD{c}(:,dir(t)==[0 180]);
+            z = normrnd(0,1,nNeurons,1);
+            y = rootQ * z;
+            y = y.*sqrt(fano*m*T) + m*T; % variance is fano*mean, and SD is sqrt of that
+            y(y<0) = 0; % no negative reponses
+            Counts(t,:) = round(y);
+        end
+        toc
 
-
-% (2) Shadlen et al. 1996 J Neurosci, Appendix 1 (>2x faster)
-tic
-rootQ = sqrtm(Cor);
-Counts = nan(nTrials, nNeurons);
-for t = 1:nTrials
-    c = poscohs==abs(coh(t));
-    T = dur(t)/1000;
-    m = tuning{c}(:,dirAxis==dir(t));
-    z = normrnd(0,1,nNeurons,1);
-    y = rootQ * z;
-    y = y.*sqrt(fano*m*T) + m*T; % variance is fano*mean, and SD is sqrt of that
-    y(y<0) = 0; % no negative reponses
-    Counts(t,:) = round(y);
 end
-toc
 
 
 % below we'll also need spike *rates*, since dur varies
@@ -216,8 +292,8 @@ for c = 1:length(cohs)
     Fanos(:,c) = var(Counts(I,:))./mean(Counts(I,:));
 %     Fanos(:,c) = var(Rates(I,:))./mean(Rates(I,:));
 % **this greatly overestimates the true Fano factor, even when using Rates, 
-% because of added variance from variable durations. set dur(:)=1000 on 
-% line ~23 to see the correct Fano
+% because of added variance from variable durations. set dur(:)=1000 in 
+% first code cell above to see the correct Fano
 
 end
 if plotCorr
@@ -226,7 +302,7 @@ if plotCorr
     figure(5); suptitle('spike count correlation matrix: actual (sep by coh)');
 end
 
-    
+
 % confirm that variance of difference variable (momentary evidence)
 % increases with coh, aka signal-dependent noise
 if plotMT
@@ -354,13 +430,13 @@ end
 % tuning curves and correlations) throughout the trial, which now
 % includes a baseline and ramp-down period. In real experiments, tuning
 % curves are usually constructed by counting spikes in a window that
-% excludes these periods. This has two consequences: (1) spike counts/rates
+% excludes these periods. This has two consequences: (1) spike rates
 % in the appropriate time windows of these constructed spike trains will be
-% lower than the intended values based on tuning{}, and (2) the average
+% lower than the prescribed values based on tuning{}, and (2) the average
 % spike rate during the baseline period (see PSTHs below) will depend on
 % the mean rate for that trial, i.e. will depend on coherence, which of
 % course would not happen in a real experiment. I don't think this should
-% cause any problems with this exercise but noting it here just in case.
+% cause any problems with the simulation but noting it here just in case.
 
 
 
@@ -408,10 +484,11 @@ end
 %% save the results
 disp('saving...');
 
-clearvars -except R tuning nNeurons nTrials prefDirs latency dir dur coh cohs poscohs tAxis
+clearvars -except R tuning nNeurons nTrials prefDirs latency dir dur coh cohs poscohs tAxis dirDist_sigma
+if dirDist_sigma<1e-6; dirDist_sigma=0; end
 
 tic
-save(sprintf('simMT_nNeu=%d_nTr=%d.mat', nNeurons, nTrials),'-v7.3');
+save(sprintf('simMT_nNeu=%d_nTr=%d_sigma=%d.mat', nNeurons, nTrials,dirDist_sigma),'-v7.3');
 toc
 
 disp('done.');

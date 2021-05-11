@@ -4,9 +4,9 @@
 % distributions: low, medium, and high. Low when both the bandit and dots
 % choices are wrong, high when both are correct, and medium when either is
 % correct and the other incorrect. The correct bandit choice is random at
-% the beginning of the block of ~40-60 trials, and changes at some uncued
-% time near the middle of the block. In addition, expected values of the
-% options can be modulated by changing, say, the prior over (signed)
+% the beginning of the block of ~40-60 trials, and switches with some
+% probability (modulo a refractory period) up In addition, expected values
+% of the options can be modulated by changing, say, the prior over (signed)
 % coherence, in addition to mean and variance of reward distributions.
 
 

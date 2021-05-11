@@ -84,7 +84,7 @@ for c = 1:length(poscohs)
         figure(100);
         plot(dirAxis, kernelH{c}(round(nNeurons/2), :)); hold on; 
         figure(101);
-        plot([dirAxis 360], log(tuning{c}(round(nNeurons/2),:))); hold on;
+        plot(dirAxis, log(tuning{c}(round(nNeurons/2),:))); hold on;
     end
 end
 hold off
@@ -93,8 +93,8 @@ hold off
 % different, because i divided by 500. When you add it it looks better).
 if 1
     figure
-    plot([dirAxis 360], log(tuning{6}(round(nNeurons/2),:))); hold on;
-    plot([dirAxis 360], tuning{6}(round(nNeurons/2),:)); hold off;
+    plot(dirAxis, log(tuning{6}(round(nNeurons/2),:))); hold on;
+    plot(dirAxis, tuning{6}(round(nNeurons/2),:)); hold off;
     title('Kernel with NO Correlation, with Log')
     xlabel('Direction')
 
