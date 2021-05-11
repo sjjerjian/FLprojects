@@ -26,23 +26,23 @@ for d = 1:length(deltas)+1 % add extra column for all trials irrespective of del
             J = data.modality==mods(m) & data.coherence==cohs(c) & data.heading==hdgs(h) & data.delta==deltas(d);
         end
         
-        n(m,c,d,h) = sum(J);
-        pRight(m,c,d,h) = sum(J & data.choice==2) / n(m,c,d,h); % 2 is rightward
+        n(m,c,d,h) = nansum(J);
+        pRight(m,c,d,h) = nansum(J & data.choice==2) / n(m,c,d,h); % 2 is rightward
         
         if RTtask
-            RTmean(m,c,d,h) = mean(data.RT(J));
-            RTse(m,c,d,h) = std(data.RT(J))/sqrt(n(m,c,d,h));
+            RTmean(m,c,d,h) = nanmean(data.RT(J));
+            RTse(m,c,d,h) = nanstd(data.RT(J))/sqrt(n(m,c,d,h));
         end
         
         if conftask==1
-            confMean(m,c,d,h) = mean(data.conf(J));
-            confSE(m,c,d,h) = std(data.conf(J))/sqrt(n(m,c,d,h));
+            confMean(m,c,d,h) = nanmean(data.conf(J));
+            confSE(m,c,d,h) = nanstd(data.conf(J))/sqrt(n(m,c,d,h));
         else % PDW
             % ignore 1-target trials! these are just for training purposes
             if isfield(data,'oneConfTargTrial')
                 J = J & ~data.oneConfTargTrial;
             end
-            confMean(m,c,d,h) = sum(J & data.PDW==1) / sum(J); % 1 is high
+            confMean(m,c,d,h) = nansum(J & data.PDW==1) / sum(J); % 1 is high
             % SE gets calculated below
         end            
     end
@@ -53,7 +53,7 @@ for d = 1:length(deltas)+1 % add extra column for all trials irrespective of del
     else
         K = data.modality==mods(m) & data.coherence==cohs(c) & data.delta==deltas(d);
     end
-    if sum(~isnan(data.heading(K)))>=3*length(hdgs) && length(hdgs)>5
+    if nansum(~isnan(data.heading(K)))>=3*length(hdgs) && length(hdgs)>5
         X = data.heading(K);
         y = data.choice(K)==2; % 2 is rightward
         [B{m,c,d}, ~, stats{m,c,d}] = glmfit(X, y, 'binomial');
@@ -83,8 +83,6 @@ for c=1:length(cohs)
     confSE(1,c,:,:,:) = confSE(1,1,:,:,:);
     RTmean(1,c,:,:,:) = RTmean(1,1,:,:,:);
     RTse(1,c,:,:,:) = RTse(1,1,:,:,:);
-    confMean(1,c,:,:,:) = confMean(1,1,:,:,:);
-    confSE(1,c,:,:,:) = confSE(1,1,:,:,:);
     yVals(1,c,:,:,:) = yVals(1,1,:,:,:);
     plotLogistic(1,c,:,:) = plotLogistic(1,1,:,:);
     B(1,c,:,:) = B(1,1,:,:);

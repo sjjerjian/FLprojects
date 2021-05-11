@@ -128,7 +128,7 @@ switch options.fitMethod
 
 end
 
-% insert fixed params
+% re-insert fixed params
 temp = X;
 X = zeros(size(fixed));
 X(fixed==0) = temp;
@@ -178,7 +178,7 @@ Dfit.delta = delta;
 % plotted is fitInterp, not Dfit
 Dfit.choice = ones(size(Dfit.heading));
 Dfit.RT     = ones(size(Dfit.heading));
-Dfit.PDW   = ones(size(Dfit.heading));
+Dfit.conf   = ones(size(Dfit.heading));
 
 
 % [~,fitInterp] = dots3DMP_fitDDM_err(X,Dfit);

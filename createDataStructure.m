@@ -12,7 +12,7 @@ data.filename = {};
 data.subj = {};
 data.choice = []; % initialize this one field, you'll see why
 
-fieldExcludes = {'reward','leftEarly','fixFP','eyeXYs','corrLoopActive','goodtrial', ...
+fieldExcludes = {'reward','rewardDelay','leftEarly','tooSlow','fixFP','FPHeld','eyeXYs','corrLoopActive','goodtrial', ...
                  'timeTargDisappears','probOfMemorySaccade','leftTargR','leftTargTheta', ...
                  'rightTargR','rightTargTheta','audioFeedback','textFeedback'};
 
@@ -25,6 +25,7 @@ for d = 1:length(dateRange)
            && contains(allFiles(f).name, paradigm)
        
             disp(['loading ' allFiles(f).name]);
+            
             try
                 load([localDir allFiles(f).name],'-mat'); % load it. this is the time limiting step;
                                                           % will eventually change how data are saved to make this faster
@@ -43,7 +44,7 @@ for d = 1:length(dateRange)
                             else
                                 data.subj{T,1} = subject;
                             end
-
+                            
                             % independent variables are stored in PDS.conditions.stimulus
                             fnames = fieldnames(PDS.conditions{t}.stimulus);
                             fnames(ismember(fnames,fieldExcludes)) = [];

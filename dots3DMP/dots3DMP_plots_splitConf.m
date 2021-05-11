@@ -42,7 +42,7 @@ for c=1:length(cohs)
         else
             title(modlabels{m})
         end
-    legend('hiConf','loConf','Location','northwest');
+    legend('High Bet','Low Bet','Location','northwest');
     if m==length(mods), xlabel('heading angle (deg)'); end
     if m==2, ylabel('proportion rightward choices'); end
     changeAxesFontSize(gca,15,15);

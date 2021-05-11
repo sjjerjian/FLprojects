@@ -14,7 +14,7 @@ end
 figure('position',[300 300 800 300]);subplot(131); plot(hdgs,confCorr,'b-o',hdgs,confErr,'r-o','linew',1.5);
 xlabel('heading (deg)');
 changeAxesFontSize(gca,14,14);
-ylabel('confidence)');
+ylabel('confidence');
 legend('corrects','errors','Location','Southeast');
 
 clear confCorr confErr

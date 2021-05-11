@@ -113,7 +113,7 @@ if R.plotflag
     figure(111); set(gcf,'Color',[1 1 1],'Position',[1022 274 538 681],'PaperPositionMode','auto'); clf;
     subplot(3,1,1); plot(R.drift,P.up.p); title('Prob correct bound crossed before tmax')
     subplot(3,1,2); plot(R.drift,P.up.p./(P.up.p+P.lo.p)); title('Relative prob of corr vs. incorr bound crossed (Pcorr)');
-    subplot(3,1,3); plot(R.drift,P.up.mean_t); title('mean RT');
+    subplot(3,1,3); plot(R.drift,P.up.mean_t); title('mean RT (without non-dec time)'); xlabel('Drift rate')
 
     % remake Fig. 5c-d of Kiani et al 2014 (steps analogous to makeLogOddsCorrMap_*)
     n = 100; % set n to 100+ for smooth plots, lower for faster plotting
@@ -134,9 +134,10 @@ if R.plotflag
     set(gca,'XLim',[0 R.t(end)],'XTick',0:R.t(end)/5:R.t(end),...
     'YTick',-2*R.Bup:R.Bup/2:0,'YTickLabel',num2cell(-R.Bup:R.Bup/2:R.Bup),'TickDir','out');
     set(h,'LineColor','none');
-    changeAxesFontSize(gca,24,24);
+    changeAxesFontSize(gca,12,12);
+%     title('2D Acc PDF')
     % xlabel('Time (s)'); ylabel('Accumulated evidence of losing accumulator');
-    % title('Probability density of losing accumulator');
+    title('Probability density of losing accumulator');
     if R.plotflag==2; ylim([-2.5 0]); export_fig('2dacc_PDF','-eps'); end
         
     % (3) then the log odds corr map
@@ -147,9 +148,10 @@ if R.plotflag
     set(gca,'XLim',[0 R.t(end)],'XTick',0:R.t(end)/5:R.t(end),...
     'YTick',-2*R.Bup:R.Bup/2:0,'YTickLabel',num2cell(-R.Bup:R.Bup/2:R.Bup),'TickDir','out');
     set(h,'LineColor','none');
-    changeAxesFontSize(gca,24,24);
+    changeAxesFontSize(gca,12,12);
+%     title('Log Odds Correct')
     % xlabel('Time (s)'); ylabel('Accumulated evidence of losing accumulator');
-    % title('Log odds correct vs. state of losing accumulator');
+    title('Log odds correct vs. state of losing accumulator');
     if R.plotflag==2; ylim([-2.5 0]); export_fig('2dacc_logoddscorr','-eps'); end
 
 end

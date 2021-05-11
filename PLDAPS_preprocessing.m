@@ -13,13 +13,11 @@ clear all
 
 %% decide which files to load
 
-subject = 'human';
+subject = 'lucio';
 paradigm = 'dots3DMP';
-dateRange = 20200213:20200308; % 
-% 
+dateRange = 20210315:20210510; % 
+% % 
 % % % Warning: error loading hanzo20191011Dots1341.PDS
-
-
 
 % subject = 'human';
 % paradigm = 'dots3DMP';
@@ -29,28 +27,29 @@ dateRange = 20200213:20200308; %
 % paradigm = 'dots3DMP';
 % dateRange = 20200213:20200308; % RT
 
-% subject = 'lucio';
-% paradigm = 'dots3DMP';
-% dateRange = 20200615:20200923; % everything!
-
-
+%%
 dateStr = num2str(dateRange(1));
+if length(dateStr)>1
 for d = 2:length(dateRange)
     dateStr = [dateStr newline num2str(dateRange(d))];
+end
 end
 
 % localDir = ['/Users/chris/Documents/MATLAB/PLDAPS_data/' subject '/'];
 localDir = ['/Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data/' subject '/'];
+remoteDir = ['/var/services/homes/fetschlab/data/' subject '_basic/'];
 
-remoteDir = ['/var/services/homes/fetschlab/data/' subject '/'];
+useVPN = 0; % set to 1 if connected to JHU VPN
+%createLocalFiles = 1; % set to 0 to run pdsCleanup on server
+% server pdsCleanup not yet implemented...trying to solve error issue with
+% 'load' and 'save' of PDS file on remote server
 
+overwriteLocalFiles = 0; % set to 1 to always use the server original copy
 
 %% get PDS files from server
 % will skip files that already exist locally, unless overwrite set to 1
 
-overwriteLocalFiles = 0; % set to 1 to always use the server copy
-getDataFromServer % now also includes pdsCleanup to reduce file size and complexity
-
+getDataFromServer % includes pdsCleanup to reduce file size and complexity
 
 %% create data structure
 
@@ -60,7 +59,3 @@ createDataStructure
 %% optional: save data struct to a mat file so you don't have to repeat the time consuming step
 file = [subject '_' num2str(dateRange(1)) '-' num2str(dateRange(end)) '.mat'];
 save([localDir(1:length(localDir)-length(subject)-1) file], 'data');
-
-
-
-

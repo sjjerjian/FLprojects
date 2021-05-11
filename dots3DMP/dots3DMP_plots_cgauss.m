@@ -19,7 +19,7 @@ for c = 1:length(cohs)
         h(m) = plot(xVals, cgauss(beta,xVals), [clr{c}{m}(1) '-'],'linewidth',1.5); hold on;
         errorbar(hdgs, squeeze(pRight(m,c,D,:)), squeeze(pRightSE(m,c,D,:)), clr{c}{m},'linewidth',1.5);
         ylim([0 1]); if length(mods)>1; title(['coh = ' num2str(cohs(c))]); end
-        text(hdgs(1)+0.5,1.0-m*0.07,sprintf('%s: mu = %.2f, s = %.2f',modlabels{m},beta(1),beta(2)),'color',clr{1}{m}(1))
+        text(hdgs(1)+0.5,1.0-m*0.07,sprintf('%s: mu = %.2f, s = %.2f',modlabels{m},beta(1),beta(2)),'color',clr{c}{m}(1))
     end
 %     legend(h,'vestib','visual','comb','Location','northwest');
     
@@ -51,6 +51,7 @@ for c = 1:length(cohs)
             if length(mods)>1; title(['coh = ' num2str(cohs(c))]); end
         end
     end
+    ylabel('RT (s)')
     changeAxesFontSize(gca,15,15);
 end
 
@@ -106,8 +107,7 @@ for c = 1:length(cohs)
             hold on;
             if length(mods)>1; title(['coh = ' num2str(cohs(c))]); end
         end
-    %     legend(h,L,'location','northwest');
-        xlabel('heading angle (deg)'); ylabel('saccadic endpoint (''confidence'', %)');
+        xlabel('heading angle (deg)'); ylabel('RT (s)')
     end    
     changeAxesFontSize(gca,15,15);   
     

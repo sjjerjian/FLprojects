@@ -1,4 +1,4 @@
-function dots3DMP_plots_fit(Data,fitInterp, conftask)
+function dots3DMP_plots_fit(Data,fitInterp, conftask,RTtask)
 
 % somewhat unwieldy amalgam of parseData and dots3DMP_plots, to show model 
 % fits versus data in dots3DMP experiment

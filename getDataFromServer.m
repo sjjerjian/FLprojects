@@ -6,9 +6,13 @@
 % VERSION 2.0: 08-30-19 CF
 % must be run by PLDAPS_preprocessing
 
+% 04-07-2021 SJ
+if useVPN, FLnas = 'fetschlab@10.161.240.133';
+else,      FLnas = 'fetschlab@172.30.3.33'; 
+end
 
 % get file list from local dir
-if ~exist(localDir,'file')
+if ~exist(localDir,'dir')
     mkdir(localDir);
 end
 allFiles = dir(localDir);
@@ -21,9 +25,9 @@ else
     localFileList = [];
 end
 
+
 % get file list from remote dir
-% cmd = ['ssh fetschlab@172.30.3.33 ls ' remoteDir];
-cmd = ['ssh fetschlab@10.161.240.133 ls ' remoteDir]; % temp: VPN workaround
+cmd = ['ssh ' FLnas ' ls ' remoteDir];
 [~,remoteFileList] = system(cmd);
 if any(strfind(remoteFileList,'timed out')); error(remoteFileList); end
 filenameStart = strfind(lower(remoteFileList),lower(subject)); % lower makes it case-insensitive
@@ -42,19 +46,20 @@ for n = 1:length(filenameStart)
     dateStart = strfind(remoteFiles{n},'20');
     thisDate = remoteFiles{n}(dateStart(1):dateStart(1)+7); % (1) just in case '20' appears in a timestamp
     dot = strfind(remoteFiles{n},'.');
-    thisProt = remoteFiles{n}(dateStart(1)+8:dot-5);
+    thisProt = remoteFiles{n}(dateStart(1)+8:dot-11);
+%     thisProt = remoteFiles{n}(dateStart(1)+8:dot-5);
     if strcmp(paradigm,'Dots') % kluge for Hanzo, don't require an exclusive match
         foundProt = contains(remoteFiles{n},thisProt);
     else
         foundProt = strcmp(paradigm,thisProt);
     end
-    if any(strfind(dateStr,thisDate)) && foundProt
+    if any(strfind(dateStr,thisDate)) && foundProt  
         if ~any(strfind(localFileList,remoteFiles{n})) || overwriteLocalFiles % always copy if overwrite option selected
-%             cmd = ['scp fetschlab@172.30.3.33:' remoteDir remoteFiles{n} ' ' localDir];
-            cmd = ['scp fetschlab@10.161.240.133:' remoteDir remoteFiles{n} ' ' localDir]; % temp: VPN workaround
+            cmd = ['scp ' FLnas ':' remoteDir remoteFiles{n} ' ' localDir];
             system(cmd,'-echo');
+            
             % now clean it up and re-save
-            pdsCleanup
+            %pdsCleanup
         else
             disp([remoteFiles{n} ' exists locally, not copied']);
         end
