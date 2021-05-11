@@ -128,13 +128,19 @@ switch options.fitMethod
 
 end
 
+% re-insert fixed params
+temp = X;
+X = zeros(size(fixed));
+X(fixed==0) = temp;
+X(fixed==1) = guess(fixed==1);
 end
 
 
 % run err func again at the fitted/fixed params to generate a final
 % error value and model-generated data points (trial outcomes)
 options.ploterr = 0;
-[err_final, fit] = dots3DMP_fit_2Dacc_err(X,guess,zeros(size(X)),data,options);
+
+[err_final, fit] = dots3DMP_fit_2Dacc_err(X,X,false(size(X)),data,options);
 
 
 % *** now run it one more time with interpolated headings
@@ -157,8 +163,6 @@ mods = unique(data.modality);
 cohs = unique(data.coherence);
 deltas = unique(data.delta);
 
-% /begin generate condition list (could be moved into a function; it's the
-% same as the sim code and maybe elsewhere)
 nreps = 200;
 [hdg, modality, coh, delta, ~] = dots3DMP_create_trial_list(hdgs,mods,cohs,deltas,nreps);
 
@@ -166,10 +170,10 @@ nreps = 200;
 condlist = [hdg modality coh delta];
 trialTable = repmat(condlist,nreps,1);
 
-Dfit.heading = trialTable(:,1);  
-Dfit.modality = trialTable(:,2);  
-Dfit.coherence = trialTable(:,3);  
-Dfit.delta = trialTable(:,4);
+Dfit.heading = hdg;  
+Dfit.modality = modality;  
+Dfit.coherence = coh;  
+Dfit.delta = delta;
 
 %/end generate condition list
 
@@ -177,12 +181,13 @@ Dfit.delta = trialTable(:,4);
 % calculate err even though in this case it's meaningless. What will be
 % plotted is fitInterp, not Dfit
 Dfit.choice = ones(size(Dfit.heading));
-Dfit.RT = ones(size(Dfit.heading));
-Dfit.conf = ones(size(Dfit.heading));
+Dfit.RT     = ones(size(Dfit.heading));
+Dfit.conf   = ones(size(Dfit.heading));
+
 
 % [~,fitInterp] = dots3DMP_fitDDM_err(X,Dfit);
+% [~, fitInterp] = dots3DMP_fit_2Dacc_err(X,X,false(size(X)),Dfit,options);
 [~, fitInterp] = dots3DMP_fit_2Dacc_err(X,guess,zeros(size(X)),Dfit,options); 
-
 
 end
 

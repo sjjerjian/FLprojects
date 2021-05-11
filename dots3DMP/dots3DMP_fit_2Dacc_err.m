@@ -3,7 +3,12 @@ function [err,fit] = dots3DMP_fit_2Dacc_err(param, guess, fixed, data, options)
 global call_num
 keyboard
 
+% set parameters based on guess and fixed params flag
 param = getParam(param, guess, fixed);
+
+if isfield(data,'PDW')
+    data.conf = data.PDW;
+end
 
 ntrials = length(data.heading);
 
@@ -12,7 +17,9 @@ cohs = unique(data.coherence); % visual coherence levels
 hdgs = unique(data.heading);
 deltas = unique(data.delta);
 
-duration = 2000; % stimulus duration (ms)
+% actual MP traj...
+duration = 1300; % stimulus duration (ms)
+% duration = 2000;
 dur = ones(ntrials,1) * duration;
 
 ks    = param(1);
@@ -20,10 +27,10 @@ sigma = param(2);
 B     = abs(param(3)); % don't accept negative bound heights
 muTnd = param(4);
 
-if numel(param)==5, theta = param(5); end
+if numel(param)==5, theta = param(5); end % only relevant for PDW
 
 kves = ks;
-kvis = [.666*ks 1.5*ks];
+kvis = ks * [2 4.5]/3; % should 2/4.5 be another set of parameters? - relationship between ves and vis is fixed otherwise
 
 sigmaVes = sigma; % std of momentary evidence
 sigmaVis = [sigma sigma]; % allow for separate sigmas for condition, coherence
@@ -47,9 +54,15 @@ P =  images_dtb_2d(R);
 % create acceleration and velocity profiles (arbitrary for now)
 % SJ 04/2020
 % Hou et al. 2019, peak vel = 0.37m/s, SD = 210ms
-vel = normpdf(1:duration,duration/2,210);
-vel = 0.37*vel./max(vel);
-acc = gradient(vel)*1000; % multiply by 1000 to get from m/s/ms to m/s/s
+
+ampl = 0.16; % movement in metres
+pos = normcdf(1:duration,duration/2,0.14*duration)*ampl;
+vel = gradient(pos)*1000; % metres/s
+acc = gradient(vel);
+
+% vel = normpdf(1:duration,duration/2,210);
+% vel = 0.37*vel./max(vel);
+% acc = gradient(vel)*1000; % multiply by 1000 to get from m/s/ms to m/s/s
 
 % normalize
 vel = vel./max(vel);
@@ -79,7 +92,7 @@ S = [1 -1/sqrt(2) ; -1/sqrt(2) 1];
 
 for n = 1:ntrials
     Tnd = Tnds(n) / 1000; % non-decision time for nth trial in seconds
-    
+
     switch modality(n)
         case 1
             mu = acc .* kves * sind(hdg(n)) / 1000; % mean of momentary evidence
@@ -93,6 +106,7 @@ for n = 1:ntrials
             muVes = acc .* kves               * sind(hdg(n)-delta(n)/2) / 1000;
             muVis = vel .* kvis(cohs==coh(n)) * sind(hdg(n)+delta(n)/2) / 1000;
 
+            
             % optimal weights (Drugo et al.) 
             wVes = sqrt( kves^2 / (kvis(cohs==coh(n))^2 + kves^2) );
             wVis = sqrt( kvis(cohs==coh(n))^2 / (kvis(cohs==coh(n))^2 + kves^2) );
@@ -203,7 +217,7 @@ choiceD  = logical(data.choice-1);
 Pr_model = nan(ntrials,1);
 n = nan(length(mods),length(cohs),length(deltas),length(hdgs));
 
-pRight = n;
+pRight = n; PHighBet = n;
 RTmean_fit = n; RTmean_data = n; sigmaRT = n;
 confMean_fit = n; confMean_data = n; sigmaConf = n;
 nCor = n;
@@ -216,18 +230,25 @@ for d = 1:length(deltas)
         J = data.modality==mods(m) & data.coherence==cohs(c) & data.heading==hdgs(h) & data.delta==deltas(d);
         
         n(m,c,d,h) = sum(J);
-        nCor(m,c,d,h) = sum(J & data.correct); % use only correct trials for RT and conf fits
+        nCor(m,c,d,h) = sum(J & data.correct); % use only correct trials for RT and conf (sacc EP) fits
         
         pRight(m,c,d,h) = sum(J & fit.choice==2) / n(m,c,d,h); % 2 is rightward
         Pr_model(J) = pRight(m,c,d,h);
         
-        RTmean_fit(m,c,d,h) = mean(fit.RT(J & data.correct));
-        RTmean_data(m,c,d,h) = mean(data.RT(J & data.correct));
-        sigmaRT(m,c,d,h) = std(data.RT(J & data.correct))/sqrt(nCor(m,c,d,h));
+        if options.RTtask
+            RTmean_fit(m,c,d,h) = mean(fit.RT(J & data.correct));
+            RTmean_data(m,c,d,h) = mean(data.RT(J & data.correct));
+            sigmaRT(m,c,d,h) = std(data.RT(J & data.correct))/sqrt(nCor(m,c,d,h));
+        end
         
-        confMean_fit(m,c,d,h) = mean(fit.conf(J & data.correct));
-        confMean_data(m,c,d,h) = mean(data.conf(J & data.correct));
-        sigmaConf(m,c,d,h) = std(data.conf(J & data.correct))/sqrt(nCor(m,c,d,h));
+        if options.conftask == 1 % sacc endpoint
+            confMean_fit(m,c,d,h) = mean(fit.conf(J & data.correct));
+            confMean_data(m,c,d,h) = mean(data.conf(J & data.correct));
+            sigmaConf(m,c,d,h) = std(data.conf(J & data.correct))/sqrt(nCor(m,c,d,h));
+        elseif options.conftask == 2 % PDW
+            PHighBet(m,c,d,h) = sum(J & fit.conf==1) / n(m,c,d,h); % 1 is high
+            Phi_model(J) = PHighBet(m,c,d,h);
+        end  
     end
     
 end
@@ -241,18 +262,34 @@ Pr_model(Pr_model==0) = eps;
 Pr_model(Pr_model==1) = 1-eps;
 
 LL_choice = sum(log(Pr_model(choiceD))) + sum(log(1-Pr_model(~choiceD)));
+% log likelihood of choice is summed log likelihood across all trials (log
+% probability of observing choice given model
 
 % likelihood of mean RTs and mean confidence ratings for each condition, under Gaussian approximation
 
-L_RT = 1./(sigmaRT*sqrt(2*pi)) .* exp(-(RTmean_fit - RTmean_data).^2 ./ (2*sigmaRT.^2));
-L_RT(L_RT==0) = min(L_RT(L_RT~=0));
-LL_RT = nansum(log(L_RT(:))); % sum over all conditions
+LL_RT = 0;
+if options.RTtask
+    L_RT = 1./(sigmaRT*sqrt(2*pi)) .* exp(-(RTmean_fit - RTmean_data).^2 ./ (2*sigmaRT.^2));
+    L_RT(L_RT==0) = min(L_RT(L_RT~=0));
+    LL_RT = nansum(log(L_RT(:))); % sum over all conditions
+end
 
-L_conf = 1./(sigmaConf*sqrt(2*pi)) .* exp(-(confMean_fit - confMean_data).^2 ./ (2*sigmaConf.^2));
-L_conf(L_conf==0) = min(L_conf(L_conf~=0));
-LL_conf = nansum(log(L_conf(:))); % sum over all conditions
+LL_conf = 0;
+if options.conftask == 1 % sacc endpoint
+    L_conf = 1./(sigmaConf*sqrt(2*pi)) .* exp(-(confMean_fit - confMean_data).^2 ./ (2*sigmaConf.^2));
+    L_conf(L_conf==0) = min(L_conf(L_conf~=0));
+    LL_conf = nansum(log(L_conf(:))); % sum over all conditions
+elseif options.conftask ==2 % PDW
+    Phi_model(Phi_model==0) = min(Phi_model(Phi_model~=0)); 
+    Phi_model(Phi_model==1) = max(Phi_model(Phi_model~=1));
+    pdw = logical(data.conf);
+    LL_conf = sum(log(Phi_model(pdw))) + sum(log(1-Phi_model(~pdw)));
+else
+    
+end
 
 err = -(LL_choice + LL_RT + LL_conf);
+err = -LL_choice;
 
 
 %% print progress report!

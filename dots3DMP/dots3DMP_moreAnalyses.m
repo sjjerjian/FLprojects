@@ -14,7 +14,7 @@ end
 figure('position',[300 300 800 300]);subplot(131); plot(hdgs,confCorr,'b-o',hdgs,confErr,'r-o','linew',1.5);
 xlabel('heading (deg)');
 changeAxesFontSize(gca,14,14);
-ylabel('confidence)');
+ylabel('confidence');
 legend('corrects','errors','Location','Southeast');
 
 clear confCorr confErr
@@ -43,11 +43,11 @@ xlabel('RT');
 legend('correct','error')
 changeAxesFontSize(gca,14,14);
 ylabel('confidence)');
-legend('corrects','errors','Location','Southeast');
+legend('corrects','errors','Location','Northeast');
 
 %% compare choice shifts vs conf shifts
 
-exportfigs = 1;
+exportfigs = 0;
 
 % first just raw biases
 n = 1;

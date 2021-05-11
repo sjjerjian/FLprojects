@@ -16,9 +16,10 @@ normalize = 0;
 % RTtask = 0;
 
 %% RT
+
 subject = 'human';
 paradigm = 'dots3DMP';
-dateRange = 20200213:20200308; % RT
+dateRange = 20200213:20210331; % RT
 RTtask = 1;
 
 
@@ -30,7 +31,8 @@ RTtask = 1;
 
 
 %%
-folder = '/Users/chris/Documents/MATLAB/PLDAPS_data/';
+% folder = '/Users/chris/Documents/MATLAB/PLDAPS_data/';
+folder = '/Users/stevenjerjian/Desktop/FetschLab/Analysis/PLDAPS_data/';
 file = [subject '_' num2str(dateRange(1)) '-' num2str(dateRange(end)) '.mat'];
 load([folder file], 'data');
 
@@ -55,26 +57,21 @@ for k = 1:length(data.filename)
     data.subjDate{k,:} = [data.subj{k} data.filename{k}(9:16)];
 end
 
-% quick look at blocks, for when some need to be excluded
-blocks = unique(data.filename);
-nTrialsByBlock = nan(length(blocks),1);
-for u = 1:length(blocks)
-    nTrialsByBlock(u) = sum(ismember(data.filename,blocks(u)));
-end
+%% Some manual excludes e.g. of bad sessions, RT trainings
 
-% would be nice to have a variable that indexes good data...
-% for the time being we'll have to manually exclude by block or subj+date
-
-% we can be pretty sure blocks with <N trials (say, 30) are to be discarded
-removethese = ismember(data.filename,blocks(nTrialsByBlock<30));
-
+% consider beter ways of cleaning or labelling sessions beforehand?
+% based on notes? add field
 
 % other manual excludes (e.g., RT training)
 excludes_filename = {'humanIPQ20200227dots3DMP0904','humanVZC20200229dots3DMP1239'};
 excludes_subjDate = {'FRK20200216','FRK20200223','NKT20200215','VZC20200222'};
-% excludes_subj = {'ASQ', 'HXL', 'XRJ', 'EMF'};
-excludes_subj = {};
-removethese = removethese | ismember(data.filename,excludes_filename) | ismember(data.subjDate,excludes_subjDate) | ismember(data.subj,excludes_subj); %#ok<NASGU>
+excludes_subj = {'ASQ', 'HXL', 'XRJ', 'EMF','NEX'};
+
+% excludes_filename = {};
+% excludes_subjDate = {};
+% excludes_subj = {};
+
+removethese = ismember(data.filename,excludes_filename) | ismember(data.subjDate,excludes_subjDate) | ismember(data.subj,excludes_subj); %#ok<NASGU>
 fnames = fieldnames(data);
 for F = 1:length(fnames)
     eval(['data.' fnames{F} '(removethese) = [];']);
@@ -85,7 +82,7 @@ blocks = unique(data.filename);
 
 %% choose subjects to include based on 3-letter code
 
-subjs = unique(data.subj); % all
+% subjs = unique(data.subj); % all
 
 % subjs = {'AAW'}; % the best single subject
 % subjs = {'LLV'}; % good shifts at low coh
@@ -108,6 +105,8 @@ subjs = unique(data.subj); % all
 % subjs = {'SJJ'}
 % subjs = {'VZC'}
 
+subjs = {'DRH','SJJ','LLV','IPQ'};
+
 % subjs = {'AAW' 'LLV' 'CXD' 'DRH' 'IPQ' 'SJJ' 'VZC'}; % all 'good' data (pre and post RT)
 
 
@@ -120,6 +119,27 @@ for F = 1:length(fnames)
     eval(['data.' fnames{F} '(removethese) = [];']);
 end
 
+% should do the trial number based exclusion here, earlier on we are
+% counting fixation breaks
+
+% quick look at blocks, for when some need to be excluded
+blocks = unique(data.filename);
+nTrialsByBlock = nan(length(blocks),1);
+for u = 1:length(blocks)
+    nTrialsByBlock(u) = sum(ismember(data.filename,blocks(u)));
+end
+
+% we can be pretty sure blocks with <N trials (say, 30) are to be discarded
+removethese = ismember(data.filename,blocks(nTrialsByBlock<30));
+for F = 1:length(fnames)
+    eval(['data.' fnames{F} '(removethese) = [];']);
+end
+% quick look at blocks again
+blocks = unique(data.filename);
+nTrialsByBlock = nan(length(blocks),1);
+for u = 1:length(blocks)
+    nTrialsByBlock(u) = sum(ismember(data.filename,blocks(u)));
+end
 
 %% cull data
 
@@ -132,7 +152,7 @@ mods = unique(data.modality);
     % currently too many cohs in the dataset, so...
 
 % N = hist(data.coherence,unique(data.coherence))'
-unique(data.coherence)
+% unique(data.coherence)
 
 
 % ...lump coherences together (work in progress)
@@ -144,11 +164,11 @@ unique(data.coherence)
 % cohs = [0.1 0.5 0.9];
 
 % everyone else
-data.coherence(data.coherence<=0.3) = 0.2;
+data.coherence(data.coherence<=0.5) = 0.3;
 % data.coherence(data.coherence>0.1 & data.coherence<=0.4) = 0.2;
-data.coherence(data.coherence>0.3) = 0.6;
+data.coherence(data.coherence>0.5) = 0.7;
 
-cohs = [0.2 0.6];
+cohs = unique(data.coherence);
 
 
 % remove the rest
@@ -169,7 +189,7 @@ hdgs = unique(data.heading);
 if RTtask==0
     % same here.  the 1.5-12 range was only used rarely, and in fact is a
       % good signature of warmup or testing-mode trials to be excluded
-    hdgs = [-10 -5 -2.5 -1.25 0 1.25 2.5 5 10]';
+    %hdgs = [-10 -5 -2.5 -1.25 0 1.25 2.5 5 10]';
     % some zero values were stored as +/- eps in an older version of the gui
     data.heading(abs(data.heading)<0.01) = 0;
 end

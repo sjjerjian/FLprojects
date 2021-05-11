@@ -1,10 +1,12 @@
-function dots3DMP_plots_fit(Data,fitInterp)
+function dots3DMP_plots_fit(Data,fitInterp, conftask,RTtask)
 
 % somewhat unwieldy amalgam of parseData and dots3DMP_plots, to show model 
 % fits versus data in dots3DMP experiment
 
 % calls parseData separately on fit and data, then plots the curves for
 % the former and just the data points for the latter
+
+if nargin<3, conftask=1; end
 
 %% data
 
@@ -13,8 +15,6 @@ mods = unique(data.modality);
 cohs = unique(data.coherence);
 deltas = unique(data.delta);
 hdgs = unique(data.heading);
-conftask = 1;
-RTtask = 1;
 
 dots3DMP_parseData
 
@@ -42,7 +42,10 @@ for c = 1:length(cohs)
         h(m) = errorbar(hdgs, squeeze(confMean(m,c,D,:)), squeeze(confSE(m,c,D,:)), [clr{c}{m}]);
         ylim([0 1]); hold on;
     end
-    xlabel('heading angle (deg)'); ylabel('saccadic endpoint (''confidence'', %)');
+    xlabel('heading angle (deg)'); 
+    if conftask==1, ylabel('saccadic endpoint (''confidence'', %)');
+    elseif conftask==2, ylabel('proportion high bet');
+    end
     
     if ~isnan(RTmean(1,1,2))
         subplot(3,length(cohs),c+length(cohs)*2);
@@ -80,7 +83,10 @@ for c = 1:length(cohs)
         h(d) = errorbar(hdgs, squeeze(confMean(3,c,d,:)), squeeze(confSE(3,c,d,:)), [clr{c}{d}]);
         ylim([0 1]); hold on;
     end
-    xlabel('heading angle (deg)'); ylabel('saccadic endpoint (''confidence'', %)');
+    xlabel('heading angle (deg)'); 
+    if conftask==1, ylabel('saccadic endpoint (''confidence'', %)');
+    elseif conftask==2, ylabel('proportion high bet');
+    end  
     
     if ~isnan(RTmean(1,1,2))
         subplot(3,length(cohs),c+length(cohs)*2);

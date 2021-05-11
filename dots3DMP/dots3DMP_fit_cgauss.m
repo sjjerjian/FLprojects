@@ -7,24 +7,32 @@ cgauss_err = @(param,choice,hdg) -(sum(log(cgauss(param,hdg(choice))))+sum(log(1
 
 % fit a (flipped) gaussian for conf and RT for now, until DDM fits are good
 % b(2) and b(3) are mu and sigma
-% b(1) and b(4) are top and bottom offsets
+% b(1) is 'amplitude' above baseline, b(4) is baseline level
 
-flippedGauss = @(b,hdg) 1 - ( min(max(b(1),0),1) .* exp(-(hdg-b(2)).^2 ./ (2*b(3).^2)) + b(4));
 
 if conftask==1 % continuous, sacc endpoint    
     % for continuous values, error is sum squared error
-    flippedGauss_err = @(param,SEP,hdg) sum((flippedGauss(param,hdg)-SEP).^2);
-else % PDW, probabilities
-    flippedGauss_err = @(param,pdw,hdg) -(sum(log(flippedGauss(param,hdg(pdw))))+sum(log(1-flippedGauss(param,hdg(~pdw))))); 
+    flippedGauss = @(b,hdg) 1 - ( min(max(b(1),0),1) .* exp(-(hdg-b(2)).^2 ./ (2*b(3).^2)) + b(4));
+    flippedGauss_err = @(param,SEP,hdg) nansum((flippedGauss(param,hdg)-SEP).^2);
+    
+elseif conftask==2 % PDW, probabilities
+    flippedGauss = @(b,hdg) 1 - ( min(max(b(1),0),1) .* exp(-(hdg-b(2)).^2 ./ (2*b(3).^2)) + b(4));
+    % negative log likelihood of observing PDW data
+    
+    % this error function doesn't seem to work...why not?
+    % log probability of observing high bet on all trials where subj bet
+    % high, + log probability of low bet on trials where subj bet low
+    flippedGauss_err = @(param,pdw,hdg) -( sum(log(flippedGauss(param,hdg(pdw)))) + sum(log(1-flippedGauss(param,hdg(~pdw)))) );
 end
 
+% RT
 gauss = @(b,hdg) b(1) .* exp(-(hdg-b(2)).^2 ./ (2*b(3).^2)) + b(4);
 gauss_err = @(param,SEP,hdg) sum((gauss(param,hdg)-SEP).^2);
 
 unc = 0; % saves biases from fminunc instead of fminsearch (SEs always are fminunc, and plots are always fminsearch)
 
-% parameter intial guesses
-guess_fgauss = [0.7 0 4 0.1];
+% parameter initial guesses
+guess_fgauss = [0.4 0 3 0.1];
 guess_gauss = [1 0 6 1];
 
 
@@ -33,28 +41,22 @@ D = length(deltas)+1; % (the extra column we made for pooling across deltas)
 % OR select just delta=0:
 % D = find(deltas==0);
 
-muPMF = nan(length(mods),length(cohs),length(deltas));
-muPMFse = nan(length(mods),length(cohs),length(deltas));
-sigmaPMF = nan(length(mods),length(cohs),length(deltas));
-sigmaPMFse = nan(length(mods),length(cohs),length(deltas));
+% initialize vars for storing param fits
+% deal func looks nicer, but is slow for some reason...
+n = nan(length(mods),length(cohs),length(deltas));
 
-amplConf = nan(length(mods),length(cohs),length(deltas));
-amplConfse = nan(length(mods),length(cohs),length(deltas));
-muConf = nan(length(mods),length(cohs),length(deltas));
-muConfse = nan(length(mods),length(cohs),length(deltas));
-sigmaConf = nan(length(mods),length(cohs),length(deltas));
-sigmaConfse = nan(length(mods),length(cohs),length(deltas));
-baselineConf = nan(length(mods),length(cohs),length(deltas));
-baselineConfse = nan(length(mods),length(cohs),length(deltas));
+muPMF = n; muPMFse = n;
+sigmaPMF = n; sigmaPMFse = n;
 
-amplRT = nan(length(mods),length(cohs),length(deltas));
-amplRTse = nan(length(mods),length(cohs),length(deltas));
-muRT = nan(length(mods),length(cohs),length(deltas));
-muRTse = nan(length(mods),length(cohs),length(deltas));
-sigmaRT = nan(length(mods),length(cohs),length(deltas));
-sigmaRTse = nan(length(mods),length(cohs),length(deltas));
-baselineRT = nan(length(mods),length(cohs),length(deltas));
-baselineRTse = nan(length(mods),length(cohs),length(deltas));
+amplConf = n; amplConfse = n;
+muConf = n; muConfse = n;
+sigmaConf = n; sigmaConfse = n;
+baselineConf = n; baselineConfse = n;
+
+amplRT = n; amplRTse = n;
+muRT = n; muRTse = n;
+sigmaRT = n; sigmaRTse = n;
+baselineRT = n; baselineRTse = n;
 
 for c = 1:length(cohs)
     % choice
@@ -95,9 +97,11 @@ for c = 1:length(cohs)
         end
         
         if conftask==1 % sacc endpoint
+            
             beta = fminsearch(@(x) flippedGauss_err(x,data.conf(I),data.heading(I)), guess_fgauss);
             [betaUnc,~,~,~,~,hessian] = fminunc(@(x) flippedGauss_err(x,data.conf(I),data.heading(I)), guess_fgauss);
         elseif conftask==2 % PDW
+%             keyboard
             beta = fminsearch(@(x) flippedGauss_err(x,data.PDW(I)==1,data.heading(I)), guess_fgauss);
             [betaUnc,~,~,~,~,hessian] = fminunc(@(x) flippedGauss_err(x,data.PDW(I)==1,data.heading(I)), guess_fgauss);
         end
