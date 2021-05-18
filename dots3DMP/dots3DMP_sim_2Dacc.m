@@ -19,9 +19,10 @@ nreps = 200; % number of repetitions of each unique trial type
             % start small to verify it's working, then increase
             % (ntrials depends on num unique trial types)
 
-cohs = [0.3 0.7]; % visual coherence levels (these are really just labels, since k's are set manually)
-hdgs = [-10 -5 -2.5 -1.25 0 1.25 2.5 5 10]; % heading angles
+cohs = [0.4 0.8]; % visual coherence levels (these are really just labels, since k's are set manually)
+% hdgs = [-10 -5 -2.5 -1.25 0 1.25 2.5 5 10]; % heading angles
 % hdgs = [-10 -3.5 -1.25 1.25 3.5 10]; % heading angles
+hdgs = [-12 -6 -3 -1.5 1.5 3 6 12];
 deltas = [-3 0 3]; % conflict angle; positive means vis to the right
 mods = [1 2 3]; % stimulus modalities: ves, vis, comb
 % duration = 2000; % stimulus duration (ms)
@@ -31,16 +32,17 @@ duration = 1300;
 ks = 25; % scale factor, for quickly testing different k levels
   % set manually to get reasonable results from images_dtb_2d
 kves = ks;
-kvis = ks * [2 4.5]/3; % straddles vestibular reliability, by construction
+% kvis = ks * [2 4.5]/3; % straddles vestibular reliability, by construction
+kvis = ks * [1 2.7]/3; % straddles vestibular reliability, by construction
 
-theta = 0.7; % threshold for high bet in logOdds, ignored if conftask==1
+theta = 0.8; % threshold for high bet in logOdds, ignored if conftask==1
 
-sigmaVes = 0.01; % std of momentary evidence
-sigmaVis = [0.01 0.01]; % allow for separate sigmas for condition, coherence
+sigmaVes = 0.02; % std of momentary evidence
+sigmaVis = [0.02 0.02]; % allow for separate sigmas for condition, coherence
     % set manually to get reasonable looking dv trajectories;
     % also affects peakiness/flatness of confidence curve
 
-B = 1.2; % bound height (also hand-tuned)
+B = 0.8; % bound height (also hand-tuned)
 
 % draw non-decision times from Gaussian dist
 % muTnd will be a parameter to fit, sdTnd can be fixed at reasonable value
@@ -90,7 +92,7 @@ end
 
 %% build trial list
 
-[hdg, modality, coh, delta, ntrials] = dots3DMP_create_trial_list(hdgs,mods,cohs,deltas,nreps);
+[hdg, modality, coh, delta, ntrials] = dots3DMP_create_trial_list(hdgs,mods,cohs,deltas,nreps,0); % don't shuffle
 
 % sample durations from truncated exponential?
     % not practical experimentally.
@@ -237,10 +239,10 @@ for n = 1:ntrials
 
     if plotExampleTrials
 
-        if modality(n)==1 && hdg(n)==5 && choice(n)==1 && doneWith1==0 % make a better plot for talk/poster;
+        if modality(n)==1 && hdg(n)==3 && choice(n)==1 && doneWith1==0 % make a better plot for talk/poster;
                               % must not shuffle trial list for this to go in correct in order
 
-            figure(1000); set(gcf, 'Color', [1 1 1], 'Position', [100 100 350 375], 'PaperPositionMode', 'auto'); clf;
+            figure(1000); set(gcf, 'Color', [1 1 1], 'Position', [100 100 350 375], 'PaperPositionMode', 'auto');
             hold on; box off;
             xlabel('Time (ms)');
             ylabel('Accum. evidence');
@@ -257,15 +259,11 @@ for n = 1:ntrials
             fprintf('Vest hdg = %.1f, RT (-NDT) = %.2f, conf = %.2f',hdg(n),RT(n)-Tnd,conf(n));
 
             plot(1:length(dv),ones(1,length(dv))*B,'k-','LineWidth',4);
+            if conftask==2, text(1, B+0.02, sprintf('Theta = %.g',theta),'verti','bottom'); end
 
             plot([round((RT(n)-Tnd)*1000) round((RT(n)-Tnd)*1000)],dv(round((RT(n)-Tnd)*1000),:),'k:')
 %             plot([round(RT(n)*1000) round(RT(n)*1000)],[dv(round((RT(n)-Tnd)*1000),2) B],'r--')
-
-%             text((RT(n)-Tnd/2)*1000,1,'NDT','horizo','center','verti','bottom','fontweight','bold','fontsize',14)
-%             keyboard
-%             text((RT(n)+0.1-Tnd)*1000,0,sprintf('Conf = %.2f',conf(n)),'fontweight','bold','fontsize',14)
-%             text(RT(n)*1000-Tnd,1.12*B,sprintf('RT = %.2fs',RT(n)),'fontweight','bold','fontsize',14)
-
+                
             box off;
             xlabel('Time (ms)');
 %             ylabel('Accum. evidence for leftward');
@@ -277,16 +275,16 @@ for n = 1:ntrials
 
             doneWith1=1; n
         end
-        if modality(n)==2 && hdg(n)==5 && coh(n)==cohs(2) && choice(n)==1 && doneWith2==0
-            figure(1000);
+        if modality(n)==2 && hdg(n)==6 && coh(n)==cohs(2) && choice(n)==1 && doneWith2==0
+            figure(1000); hold on; 
             plot(dv(1:round((RT(n)-Tnd)*1000),1),'r-','LineWidth',2); %hold on; % winning (R, since we preselect for R choice)
             plot(dv(1:round((RT(n)-Tnd)*1000),2),'m-','LineWidth',1); % losing (L)            doneWith2 = 1;
             plot([round((RT(n)-Tnd)*1000) round((RT(n)-Tnd)*1000)],dv(round((RT(n)-Tnd)*1000),:),'r:')
             fprintf('Vis hdg = %.1f, RT (-NDT) = %.2f, conf = %.2f',hdg(n),RT(n)-Tnd,conf(n));
             doneWith2 = 1; n
         end
-        if modality(n)==3 && hdg(n)==5 && coh(n)==cohs(2) && choice(n)==1 && delta(n)==0 && doneWith3==0
-            figure(1000);
+        if modality(n)==3 && hdg(n)==1.5 && coh(n)==cohs(2) && choice(n)==1 && delta(n)==0 && doneWith3==0
+            figure(1000); hold on; 
             plot(dv(1:round((RT(n)-Tnd)*1000),1),'b-','LineWidth',2); %hold on; % winning (R, since we preselect for R choice)
             plot(dv(1:round((RT(n)-Tnd)*1000),2),'c-','LineWidth',1); % losing (L)
             plot([round((RT(n)-Tnd)*1000) round((RT(n)-Tnd)*1000)],dv(round((RT(n)-Tnd)*1000),:),'b:')
@@ -299,7 +297,7 @@ for n = 1:ntrials
 end
 toc
 
-figure(1000);
+figure(1000); %yl = get(gca,'ylim');
 plot(1:length(vel),vel+yl(1),'k--','linew',0.5)
 choice(choice==0) = sign(randn); % not needed under usual circumstances
 
@@ -325,19 +323,20 @@ data.conf = conf;
 if conftask==2
     data.PDW=data.conf;
 end
+subject = 'simul';
 
 % cd('/Users/stevenjerjian/Desktop/FetschLab/DATA analysis')
-% save('2DAcc_simdata_sacc_stimprof.mat','data','cohs','deltas','hdgs','mods','origParams','RTtask','conftask')
+save('2DAccSim_PDW.mat','data','cohs','deltas','hdgs','mods','origParams','RTtask','conftask')
 
 %% plots
-
+if 0
 dots3DMP_parseData
 dots3DMP_plots
 
 % dots3DMP_parseData_splitConf
 % dots3DMP_plots_splitConf
 
-if 0
+
 %% fit cumulative gaussians
 
 dots3DMP_fit_cgauss
@@ -347,24 +346,24 @@ dots3DMP_plots_cgauss
 
 %% now try fitting the fake data to recover the generative parameters
 
-options.fitMethod = 'fms';
+% options.fitMethod = 'fms';
 % options.fitMethod = 'global';
-% options.fitMethod = 'multi';
+options.fitMethod = 'multi';
 % options.fitMethod = 'pattern';
 % options.fitMethod = 'bads';
 
 % initial guess (or hand-tuned params)
 ks      = 22;
-sigma   = 0.01;
-B       = 1.2;
+sigma   = 0.02;
+B       = 0.8;
 Tnd     = 300;
-fixed   = [0 1 1 1];
+fixed   = [0 1 0 1];
 guess   = [ks sigma B Tnd];
 
 if conftask==2 % PDW
-    theta = 1;
+    theta = 1.0;
 
-    fixed = [0 1 0 1 1];
+    fixed = [0 1 1 1 0];
     guess = [ks sigma B Tnd theta];
 end
 
@@ -382,6 +381,6 @@ options.conftask = conftask; % 1 - sacc endpoint, 2 - PDW
 [X, err_final, fit, fitInterp] = dots3DMP_fitDDM(data,options,guess,fixed);
 
 % plot it!
-% dots3DMP_plots_fit(data,fitInterp,conftask,RTtask)
+dots3DMP_plots_fit(data,fitInterp,conftask,RTtask)
 
 end

@@ -8,7 +8,7 @@ conftask = 2; % 1=colorbars, 2=PDW
 
 subject = 'lucio';
 paradigm = 'dots3DMP';
-dateRange = 20210315:20210510;
+dateRange = 20210315:20210512;
 
 
 %%
@@ -47,16 +47,16 @@ end
 % excludes_subjDate = {'lucio20200625','lucio20200724','lucio20200729', 'lucio20200820',...
 %     'lucio20200827','lucio20200902','lucio20200910'};
 
-excludes_filename = {};
-excludes_subjDate = {};
-
-cutoff = 20210401; % quickly exclude everything before this date
-removethese = ismember(data.filename,excludes_filename) | ...
-    ismember(data.subjDate,excludes_subjDate) | data.date<cutoff; %#ok<NASGU>
-fnames = fieldnames(data);
-for F = 1:length(fnames)
-    eval(['data.' fnames{F} '(removethese) = [];']);
-end
+% excludes_filename = {'lucio20210315dots3DMP1112_basic', 'lucio20210319dots3DMP1332_basic'};
+% excludes_subjDate = {};
+% 
+% cutoff = 20210401; % quickly exclude everything before this date
+% removethese = ismember(data.filename,excludes_filename) | ...
+%     ismember(data.subjDate,excludes_subjDate) | data.date<cutoff; %#ok<NASGU>
+% fnames = fieldnames(data);
+% for F = 1:length(fnames)
+%     eval(['data.' fnames{F} '(removethese) = [];']);
+% end
 
 
 
@@ -75,7 +75,7 @@ for u = 1:length(blocks)
 end
 
 % we can be pretty sure blocks with <N trials (say, 50) are to be discarded
-removethese = ismember(data.filename,blocks(nTrialsByBlock<100));
+removethese = ismember(data.filename,blocks(nTrialsByBlock<80));
 for F = 1:length(fnames)
     eval(['data.' fnames{F} '(removethese) = [];']);
 end
@@ -86,26 +86,38 @@ nTrialsByBlock = nan(length(blocks),1);
 for u = 1:length(blocks)
     nTrialsByBlock(u) = sum(ismember(data.filename,blocks(u)));
 end
+% 
+% figure;
+% hist(nTrialsByBlock,15);
+% xlabel('Session');
+% ylabel('NumTrials');
 
+%% manual exclude specific blocks
+% 
+i  = [1 4:10 12:13];
+removethese = ismember(data.filename,blocks(i));
+for F = 1:length(fnames)
+    eval(['data.' fnames{F} '(removethese) = [];']);
+end
 %% manual selection of specific session/s
-%{
-% i  = 1:10;
+
+% i  = 23;
 % removethese = ~ismember(data.filename,blocks(i));
 % for F = 1:length(fnames)
 %     eval(['data.' fnames{F} '(removethese) = [];']);
 % end
 
-keep_SubjDates = {'lucio20200727','lucio20200803','lucio20200805','lucio20200807','lucio20200819',...
-    'lucio20200820','lucio20200821','lucio20200901','lucio20200922','lucio20200923'};
-removethese = ~ismember(data.subjDate,keep_SubjDates);
+% keep_SubjDates = {'lucio20200727','lucio20200803','lucio20200805','lucio20200807','lucio20200819',...
+%     'lucio20200820','lucio20200821','lucio20200901','lucio20200922','lucio20200923'};
+% removethese = ~ismember(data.subjDate,keep_SubjDates);
 
 % keep_Subjfiles = {'lucio20200715dots3DMP1005'};
 % removethese = ~ismember(data.filename,keep_Subjfiles);
 
-for F = 1:length(fnames)
-    eval(['data.' fnames{F} '(removethese) = [];']);
-end
-%}
+% for F = 1:length(fnames)
+%     eval(['data.' fnames{F} '(removethese) = [];']);
+% end
+
 %% cull data
 
 mods = unique(data.modality); 
@@ -127,11 +139,12 @@ end
 data.coherence(data.modality==1) = cohs(1);
 
 deltas = unique(data.delta); % aka conflict angle
-hdgs = unique(data.heading);
 
 % group some of the hdgs together to simplify things...
 % data.heading(data.heading>-5 & data.heading<=-4) = -4;
 % data.heading(data.heading<5 & data.heading>=4) = 4;
+
+% data.heading(abs(data.heading)<=eps*1.5) = 0;
 
 % hdgs = unique(data.heading);
 % hdgs = [-12 -6 -4 -3 -2 -1.5 1.5 2 3 4 6 12];
@@ -164,7 +177,6 @@ dots3DMP_plots_cgauss
 dots3DMP_parseData_splitConf
 dots3DMP_plots_splitConf
 
-end
 
 %% summary statistic for each session
 
@@ -222,4 +234,4 @@ options.conftask = conftask; % 1 - sacc endpoint, 2 - PDW
 % plot it!
 dots3DMP_plots_fit(data,fitInterp,conftask,RTtask)
     
-    
+end

@@ -3,7 +3,7 @@
 
 n = nan(length(mods),length(cohs),length(deltas)+1,length(hdgs));
                                % add extra column^ for pooling all trials irrespective of delta
-[pRight, RTmean, RTse, confMean, confSE] = deal(n);
+[pRight, RTmean, RTse, confMean, confSE,nC] = deal(n);
 
 xVals = hdgs(1):0.1:hdgs(end);
 yVals = nan(length(mods),length(cohs),length(deltas)+1,length(xVals));
@@ -38,6 +38,8 @@ for d = 1:length(deltas)+1 % add extra column for all trials irrespective of del
         
         n(m,c,d,h,1) = sum(Jhi);
         n(m,c,d,h,2) = sum(Jlo);
+%         nC(m,c,d,h,1) = sum(Jhi & ~data.correct);
+%         nC(m,c,d,h,2) = sum(Jlo & ~data.correct);
 
         pRight(m,c,d,h,1) = sum(Jhi & data.choice==2) / n(m,c,d,h,1); % 2 is rightward
         pRight(m,c,d,h,2) = sum(Jlo & data.choice==2) / n(m,c,d,h,2); % 2 is rightward
@@ -58,8 +60,8 @@ for d = 1:length(deltas)+1 % add extra column for all trials irrespective of del
             confSE(m,c,d,h,2) = std(data.conf(Jlo))/sqrt(n(m,c,d,h,2));
             
         else % PDW
-            confMean(m,c,d,h,1) = sum(J & data.PDW==1) / n(m,c,d,h,1); % 1 is high
-            confMean(m,c,d,h,2) = sum(J & data.PDW==0) / n(m,c,d,h,2); 
+            confMean(m,c,d,h,1) = mean(data.PDW(Jhi)); % 1 is high
+            confMean(m,c,d,h,2) = mean(data.PDW(Jlo)); 
 
             % SE gets calculated below
         end            

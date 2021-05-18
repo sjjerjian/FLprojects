@@ -25,7 +25,7 @@ for c = 1:length(cohs)
     xlabel('heading angle (deg)'); ylabel('proportion rightward choices');
     changeAxesFontSize(gca,15,15);
 
-    subplot(2+(~isnan(RTmean(1,1,2))),length(cohs),c+length(cohs)); box off; hold on;
+    subplot(2+RTtask,length(cohs),c+length(cohs)); box off; hold on;
     for m = 1:length(mods)
         h(m) = errorbar(hdgs, squeeze(confMean(m,c,D,:)), squeeze(confSE(m,c,D,:)), [clr{c}{m} '-'],'linewidth',1.5);
         ylim([0 1]); hold on;
@@ -36,12 +36,17 @@ for c = 1:length(cohs)
     end
     changeAxesFontSize(gca,15,15);
 
-    if ~isnan(RTmean(1,1,2))
+    if RTtask
         subplot(3,length(cohs),c+length(cohs)*2); box off; hold on;
         for m = 1:length(mods)
             h(m) = errorbar(hdgs, squeeze(RTmean(m,c,D,:)), squeeze(RTse(m,c,D,:)), [clr{c}{m} '-'],'linewidth',1.5); hold on;
         end
         xlabel('heading angle (deg)'); ylabel('RT (s)');
+        if strcmp(subject,'lucio')
+            ylim([0.5 0.9])
+        else
+            ylim([0.6 1.8]);
+        end
     end
     changeAxesFontSize(gca,15,15);
 end
@@ -78,9 +83,13 @@ for c = 1:length(cohs)
     subplot(2+(~isnan(RTmean(1,1,2))),length(cohs),c+length(cohs)); box off; hold on;
     for d = 1:length(deltas)
         h(d) = errorbar(hdgs, squeeze(confMean(3,c,d,:)), squeeze(confSE(3,c,d,:)), [clr{c}{d} '-'], 'linewidth', 1.5);
-        ylim([0 1]); hold on;
+        hold on;
     end
-    xlabel('heading angle (deg)'); ylabel('saccadic endpoint (''confidence'', %)');
+    ylim([0 1]); 
+    xlabel('heading angle (deg)'); 
+    if conftask==1, ylabel('saccadic endpoint (''confidence'', %)');
+    elseif conftask==2, ylabel('proportion high bet');
+    end
     changeAxesFontSize(gca,15,15);
    
     if ~isnan(RTmean(1,1,2))
@@ -89,6 +98,11 @@ for c = 1:length(cohs)
             h(d) = errorbar(hdgs, squeeze(RTmean(3,c,d,:)), squeeze(RTse(3,c,d,:)), [clr{c}{d} '-'], 'linewidth', 1.5); hold on;
         end
         xlabel('heading angle (deg)'); ylabel('RT (s)');
+        if strcmp(subject,'lucio')
+            ylim([0.5 0.9])
+        else
+            ylim([0.6 1.8]);
+        end
     end
     changeAxesFontSize(gca,15,15);
    

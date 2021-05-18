@@ -18,7 +18,8 @@ switch options.fitMethod
     case 'fms'
         fitOptions = optimset('Display', 'iter', 'MaxFunEvals', 500*sum(fixed==0), 'MaxIter', ... 
             500*sum(fixed==0), 'TolX', 1e-3, 'TolFun', 1e-2, 'UseParallel', 'Always');
-        [X, ~, ~] = fminsearch(@(x) dots3DMP_fit_2Dacc_err(x,guess,fixed,data,options), guess(fixed==0), fitOptions);
+        [X, fval, ~] = fminsearch(@(x) dots3DMP_fit_2Dacc_err(x,guess,fixed,data,options), guess(fixed==0), fitOptions);
+        fprintf('fval: %f\n', fval);
 
     case 'global'
         % GlobalSearch from Global Optimization Toolbox

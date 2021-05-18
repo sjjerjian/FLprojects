@@ -9,19 +9,17 @@ cgauss_err = @(param,choice,hdg) -(sum(log(cgauss(param,hdg(choice))))+sum(log(1
 % b(2) and b(3) are mu and sigma
 % b(1) is 'amplitude' above baseline, b(4) is baseline level
 
-
+% 'baseline' for flippedGauss is the highBet side, because of flip
 if conftask==1 % continuous, sacc endpoint    
     % for continuous values, error is sum squared error
-    flippedGauss = @(b,hdg) 1 - ( min(max(b(1),0),1) .* exp(-(hdg-b(2)).^2 ./ (2*b(3).^2)) + b(4));
+    flippedGauss = @(b,hdg) 1 - ( b(1) .* exp(-(hdg-b(2)).^2 ./ (2*b(3).^2)) + b(4));
     flippedGauss_err = @(param,SEP,hdg) nansum((flippedGauss(param,hdg)-SEP).^2);
-    
 elseif conftask==2 % PDW, probabilities
-    flippedGauss = @(b,hdg) 1 - ( min(max(b(1),0),1) .* exp(-(hdg-b(2)).^2 ./ (2*b(3).^2)) + b(4));
+    flippedGauss = @(b,hdg) 1 - ( min(max(b(1),0),1) .* exp(-(hdg-b(2)).^2 ./ (2*b(3).^2)) + min(max(b(4),0),1));
+
     % negative log likelihood of observing PDW data
-    
-    % this error function doesn't seem to work...why not?
-    % log probability of observing high bet on all trials where subj bet
-    % high, + log probability of low bet on trials where subj bet low
+    % log prob of observing high bet on all trials where subj bet
+    % high, + log prob of low bet on trials where subj bet low
     flippedGauss_err = @(param,pdw,hdg) -( sum(log(flippedGauss(param,hdg(pdw)))) + sum(log(1-flippedGauss(param,hdg(~pdw)))) );
 end
 
@@ -32,7 +30,7 @@ gauss_err = @(param,SEP,hdg) sum((gauss(param,hdg)-SEP).^2);
 unc = 0; % saves biases from fminunc instead of fminsearch (SEs always are fminunc, and plots are always fminsearch)
 
 % parameter initial guesses
-guess_fgauss = [0.4 0 3 0.1];
+guess_fgauss = [0.2 0 6 0];
 guess_gauss = [1 0 6 1];
 
 
@@ -101,7 +99,6 @@ for c = 1:length(cohs)
             beta = fminsearch(@(x) flippedGauss_err(x,data.conf(I),data.heading(I)), guess_fgauss);
             [betaUnc,~,~,~,~,hessian] = fminunc(@(x) flippedGauss_err(x,data.conf(I),data.heading(I)), guess_fgauss);
         elseif conftask==2 % PDW
-%             keyboard
             beta = fminsearch(@(x) flippedGauss_err(x,data.PDW(I)==1,data.heading(I)), guess_fgauss);
             [betaUnc,~,~,~,~,hessian] = fminunc(@(x) flippedGauss_err(x,data.PDW(I)==1,data.heading(I)), guess_fgauss);
         end

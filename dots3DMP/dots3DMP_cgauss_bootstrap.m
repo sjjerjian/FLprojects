@@ -1,21 +1,13 @@
-function [muPMFboot,sigmaPMFboot,wvesEmpboot,wvesPredboot] = dots3DMP_cgauss_bootstrap(data,mods,cohs,deltas,nboots)
-% run cgauss fitting on data, bootstrapped with replacement to generate CIs
-
 options = optimset('Display','off');
 
 muPMFboot = cell(nboots,1);
 sigmaPMFboot = cell(nboots,1);
+muConfboot = cell(nboots,1);
+sigmaConfboot = cell(nboots,1);
+amplConfboot = cell(nboots,1);
 wvesPredboot = nan(nboots,length(cohs));
 wvesEmpboot = nan(nboots,length(cohs));
-
-% define anonymous functions for fitting:
-
-cgauss = @(b,hdg) 1/2 * ( 1 + erf( (hdg-b(1))./(b(2)*sqrt(2)) ) );
-    % for probabilities, error is negative log likelihood of observing the data, which is
-    % [ log(Pright(hdg)) + log(1-(~Pright(hdg))) ]
-cgauss_err = @(param,choice,hdg) -(sum(log(cgauss(param,hdg(choice))))+sum(log(1-cgauss(param,hdg(~choice))))); 
-
-unc = 0; % saves biases from fminunc instead of fminsearch (SEs always are fminunc, and plots are always fminsearch)
+wvesConfBasedboot = nan(nboots,length(cohs));
 
 if nboots==0
     return
@@ -29,6 +21,9 @@ for n = 1:nboots
 
     muPMFboot{n} = nan(length(mods),length(cohs),length(deltas));
     sigmaPMFboot{n} = nan(length(mods),length(cohs),length(deltas));
+    muConfboot{n} = nan(length(mods),length(cohs),length(deltas));
+    sigmaConfboot{n} = nan(length(mods),length(cohs),length(deltas));
+    amplConfboot{n} = nan(length(mods),length(cohs),length(deltas));
 
     % first the single-cues, and comb with either:
     % all trials irrespective of delta
@@ -50,13 +45,17 @@ for n = 1:nboots
             bootI = randsample(find(I),sum(I),true);
 
             if unc
-                [beta,~,~,~,~,~] = fminunc(@(x) cgauss_err(x,data.choice(bootI)==1,data.heading(bootI)), [0 3], options);
+                [beta,~,~,~,~,~] = fminunc(@(x) cgauss_err(x,data.choice(bootI)==2,data.heading(bootI)), [0 3], options);
+                [betaConf,~,~,~,~,~] = fminunc(@(x) flippedGauss_err(x,data.conf(bootI),data.heading(bootI)), [0.7 0 4 0.1], options);
             else
-                beta = fminsearch(@(x) cgauss_err(x,data.choice(bootI)==1,data.heading(bootI)), [0 3], options);
+                beta = fminsearch(@(x) cgauss_err(x,data.choice(bootI)==2,data.heading(bootI)), [0 3], options);
+                betaConf = fminsearch(@(x) flippedGauss_err(x,data.conf(bootI),data.heading(bootI)), [0.7 0 4 0.1], options);
             end
             muPMFboot{n}(m,c,D) = beta(1);
             sigmaPMFboot{n}(m,c,D) = beta(2);
-            
+            amplConfboot{n}(m,c,D) = betaConf(1);
+            muConfboot{n}(m,c,D) = betaConf(2);
+            sigmaConfboot{n}(m,c,D) = betaConf(3);
         end
     end
 
@@ -68,13 +67,17 @@ for n = 1:nboots
             bootI = randsample(find(I),sum(I),true);
             
             if unc
-                [beta,~,~,~,~,~] = fminunc(@(x) cgauss_err(x,data.choice(bootI)==1,data.heading(bootI)), [0 3], options);
+                [beta,~,~,~,~,~] = fminunc(@(x) cgauss_err(x,data.choice(bootI)==2,data.heading(bootI)), [0 3], options);
+                [betaConf,~,~,~,~,~] = fminunc(@(x) flippedGauss_err(x,data.conf(bootI),data.heading(bootI)), [0.7 0 4 0.1], options);
             else
-                beta = fminsearch(@(x) cgauss_err(x,data.choice(bootI)==1,data.heading(bootI)), [0 3], options);
+                beta = fminsearch(@(x) cgauss_err(x,data.choice(bootI)==2,data.heading(bootI)), [0 3], options);
+                betaConf = fminsearch(@(x) flippedGauss_err(x,data.conf(bootI),data.heading(bootI)), [0.7 0 4 0.1], options);
             end
             muPMFboot{n}(3,c,d) = beta(1);
             sigmaPMFboot{n}(3,c,d) = beta(2);
-            
+            amplConfboot{n}(3,c,d) = betaConf(1);
+            muConfboot{n}(3,c,d) = betaConf(2);
+            sigmaConfboot{n}(3,c,d) = betaConf(3);
         end
     end
     
@@ -86,6 +89,10 @@ for n = 1:nboots
         actual(2) = (muPMFboot{n}(3,c,3)-muPMFboot{n}(3,c,2)+(deltas(3)/2)) / deltas(3);    
         wvesEmpboot(n,c) = mean(actual);
 
+        actual(1) = (muConfboot{n}(3,c,1)-muConfboot{n}(3,c,2)+(deltas(1)/2)) / deltas(1);
+        actual(2) = (muConfboot{n}(3,c,3)-muConfboot{n}(3,c,2)+(deltas(3)/2)) / deltas(3);        
+        wvesConfBasedboot(n,c) = mean(actual);
     end
+
 
 end
