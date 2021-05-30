@@ -13,7 +13,7 @@ subject = 'hanzo';
 folder = '/Users/chris/Documents/MATLAB/PLDAPS_data/';
 
 % all Hanzo good data
-% dateRange = 20190401:20201231; % all 'good' data
+dateRange = 20190401:20201231; % all 'good' data
 
 % Hanzo for R01
 % dateRange = 20200728:20200930; % great PDW; misnamed (not really up to 9/30)

@@ -19,7 +19,7 @@ dt = RT(I)'/1000;
 mu = mean(count);
     % simplify for now: use rate instead of count and and call dt=1
 muRate = mean(rate);
-N = 1:max(count)+3;
+N = 1:max(count)+3; % why +3? I don't remember
 pN = (muRate.^N)./factorial(N) * exp(-muRate);
 hold on; plot(N,pN*max(n)/max(pN),'b');
 

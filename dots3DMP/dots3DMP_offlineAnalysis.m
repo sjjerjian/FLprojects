@@ -23,13 +23,6 @@ dateRange = 20200213:20210331; % RT
 RTtask = 1;
 
 
-% %% everything!
-% subject = 'human';
-% paradigm = 'dots3DMP';
-% dateRange = 20190612:20200308;
-% RTtask = 1;
-
-
 %%
 % folder = '/Users/chris/Documents/MATLAB/PLDAPS_data/';
 folder = '/Users/stevenjerjian/Desktop/FetschLab/Analysis/PLDAPS_data/';
@@ -89,6 +82,7 @@ blocks = unique(data.filename);
 % subjs = {'CXD'}; % fine, should maybe normalize
 % subjs = {'IWT'}; % conf doesn't match large shift at high coh!
 % subjs = {'EMF'}; % conf flat, prob discard
+% subjs = {'AAW' 'LLV' 'CXD' 'IWT' 'EMF'};
     % ^ the First Five
     
 % subjs = {'ASQ'}; % only 62 tr, discard
@@ -186,13 +180,15 @@ deltas = unique(data.delta); % aka conflict angle
 
 hdgs = unique(data.heading);
 
-if RTtask==0
+% if RTtask==0 % not sure about this
+
     % same here.  the 1.5-12 range was only used rarely, and in fact is a
       % good signature of warmup or testing-mode trials to be excluded
     %hdgs = [-10 -5 -2.5 -1.25 0 1.25 2.5 5 10]';
     % some zero values were stored as +/- eps in an older version of the gui
     data.heading(abs(data.heading)<0.01) = 0;
-end
+
+    % end
     
 % remove the rest
 removethese = ~ismember(data.heading,hdgs);
@@ -261,7 +257,6 @@ dots3DMP_plots
 
 dots3DMP_fit_cgauss
 
-
 %% and plot them
  
 dots3DMP_plots_cgauss
@@ -269,7 +264,7 @@ dots3DMP_plots_cgauss
 
 
 
-% %% nicer looking versions
+%% nicer looking versions
 % 
 % dots3DMP_plots_cgauss_forTalk
 

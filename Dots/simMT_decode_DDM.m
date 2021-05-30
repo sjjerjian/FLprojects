@@ -148,41 +148,41 @@ fittedk = beta(2)/(2*B); % right?
 
 %% uncomment to plot & check for reasonable choice + RT
 
-% % add non-decision time (truncated normal dist)
-% TndMean = 300;
-% TndSD = 50;
-% TndMin = TndMean/2;
-% TndMax = TndMean+TndMin;
-% Tnd = zeros(nTrials,1);
-% for t = 1:nTrials
-%     while Tnd(t)<=TndMin || Tnd(t)>=TndMax % simple trick for truncating
-%         Tnd(t) = round(normrnd(TndMean,TndSD));
-%     end
-% end
-% DT = RT; % rename this 'decision time'
-% RT = DT+Tnd;
-% 
-% for c = 1:length(cohs)
-%     I = coh==cohs(c);
-%     pRight(c,1) = sum(I & choice==1) /  sum(coh==cohs(c));
-%     RTmean(c,1) = mean(RT(I));
-%     RTse(c,1) = std(RT(I))/sqrt(sum(I));
-%     nc(c,1) = sum(I);
-% end
-% pRightSE = sqrt(pRight.*(1-pRight)./nc);
-% 
-% figure(2); clf; set(gcf,'Position',[900 320 480 760]);
-% subplot(2,1,1); 
-% errorbar(cohs,pRight,pRightSE,'o'); hold on;
-% plot(xVals,yVals); 
-% title('choice');
-% subplot(2,1,2); 
-% errorbar(cohs,RTmean,RTse,'s-');
-% title('RT');
-% 
-% % REMEMBER: in variable duration task, RT won't reflect realistic RT range,
-% % because:
-% proportion_hit_bound = sum(hitBound)/nTrials % is <1
+% add non-decision time (truncated normal dist)
+TndMean = 300;
+TndSD = 50;
+TndMin = TndMean/2;
+TndMax = TndMean+TndMin;
+Tnd = zeros(nTrials,1);
+for t = 1:nTrials
+    while Tnd(t)<=TndMin || Tnd(t)>=TndMax % simple trick for truncating
+        Tnd(t) = round(normrnd(TndMean,TndSD));
+    end
+end
+DT = RT; % rename this 'decision time'
+RT = DT+Tnd;
+
+for c = 1:length(cohs)
+    I = coh==cohs(c);
+    pRight(c,1) = sum(I & choice==1) /  sum(coh==cohs(c));
+    RTmean(c,1) = mean(RT(I));
+    RTse(c,1) = std(RT(I))/sqrt(sum(I));
+    nc(c,1) = sum(I);
+end
+pRightSE = sqrt(pRight.*(1-pRight)./nc);
+
+figure(2); clf; set(gcf,'Position',[900 320 480 760]);
+subplot(2,1,1); 
+errorbar(cohs,pRight,pRightSE,'o'); hold on;
+plot(xVals,yVals); 
+title('choice');
+subplot(2,1,2); 
+errorbar(cohs,RTmean,RTse,'s-');
+title('RT');
+
+% REMEMBER: in variable duration task, RT won't reflect realistic RT range,
+% because:
+proportion_hit_bound = sum(hitBound)/nTrials % is <1
 
 
 

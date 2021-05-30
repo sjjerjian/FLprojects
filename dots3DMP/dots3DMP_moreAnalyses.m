@@ -512,12 +512,12 @@ guess = [kves kvisMult B muTnd];
 
 % ************************************
 % set all fixed to 1 for hand-tuning:
-fixed(:)=0;
+fixed(:)=1;
 % (can be used to fix some params and not others)
 % ************************************
 
 % plot error trajectory (prob doesn't work with parallel fit methods)
-options.ploterr = 1;
+options.ploterr = 0;
 
 [X, err_final, fit, fitInterp] = dots3DMP_fitDDM(data,options,guess,fixed);
 
