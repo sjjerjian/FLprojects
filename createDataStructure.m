@@ -76,6 +76,9 @@ for d = 1:length(dateRange)
                             % noticed a couple extra things we need, not in either place -CF 02-2021
                             try
                                 data.oneTargPDW(T,1) = PDS.data{t}.postTarget.markOneConf;
+                            catch
+                            end
+                            try
                                 data.delayToPDW(T,1) = PDS.data{t}.postTarget.delayToConfidence;
                             catch
                             end

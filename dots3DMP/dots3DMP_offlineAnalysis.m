@@ -5,7 +5,7 @@ clear all; close all
 
 conftask = 1; % 1=colorbars, 2=PDW
 
-normalize = 0;
+normalize = 1;
 
 % specify which (previously saved) mat file to load
  
@@ -19,7 +19,7 @@ normalize = 0;
 
 subject = 'human';
 paradigm = 'dots3DMP';
-dateRange = 20200213:20210331; % RT
+dateRange = 20200213:20210512; % RT
 RTtask = 1;
 
 
@@ -32,7 +32,7 @@ RTtask = 1;
 
 %%
 % folder = '/Users/chris/Documents/MATLAB/PLDAPS_data/';
-folder = '/Users/stevenjerjian/Desktop/FetschLab/Analysis/PLDAPS_data/';
+folder = '/Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data/';
 file = [subject '_' num2str(dateRange(1)) '-' num2str(dateRange(end)) '.mat'];
 load([folder file], 'data');
 
@@ -105,7 +105,7 @@ blocks = unique(data.filename);
 % subjs = {'SJJ'}
 % subjs = {'VZC'}
 
-subjs = {'DRH','SJJ','LLV','IPQ'};
+subjs = {'DRH','SJJ','LLV','IPQ','VZC','IPQ','FRK'};
 
 % subjs = {'AAW' 'LLV' 'CXD' 'DRH' 'IPQ' 'SJJ' 'VZC'}; % all 'good' data (pre and post RT)
 
@@ -169,7 +169,6 @@ data.coherence(data.coherence<=0.5) = 0.3;
 data.coherence(data.coherence>0.5) = 0.7;
 
 cohs = unique(data.coherence);
-
 
 % remove the rest
 removethese = ~ismember(data.coherence,cohs) & data.modality~=1;

@@ -1,4 +1,5 @@
 %% the X-shape
+% confidence for correct and error trials as a function of heading angle
 
 data.corr = (data.heading>0 & data.choice==2) | (data.heading<0 & data.choice==1);
 data.corr(data.heading==0) = 999;
@@ -61,8 +62,8 @@ for c=1:length(cohs)
     end
 end
 figure(20); set(gcf,'Color',[1 1 1],'Position',[50 20 360 320],'PaperPositionMode','auto'); clf;
-[hsym,hxe,hye] = errorbar2(choiceBias, confBias, choiceBiasSE, confBiasSE, 'ko', 2);
-set(hsym,'MarkerSize',10,'MarkerFaceColor','w');
+[hsym,hxe,hye] = errorbar2(choiceBias, confBias, choiceBiasSE, confBiasSE, 'o', 2);
+set(hsym,'MarkerSize',10,'MarkerFaceColor','w','Color','k');
 hold on; plot([-2 2],[-2 2],'k--','LineWidth',2); axis square;
 xlim([-2 2]); ylim([-2 2]);
 set(gca,'Xtick',-2:1:2,'Ytick',-2:1:2);
@@ -88,15 +89,15 @@ end
 
 nboots = 0;
 tic
-dots3DMP_cgauss_bootstrap
+dots3DMP_cgauss_bootstrap;
 toc
 
 % looky there!
 figure(810); set(gcf,'Color',[1 1 1],'Position',[50 20 360 320],'PaperPositionMode','auto'); clf;
 er = errorbar(cohs,wvesPred,std(wvesPredboot),std(wvesPredboot),'k-o','LineWidth',3,'MarkerSize',10,'MarkerFaceColor','k'); hold on;
 set(er,'Color','k');
-ylim([0 1]);
-set(gca,'XTick',cohs,'Xlim',[cohs(1)-0.04 cohs(end)+0.04],'XTickLabel',[20 50 90],'Ytick',0:0.2:1);
+ylim([0 1.1]);
+set(gca,'XTick',cohs,'Xlim',[cohs(1)-0.04 cohs(end)+0.04],'XTickLabel',cohs*100,'Ytick',0:0.2:1);
 xlabel('Visual coherence (%)'); ylabel('Vestibular weight');
 changeAxesFontSize(gca,20,20); set(gca,'box','off');
 l = legend('Predicted (from single-cues)'); legend('boxoff');
@@ -120,12 +121,14 @@ if exportfigs; export_fig('weights3','-eps'); end
 
 for c = 1:length(cohs)
     I = data.modality==3 & data.coherence==cohs(c) & data.delta==0;
+    J = J & abs(data.heading<5);
     confDzero(c) = mean(data.conf(I));
     confDzeroSE(c) = std(data.conf(I))/sqrt(sum(I));
     rtDzero(c) = mean(data.RT(I));
     rtDzeroSE(c) = std(data.RT(I))/sqrt(sum(I));
 
     J = data.modality==3 & data.coherence==cohs(c) & data.delta~=0;
+    J = J & abs(data.heading<5);
     confDnonzero(c) = mean(data.conf(J));
     confDnonzeroSE(c) = std(data.conf(J))/sqrt(sum(J));
     rtDnonzero(c) = mean(data.RT(J));
