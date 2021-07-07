@@ -1,5 +1,6 @@
 function dots3DMP_plot_neuron_tuning(meanFRs,semFRs,u,cohs,hdgs)
 
+% move unit selection outside of function to reduce unnecessary overhead
 tempFR  = meanFRs(:,:,:,:,u);
 tempsem = semFRs(:,:,:,:,u);
     
