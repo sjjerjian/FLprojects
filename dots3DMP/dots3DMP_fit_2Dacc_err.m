@@ -25,16 +25,23 @@ ks    = param(1);
 sigma = param(2);
 B     = abs(param(3)); % don't accept negative bound heights
 muTnd = param(4);
-
 if numel(param)==5, theta = param(5); end % only relevant for PDW
+
+% sigmaVes = sigma; % std of momentary evidence
+% sigmaVis = [sigma sigma]; % allow for separate sigmas for condition, coherence
+
+sigmaVes = param(2);
+sigmaVis = param([3 4]);
+B     = abs(param(5)); % don't accept negative bound heights
+muTnd = param(6);
+
+if numel(param)==7, theta = param(7); end % only relevant for PDW
 
 kves = ks;
 kvis = ks * [2 4.5]/3; % should 2/4.5 be another set of parameters? - relationship between ves and vis is fixed otherwise
 
-sigmaVes = sigma; % std of momentary evidence
-sigmaVis = [sigma sigma]; % allow for separate sigmas for condition, coherence
-
-sdTnd = 60; % fixed SD
+% sdTnd = 60; % fixed SD
+sdTnd = 0;
 Tnds = muTnd + randn(ntrials,1).*sdTnd;
 
 
@@ -371,10 +378,10 @@ end
 end
 
 % kluge to avoid log(0) issues
-% Pr_model(Pr_model==0) = min(Pr_model(Pr_model~=0)); 
-% Pr_model(Pr_model==1) = max(Pr_model(Pr_model~=1));
-Pr_model(Pr_model==0) = eps; 
-Pr_model(Pr_model==1) = 1-eps;
+Pr_model(Pr_model==0) = min(Pr_model(Pr_model~=0)); 
+Pr_model(Pr_model==1) = max(Pr_model(Pr_model~=1));
+% Pr_model(Pr_model==0) = eps; 
+% Pr_model(Pr_model==1) = 1-eps;
 
 LL_choice = sum(log(Pr_model(choiceD))) + sum(log(1-Pr_model(~choiceD)));
 % log likelihood of choice is summed log likelihood across all trials (log
@@ -403,9 +410,8 @@ else
     
 end
 
-err = -(LL_choice + LL_RT + LL_conf);
+% err = -(LL_choice + LL_RT + LL_conf);
 err = -LL_choice;
-
 
 %% print progress report!
 fprintf('\n\n\n****************************************\n');

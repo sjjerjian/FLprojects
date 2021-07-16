@@ -5,7 +5,7 @@ clear all; close all
 
 conftask = 1; % 1=colorbars, 2=PDW
 
-normalize = 0;
+normalize = 1;
 
 % specify which (previously saved) mat file to load
  
@@ -19,7 +19,7 @@ normalize = 0;
 
 subject = 'human';
 paradigm = 'dots3DMP';
-dateRange = 20200213:20210331; % RT
+dateRange = 20200213:20210512; % RT
 RTtask = 1;
 
 
@@ -163,7 +163,6 @@ data.coherence(data.coherence<=0.5) = 0.3;
 data.coherence(data.coherence>0.5) = 0.7;
 
 cohs = unique(data.coherence);
-
 
 % remove the rest
 removethese = ~ismember(data.coherence,cohs) & data.modality~=1;

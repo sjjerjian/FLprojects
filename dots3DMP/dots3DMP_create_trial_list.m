@@ -1,4 +1,6 @@
-function [hdg,modality,coh,delta,ntrials] = dots3DMP_create_trial_list(hdgs,mods,cohs,deltas,nreps)
+function [hdg,modality,coh,delta,ntrials] = dots3DMP_create_trial_list(hdgs,mods,cohs,deltas,nreps,shuff)
+
+if nargin<6, shuff = 1; end
 
 %% build trial list
 % (can't just randsample the above vectors, because certain combinations of
@@ -49,10 +51,15 @@ end
 
 % now replicate times nreps and shuffle (or not):
 condlist = [hdg modality coh delta];
-trialTable = repmat(condlist,nreps,1); 
-% trialTable = Shuffle(repmat(condlist,nreps,1),2);
+% trialTable = repmat(condlist,nreps,1); 
+
+trialTable = repmat(condlist,nreps,1);
+if shuff
     % why shuffle? well, sometimes it's easier to find particular trial
     % types to test out when debugging
+    trialTable = Shuffle(trialTable,2);
+end
+
 hdg      = trialTable(:,1);  
 modality = trialTable(:,2);  
 coh      = trialTable(:,3);  

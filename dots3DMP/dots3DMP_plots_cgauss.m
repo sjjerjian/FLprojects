@@ -36,7 +36,7 @@ for c = 1:length(cohs)
         beta = [amplConf(m,c,D) muConf(m,c,D) sigmaConf(m,c,D) baselineConf(m,c,D)];
         h(m) = plot(xVals, flippedGauss(beta,xVals), [clr{c}{m}(1) '-'],'linewidth',1.5); hold on;       
         errorbar(hdgs, squeeze(confMean(m,c,D,:)), squeeze(confSE(m,c,D,:)), clr{c}{m},'linewidth',1.5);
-        ylim([0 1]); if length(mods)>1; title(['coh = ' num2str(cohs(c))]); end
+        ylim([0 max(max(confMean(:)),1)]); if length(mods)>1; title(['coh = ' num2str(cohs(c))]); end
     end
 %     legend(h,'vestib','visual','comb','location','northwest');
     xlabel('heading angle (deg)'); 
@@ -46,7 +46,7 @@ for c = 1:length(cohs)
     changeAxesFontSize(gca,15,15);
 
     % RT
-    if ~isnan(RTmean(1,1,2))
+    if RTtask
         subplot(3,length(cohs),c+length(cohs)*2); box off; hold on;
         for m = 1:length(mods)        
             beta = [amplRT(m,c,D) muRT(m,c,D) sigmaRT(m,c,D) baselineRT(m,c,D)];
@@ -54,9 +54,15 @@ for c = 1:length(cohs)
             errorbar(hdgs, squeeze(RTmean(m,c,D,:)), squeeze(RTse(m,c,D,:)), clr{c}{m},'linewidth',1.5);
             if length(mods)>1; title(['coh = ' num2str(cohs(c))]); end
         end
+        if strcmp(subject,'lucio')
+            ylim([0.5 0.9])
+        else
+            ylim([0.6 1.8]);
+        end
+        ylabel('RT (s)')
+        changeAxesFontSize(gca,15,15);
+
     end
-    ylabel('RT (s)')
-    changeAxesFontSize(gca,15,15);
 end
 
 
@@ -87,7 +93,7 @@ for c = 1:length(cohs)
     changeAxesFontSize(gca,15,15);
 
     % conf
-    subplot(2+(~isnan(RTmean(1,1,2))),length(cohs),c+length(cohs)); box off; hold on;
+    subplot(2+(RTtask),length(cohs),c+length(cohs)); box off; hold on;
     for d = 1:length(deltas)
         beta = [amplConf(3,c,d) muConf(3,c,d) sigmaConf(3,c,d) baselineConf(3,c,d)];
         h(d) = plot(xVals, flippedGauss(beta,xVals), [clr{c}{d}(1) '-'],'linewidth',1.5); hold on;       
@@ -97,11 +103,14 @@ for c = 1:length(cohs)
         if length(mods)>1; title(['coh = ' num2str(cohs(c))]); end
     end
 %     legend(h,L,'location','northwest');
-    xlabel('heading angle (deg)'); ylabel('saccadic endpoint (''confidence'', %)');
+    xlabel('heading angle (deg)'); 
+    if conftask==1, ylabel('saccadic endpoint (''confidence'', %)');
+    elseif conftask==2, ylabel('proportion high bet');
+    end
     changeAxesFontSize(gca,15,15);
 
     % RT
-    if ~isnan(RTmean(1,1,2))
+    if RTtask
         subplot(3,length(cohs),c+length(cohs)*2); box off; hold on;
         for d = 1:length(deltas)
             beta = [amplRT(3,c,d) muRT(3,c,d) sigmaRT(3,c,d) baselineRT(3,c,d)];
@@ -112,8 +121,13 @@ for c = 1:length(cohs)
             if length(mods)>1; title(['coh = ' num2str(cohs(c))]); end
         end
         xlabel('heading angle (deg)'); ylabel('RT (s)')
+        if strcmp(subject,'lucio')
+            ylim([0.5 0.9])
+        else
+            ylim([0.6 1.8]);
+        end
+        changeAxesFontSize(gca,15,15);
     end    
-    changeAxesFontSize(gca,15,15);   
     
 end
 
