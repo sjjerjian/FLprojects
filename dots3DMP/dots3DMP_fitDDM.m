@@ -141,8 +141,8 @@ end
 % error value and model-generated data points (trial outcomes)
 options.ploterr = 0;
 
-[err_final, fit] = dots3DMP_fit_2Dacc_err(X,X,false(size(X)),data,options);
-
+% [err_final, fit] = dots3DMP_fit_2Dacc_err(X,X,false(size(X)),data,options);
+[err_final, fit] = dots3DMP_fit_2Dacc_err(X,X,true(size(X)),data,options);
 
 % *** now run it one more time with interpolated headings
 % to generate smooth plots ***
@@ -154,9 +154,10 @@ options.ploterr = 0;
     % from data and this section will seem wholly redundant, but will be
     % useful later)
 
-% nsteps = 33; % should be odd so there's a zero
-% hdgs = linspace(min(data.heading),max(data.heading),nsteps);
-hdgs = unique(data.heading)'; % TEMP, see above comment
+nsteps = 33; % should be odd so there's a zero
+hdgs = linspace(min(data.heading),max(data.heading),nsteps);
+% hdgs = unique(data.heading)'; % TEMP, see above comment
+%                                   ^ no longer an issue, we just fit the fits with (c)gauss
 
 % Dfit is a dummy dataset with the same proportions of all trial types,
 % just repeated for the new interpolated headings (and some arbitrary nreps)
@@ -164,7 +165,7 @@ mods = unique(data.modality);
 cohs = unique(data.coherence);
 deltas = unique(data.delta);
 
-nreps = 200;
+nreps = 400; % 200-500 works
 [hdg, modality, coh, delta, ~] = dots3DMP_create_trial_list(hdgs,mods,cohs,deltas,nreps);
 
 % now replicate times nreps

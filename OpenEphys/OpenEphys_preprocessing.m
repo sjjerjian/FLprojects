@@ -69,7 +69,7 @@ end
 
 %% data browser (work in progress, may be abandoned)
 
-% % oephysDataBrow÷ser
+% % oephysDataBrowser
 
 
 

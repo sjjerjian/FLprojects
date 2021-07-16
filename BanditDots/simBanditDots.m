@@ -1,13 +1,14 @@
 %% monte-carlo simulation of Harry's bandit-dots task:
-% a two armed bandit where an bandit choice is followed by an RDM decision
-% with confidence and RT. The reward is drawn from one of three overlapping
-% distributions: low, medium, and high. Low when both the bandit and dots
-% choices are wrong, high when both are correct, and medium when either is
-% correct and the other incorrect. The correct bandit choice is random at
-% the beginning of the block of ~40-60 trials, and switches with some
-% probability (modulo a refractory period) up In addition, expected values
-% of the options can be modulated by changing, say, the prior over (signed)
-% coherence, in addition to mean and variance of reward distributions.
+% a two armed bandit where an bandit (or 'environment') choice is followed
+% by a perceptual decision with confidence and reaction time (RT). The
+% reward is drawn from one of three overlapping distributions: low, medium,
+% and high. Low when both the bandit and perceptual choices are wrong, high
+% when both are correct, and medium when either is correct and the other
+% incorrect. The correct bandit choice is random at the beginning of the
+% block of ~40-60 trials, and switches with some probability (modulo a 
+% refractory period) up In addition, expected values of the options can be
+% modulated by changing, say, the prior over (signed) coherence, in
+% addition to mean and variance of reward distributions.
 
 
 % Questions we want to address with this:

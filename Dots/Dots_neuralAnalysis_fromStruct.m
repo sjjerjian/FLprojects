@@ -1,5 +1,18 @@
 % NEW: load/plot data from Miguel struct
 
+
+%%
+
+
+%%
+
+
+%%
+
+
+%%
+
+
 clear
 close all
 
@@ -21,9 +34,10 @@ tuning_vonMises = @(b,dir) b(1) * exp(b(2)*cosd(dir-b(3))) / (2*pi*besseli(0,b(2
 tuning_vonMises_err = @(b,dir,FR) nansum((tuning_vonMises(b,dir)-FR).^2); % sum squared error
 
 maxCoh = 0; % maximum coherence for inclusion in CP/confP and choice/conf-cond PSTH
-    % should be 0! unless testing code / sanity checks
+% should be 0! unless testing code / sanity checks, or calcuating residuals
 
-%% quality control, etc
+
+% quality control, etc
 
 % check for missing spikes in mapping, use remap to recover if available,
 % otherwise delete the channel [ONLY REQUIRED FOR ANALYSES THAT REQUIRE TUNING!]
@@ -131,7 +145,9 @@ ConfP_pref = nan(size(dataCell,2),max(nCh));
 ConfP_null = nan(size(dataCell,2),max(nCh));
 ConfP_all = nan(size(dataCell,2),max(nCh));
 
-%% calc rasters, rates/counts, and psths for each session and channel
+
+
+% calc rasters, rates/counts, and psths for each session and channel
 M=1;
 for n = 1:length(dataCell)
     tic
@@ -281,7 +297,7 @@ for n = 1:length(dataCell)
                     b = a + dur(t) - latency(1) + latency(2);
                     spRate_exp(n,c,t) = sum(raster_dotsOn(n,c,t,a:b)) / ((b-a+1)/1000);
                     spCount_exp(n,c,t) = sum(raster_dotsOn(n,c,t,a:b));
-                end % else, will remain nans
+                end % else, spRate/Count will remain nans
             end % else, trial exceeds the max length specified in prealloc (will stay nans)
                         
             % raster, align RT (dotsOff)
@@ -311,40 +327,66 @@ for n = 1:length(dataCell)
     
     % CP, confP, and choice/conf-conditioned PSTHs
     J = abs(dataCell{n}.Exp.openEvents.coherence)<=maxCoh; % weak motion only, or else there's a confound! can also use residuals...
-    
-    % use rate or count for CP? you'd think count, because that's what the rest of
-    % the brain has to work with, but then the choice-conditioned distributions 
-    % would not be apples to apples (on average they would, with enough N,
-    % assuming equal average RTs for each choice -- but we can't assume that)
+
+    % use rate or count for CP? you'd think count, because that's what the
+    % rest of the brain has to work with, but then the choice-conditioned
+    % distributions would not necessarily be equal under the null
+    % hypothesis (on average they should be, with enough N, assuming equal
+    % mean RTs for each choice -- but we can't assume that)
     for c = 1:nCh(n)        
-        I = J & dataCell{n}.Exp.openEvents.choice==pref & dataCell{n}.Exp.openEvents.pdw==1; X = squeeze(spRate_exp(n,c,I)); % pref-high        
-        I = J & dataCell{n}.Exp.openEvents.choice~=pref & dataCell{n}.Exp.openEvents.pdw==1; Y = squeeze(spRate_exp(n,c,I)); % null-high
+        I = J & dataCell{n}.Exp.openEvents.choice==pref & dataCell{n}.Exp.openEvents.pdw==1;
+            X = squeeze(spRate_exp(n,c,I)); % pref-high        
+        I = J & dataCell{n}.Exp.openEvents.choice~=pref & dataCell{n}.Exp.openEvents.pdw==1;
+            Y = squeeze(spRate_exp(n,c,I)); % null-high
         CP_high(n,c) = rocN(X(~isnan(X)),Y(~isnan(Y)),100);
-        
-        I = J & dataCell{n}.Exp.openEvents.choice==pref & dataCell{n}.Exp.openEvents.pdw==0; X = squeeze(spRate_exp(n,c,I)); % pref-low        
-        I = J & dataCell{n}.Exp.openEvents.choice~=pref & dataCell{n}.Exp.openEvents.pdw==0; Y = squeeze(spRate_exp(n,c,I)); % null-low
+                
+        I = J & dataCell{n}.Exp.openEvents.choice==pref & dataCell{n}.Exp.openEvents.pdw==0;
+            X = squeeze(spRate_exp(n,c,I)); % pref-low        
+        I = J & dataCell{n}.Exp.openEvents.choice~=pref & dataCell{n}.Exp.openEvents.pdw==0;
+            Y = squeeze(spRate_exp(n,c,I)); % null-low
         CP_low(n,c) = rocN(X(~isnan(X)),Y(~isnan(Y)),100);
         
-        I = J & dataCell{n}.Exp.openEvents.choice==pref; X = squeeze(spRate_exp(n,c,I)); % pref-all        
-        I = J & dataCell{n}.Exp.openEvents.choice~=pref; Y = squeeze(spRate_exp(n,c,I)); % null-all
+        I = J & dataCell{n}.Exp.openEvents.choice==pref;
+            X = squeeze(spRate_exp(n,c,I)); % pref-all        
+        I = J & dataCell{n}.Exp.openEvents.choice~=pref;
+            Y = squeeze(spRate_exp(n,c,I)); % null-all
         CP_all(n,c) = rocN(X(~isnan(X)),Y(~isnan(Y)),100);
         
-        I = J & dataCell{n}.Exp.openEvents.choice==pref & dataCell{n}.Exp.openEvents.pdw==1; X = squeeze(spRate_exp(n,c,I)); % pref-high        
-        I = J & dataCell{n}.Exp.openEvents.choice==pref & dataCell{n}.Exp.openEvents.pdw==0; Y = squeeze(spRate_exp(n,c,I)); % pref-low
+        I = J & dataCell{n}.Exp.openEvents.choice==pref & dataCell{n}.Exp.openEvents.pdw==1;
+            X = squeeze(spRate_exp(n,c,I)); % pref-high        
+        I = J & dataCell{n}.Exp.openEvents.choice==pref & dataCell{n}.Exp.openEvents.pdw==0;
+            Y = squeeze(spRate_exp(n,c,I)); % pref-low
         ConfP_pref(n,c) = rocN(X(~isnan(X)),Y(~isnan(Y)),100);
         
-        I = J & dataCell{n}.Exp.openEvents.choice~=pref & dataCell{n}.Exp.openEvents.pdw==1; X = squeeze(spRate_exp(n,c,I)); % null-high        
-        I = J & dataCell{n}.Exp.openEvents.choice~=pref & dataCell{n}.Exp.openEvents.pdw==0; Y = squeeze(spRate_exp(n,c,I)); % null-low
+% if n==17 && c==3
+%     keyboard
+%     figure; set(gcf, 'Color', 'w', 'Position', [800 100 450 300], 'PaperPositionMode', 'auto');
+%     [Nx,~] = histcounts(X,0:5:70);
+%     [Ny,E] = histcounts(Y,0:5:70);
+%     bar(E(2:end)-2.5,[Nx;Ny]',.9); box('off');
+%     set(gca,'YLim',[0 12],'ytick',0:2:12,'XLim',[0 70],'xtick',0:10:70,'TickDir','out');
+%     legend('high bet','low bet'); legend('boxoff')
+%     xlabel('Firing rate (sp/s)'); ylabel('Count');
+%     changeAxesFontSize(gca, 16, 16);
+%     export_fig('ConfP_example_dists', '-eps');
+% end
+        
+        I = J & dataCell{n}.Exp.openEvents.choice~=pref & dataCell{n}.Exp.openEvents.pdw==1;
+            X = squeeze(spRate_exp(n,c,I)); % null-high        
+        I = J & dataCell{n}.Exp.openEvents.choice~=pref & dataCell{n}.Exp.openEvents.pdw==0;
+            Y = squeeze(spRate_exp(n,c,I)); % null-low
         ConfP_null(n,c) = rocN(X(~isnan(X)),Y(~isnan(Y)),100);
         
-        I = J & dataCell{n}.Exp.openEvents.pdw==1; X = squeeze(spRate_exp(n,c,I)); % all-high        
-        I = J & dataCell{n}.Exp.openEvents.pdw==0; Y = squeeze(spRate_exp(n,c,I)); % all-low
+        I = J & dataCell{n}.Exp.openEvents.pdw==1;
+            X = squeeze(spRate_exp(n,c,I)); % all-high        
+        I = J & dataCell{n}.Exp.openEvents.pdw==0;
+            Y = squeeze(spRate_exp(n,c,I)); % all-low
         ConfP_all(n,c) = rocN(X(~isnan(X)),Y(~isnan(Y)),100);
     end
     
     if plotflag
-%         figure(n*10); set(gcf, 'Color', 'w', 'Position', [200 300 370*dirPlot 430], 'PaperPositionMode', 'auto'); end
-        figure(n*10); set(gcf, 'Color', 'w', 'Position', [1 525 370*dirPlot 430], 'PaperPositionMode', 'auto');
+%         figure(n*10); set(gcf, 'Color', 'w', 'Position', [200 300 370*nCh(n) 430], 'PaperPositionMode', 'auto'); end
+        figure(n*10); set(gcf, 'Color', 'w', 'Position', [1 525 370*nCh(n) 430], 'PaperPositionMode', 'auto');
     end
         % aligned dots-on
     for c = 1:nCh(n)
@@ -489,13 +531,14 @@ nanmean(ConfP_pref(:))
 nanmean(ConfP_null(:))
 nanmean(ConfP_all(:))
 
+
 %% choose
 
-CP = CP_high(~isnan(CP_high));
+% CP = CP_high(~isnan(CP_high));
 % or
 % CP = CP_low(~isnan(CP_low));
 % or
-% CP = CP_all(~isnan(CP_all));
+CP = CP_all(~isnan(CP_all));
 
 ConfP = ConfP_pref(~isnan(ConfP_pref));
 % or
@@ -503,8 +546,12 @@ ConfP = ConfP_pref(~isnan(ConfP_pref));
 % or
 % ConfP = ConfP_all(~isnan(ConfP_all));
 
+CPse = std(CP)/sqrt(length(CP));
+[~,P] = ttest(CP,0.5)
 
-prefDir = prefDir_fit(~isnan(prefDir_fit));
+ConfPse = std(ConfP)/sqrt(length(ConfP))
+[~,P] = ttest(ConfP,0.5)
+
 
 
 %%
@@ -536,14 +583,18 @@ changeAxesFontSize(gca, 14, 14);
 
 %%
 
-% figure; set(gcf, 'Color', 'w', 'Position', [400 200 450 450], 'PaperPositionMode', 'auto');
-% plot(prefDir,CP,'ko','MarkerSize',11,'MarkerFaceColor',[1 1 1]);
-% xlabel('prefDir'); ylabel('CP');
-% 
-% figure; set(gcf, 'Color', 'w', 'Position', [400 200 450 450], 'PaperPositionMode', 'auto');
-% plot(prefDir,ConfP,'ko','MarkerSize',11,'MarkerFaceColor',[1 1 1]);
-% xlabel('prefDir'); ylabel('ConfP');
-% % ^too noisy to see anything here?
+prefDir = prefDir_fit(~isnan(prefDir_fit));
+
+figure; set(gcf, 'Color', 'w', 'Position', [400 200 450 450], 'PaperPositionMode', 'auto');
+plot(prefDir,CP,'ko','MarkerSize',11,'MarkerFaceColor',[1 1 1]);
+set(gca,'xlim',[0 360],'xtick',0:45:360,'tickDir','out')
+xlabel('prefDir'); ylabel('CP');
+
+figure; set(gcf, 'Color', 'w', 'Position', [400 200 450 450], 'PaperPositionMode', 'auto');
+plot(prefDir,ConfP,'ko','MarkerSize',11,'MarkerFaceColor',[1 1 1]);
+set(gca,'xlim',[0 360],'xtick',0:45:360,'tickDir','out')
+xlabel('prefDir'); ylabel('ConfP');
+% ^too noisy to see anything here?
 
 I = cosd(prefDir)>sqrt(2)/2 | cosd(prefDir)<-sqrt(2)/2; % within +/- 45 deg of 0 or 180
 mean(CP(I))
@@ -551,4 +602,18 @@ mean(CP(~I))
 %^ still nothing!
 
 
+%%
+% running mean
+windowWidth = 90;
+
+figure; set(gcf, 'Color', 'w', 'Position', [400 200 450 450], 'PaperPositionMode', 'auto');
+[x_,y_,~] = running_mean(prefDir, CP, windowWidth, 'window_width'); h(1) = plot(x_,y_,'k-','LineWidth',2);
+[x_,y_,~] = running_mean(prefDir, ConfP, windowWidth, 'window_width'); hold on; h(2) = plot(x_,y_,'r-','LineWidth',2);
+plot([0 360],[0.5 0.5],'k--');
+set(gca,'xlim',[0 360],'xtick',0:45:360,'ylim',[0.45 0.6], 'ytick',0.45:0.05:0.6,'tickDir','out')
+xlabel('Preferred direction (deg)'); ylabel('Choice/Confidence Probability');
+legend(h(1:2),'CP','ConfP','location','northwest'); legend('boxoff');
+changeAxesFontSize(gca, 16, 16);
+
+% export_fig('CP-v-prefdir_runningMean', '-eps');
 

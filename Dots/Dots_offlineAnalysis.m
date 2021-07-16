@@ -172,7 +172,7 @@ options.errfcn = @errfcn_DDM_2D_wConf; modelID=2; % 2D DDM aka anticorrelated ra
 
 
 options.feedback = 1; % 1 = text output to cmd window, 2 = that, plus plot LL across runs
-options.plot = 0; % plot the marginal PDFs, logOddsCorr map, and high/low bet regions (only makes sense for fixed(:)=1)
+options.plot = 1; % plot the marginal PDFs, logOddsCorr map, and high/low bet regions (only makes sense for fixed(:)=1)
 
 % choose optimization method
 options.fitMethod = 'fms'; % fminsearch
@@ -213,7 +213,7 @@ end
 
 % ************************************
 % set all fixed to 1 for hand-tuning:
-fixed(:)=0;
+fixed(:)=1;
 % ************************************
 
 % fit it!

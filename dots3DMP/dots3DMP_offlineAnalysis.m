@@ -23,16 +23,9 @@ dateRange = 20200213:20210512; % RT
 RTtask = 1;
 
 
-% %% everything!
-% subject = 'human';
-% paradigm = 'dots3DMP';
-% dateRange = 20190612:20200308;
-% RTtask = 1;
-
-
 %%
-% folder = '/Users/chris/Documents/MATLAB/PLDAPS_data/';
-folder = '/Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data/';
+folder = '/Users/chris/Documents/MATLAB/PLDAPS_data/';
+% folder = '/Users/stevenjerjian/Desktop/FetschLab/Analysis/PLDAPS_data/';
 file = [subject '_' num2str(dateRange(1)) '-' num2str(dateRange(end)) '.mat'];
 load([folder file], 'data');
 
@@ -82,13 +75,14 @@ blocks = unique(data.filename);
 
 %% choose subjects to include based on 3-letter code
 
-% subjs = unique(data.subj); % all
+subjs = unique(data.subj); % all
 
 % subjs = {'AAW'}; % the best single subject
 % subjs = {'LLV'}; % good shifts at low coh
 % subjs = {'CXD'}; % fine, should maybe normalize
 % subjs = {'IWT'}; % conf doesn't match large shift at high coh!
 % subjs = {'EMF'}; % conf flat, prob discard
+% subjs = {'AAW' 'LLV' 'CXD' 'IWT' 'EMF'};
     % ^ the First Five
     
 % subjs = {'ASQ'}; % only 62 tr, discard
@@ -105,7 +99,7 @@ blocks = unique(data.filename);
 % subjs = {'SJJ'}
 % subjs = {'VZC'}
 
-subjs = {'DRH','SJJ','LLV','IPQ','VZC','IPQ','FRK'};
+% subjs = {'DRH','SJJ','LLV','IPQ'};
 
 % subjs = {'AAW' 'LLV' 'CXD' 'DRH' 'IPQ' 'SJJ' 'VZC'}; % all 'good' data (pre and post RT)
 
@@ -185,13 +179,15 @@ deltas = unique(data.delta); % aka conflict angle
 
 hdgs = unique(data.heading);
 
-if RTtask==0
-    % same here.  the 1.5-12 range was only used rarely, and in fact is a
-      % good signature of warmup or testing-mode trials to be excluded
-    %hdgs = [-10 -5 -2.5 -1.25 0 1.25 2.5 5 10]';
-    % some zero values were stored as +/- eps in an older version of the gui
-    data.heading(abs(data.heading)<0.01) = 0;
-end
+% % if RTtask==0 % not sure about this
+% 
+%     % same here.  the 1.5-12 range was only used rarely, and in fact is a
+%       % good signature of warmup or testing-mode trials to be excluded
+%     hdgs = [-10 -5 -2.5 -1.25 0 1.25 2.5 5 10]';
+%     % some zero values were stored as +/- eps in an older version of the gui
+%     data.heading(abs(data.heading)<0.01) = 0;
+% 
+% % end
     
 % remove the rest
 removethese = ~ismember(data.heading,hdgs);
@@ -260,7 +256,6 @@ dots3DMP_plots
 
 dots3DMP_fit_cgauss
 
-
 %% and plot them
  
 dots3DMP_plots_cgauss
@@ -268,7 +263,7 @@ dots3DMP_plots_cgauss
 
 
 
-% %% nicer looking versions
+%% nicer looking versions
 % 
 % dots3DMP_plots_cgauss_forTalk
 
