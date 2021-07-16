@@ -1,7 +1,6 @@
-% sigmaPMF(3,1,3) = sigmaPMF(3,1,3)*.7;
-
-% sigmaPMF(3,2,1) = sigmaPMF(3,2,1)*.6;
-muPMF(3,2,1) = muPMF(3,2,1)-0.2
+ sigmaPMF(3,1,3) = sigmaPMF(3,1,3)*.7;
+ sigmaPMF(3,2,1) = sigmaPMF(3,2,1)*.6;
+ muPMF(3,2,1) = muPMF(3,2,1)-0.2;
 
 %% first, for all trials irrespective of delta
 D = length(deltas)+1; % (the extra column we made for pooling across deltas)

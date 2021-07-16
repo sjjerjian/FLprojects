@@ -10,15 +10,15 @@ if isfield(data,'PDW')
 end
 
 ntrials = length(data.heading);
-
+            
 mods = unique(data.modality);
 cohs = unique(data.coherence); % visual coherence levels
 hdgs = unique(data.heading);
 deltas = unique(data.delta);
 
 % actual MP traj...
-duration = 1300; % stimulus duration (ms)
-% duration = 2000;
+% duration = 1300; % stimulus duration (ms)
+duration = 2000;
 dur = ones(ntrials,1) * duration;
 
 ks    = param(1);
@@ -37,18 +37,48 @@ sigmaVis = [sigma sigma]; % allow for separate sigmas for condition, coherence
 sdTnd = 60; % fixed SD
 Tnds = muTnd + randn(ntrials,1).*sdTnd;
 
+
+% % assume the mapping is based on an equal amount of experience with the 
+% % *three* levels of reliability (ves, vis-low, vis-high) hence k and sigma
+% % are their averages
+% k = mean([kves kvis]);
+
 % assume the mapping is based on an equal amount of experience with the 
 % *three* levels of reliability (ves, vis-low, vis-high) hence k and sigma
 % are their averages
 k = mean([kves kvis]);
 
+            % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+            % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+            % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+            % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+            % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+            % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+            % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+            % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+            
+% TEMP: simulate a few things
+kves = 0.33*ks; % vestibular deficit [try this before vs after mapping!]
+% B = B*1.5; % bound height change
+
+            % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+            % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+            % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+            % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+            % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+            % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+            % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+            % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+
+
+
 R.t = 0.001:0.001:duration/1000;
 R.Bup = B;
 R.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
-R.lose_flag = 1;
-R.plotflag = 1; % 1 = plot, 2 = plot and export_fig
+R.lose_flag = 1; % need pdf of the losing race(s)
+R.plotflag = 0; % 1 = plot, 2 = plot and export_fig
 
-P =  images_dtb_2d(R);
+P = images_dtb_2d(R);
 
 % create acceleration and velocity profiles (arbitrary for now)
 % SJ 04/2020
@@ -109,6 +139,44 @@ for n = 1:ntrials
             % optimal weights (Drugo et al.) 
             wVes = sqrt( kves^2 / (kvis(cohs==coh(n))^2 + kves^2) );
             wVis = sqrt( kvis(cohs==coh(n))^2 / (kvis(cohs==coh(n))^2 + kves^2) );
+            
+            
+            % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+            % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+            % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+            % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+            % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+            % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+            % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+            % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+            
+%            wVes = 0.1; wVis = 0.9; % vis overweighting, no coh shift
+            % OR
+            if coh(n)==cohs(end) % use high coh as placeholder for TMS/Pt
+
+            %    wVes = 0.5; wVis = 0.5;
+                wVes = rand; wVis = 1-wVes; % TMS
+
+            else
+                wVes = 0.1; wVis = 0.9;
+                
+
+                % OR
+% %                 kvesPt = 0.1*ks; % vestibular deficit
+% %                 wVes = sqrt( kvesPt^2 / (kvis(cohs==coh(n))^2 + kvesPt^2) );
+% %                 wVis = sqrt( kvis(cohs==coh(n))^2 / (kvis(cohs==coh(n))^2 + kvesPt^2) );
+                % nope, this doesn't capture it because sensitivity isn't right
+            end
+            
+            % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+            % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+            % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+            % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+            % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+            % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+            % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+            % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+            
             mu = wVes.*muVes + wVis.*muVis;
 
             % the DV is a sample from a dist with mean = weighted sum of
@@ -116,6 +184,32 @@ for n = 1:ntrials
             % (error propagation formula):
             sigmaComb = sqrt(wVes.^2 .* sigmaVes^2 + wVis.^2 .* sigmaVis(cohs==coh(n))^2); % assume zero covariance
             s = [sigmaComb sigmaComb];
+            
+            
+            
+%             % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+%             % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+%             % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+%             % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+%             % okay can do this here, just repeat above
+%             if coh(n)==cohs(end) % use high coh as placeholder for TMS/Pt
+%                 kves = 0.1*ks; % vestibular deficit
+%                 muVes = acc .* kves               * sind(hdg(n)-delta(n)/2) / 1000;
+%                 muVis = vel .* kvis(cohs==coh(n)) * sind(hdg(n)+delta(n)/2) / 1000;
+%                 wVes = sqrt( kves^2 / (kvis(cohs==coh(n))^2 + kves^2) );
+%                 wVis = sqrt( kvis(cohs==coh(n))^2 / (kvis(cohs==coh(n))^2 + kves^2) );
+%                 mu = wVes.*muVes + wVis.*muVis;
+%                 sigmaComb = sqrt(wVes.^2 .* sigmaVes^2 + wVis.^2 .* sigmaVis(cohs==coh(n))^2); % assume zero covariance
+%                 s = [sigmaComb sigmaComb];
+%                 
+%                 % restore kves for next trial
+%                 kves = ks;
+%             end
+%             % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+%             % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+%             % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+%             % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+            
     end
 
 %     Mu = [mu,-mu]; % mean vector for 2D DV
@@ -187,6 +281,28 @@ for n = 1:ntrials
         conf(n) = logOddsCorr(n) > theta;
     end
 end
+
+
+            % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+            % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+            % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+            % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+            % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+            % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+            % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+            % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+            
+% TEMP SUPER KLUGE (need to add alpha param)
+conf = conf-0.08;
+
+            % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+            % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+            % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+            % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+            % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+            % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+            % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+            % TEMP TEMP TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
 
 choice(choice==0) = sign(randn); % not needed under usual circumstances
 choice(choice==1) = 2; choice(choice==-1) = 1; % 1=left, 2=right

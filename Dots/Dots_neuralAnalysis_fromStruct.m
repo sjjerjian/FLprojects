@@ -13,11 +13,11 @@
 %%
 
 
-% clear
-% close all
+clear
+close all
 
 % load PrelimDataStruct
-% load DataStruct_10-26-2020_12-18-2020
+load DataStruct_10-26-2020_12-18-2020
 
 plotflag = 0;
 

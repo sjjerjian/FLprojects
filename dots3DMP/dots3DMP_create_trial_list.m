@@ -49,8 +49,8 @@ end
 
 % now replicate times nreps and shuffle (or not):
 condlist = [hdg modality coh delta];
-% trialTable = repmat(condlist,nreps,1); 
-trialTable = Shuffle(repmat(condlist,nreps,1),2);
+trialTable = repmat(condlist,nreps,1); 
+% trialTable = Shuffle(repmat(condlist,nreps,1),2);
     % why shuffle? well, sometimes it's easier to find particular trial
     % types to test out when debugging
 hdg      = trialTable(:,1);  
