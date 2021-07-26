@@ -76,107 +76,58 @@ monkUnit(startsWith(ufile,'m24'),1) = 'Y'; % 60 units
 [meanFRs,semFRs] = dots3DMP_neuron_tuning(data,mods,cohs,deltas,hdgs); % all units
 
 unit = 8; % 8 seems to be the one in the paper! 3 also looks nice
-dots3DMP_plot_neuron_tuning(meanFRs,semFRs,unit,cohs,hdgs);
+dots3DMP_plot_neuron_tuning(meanFRs(:,:,:,:,unit),semFRs(:,:,:,:,unit),cohs,hdgs);
 
 %% Likelihood based decoding (Fig. 4)
 
-% define likelihood function, assuming independent Poisson variability
-% tc = tuning curve of each neuron (interpolated)
-% r_obs = observed population response
-% lh = likelihood as function of heading
-
-lh_func = @(tc,r_obs) exp(-tc) .* (tc .^ r_obs) ./ factorial(r_obs);
-
-numunits = length(unique(data.unitnum));
-numtrs   = 100; % number of simulated trials for each condition
-
-% interpolate tuning curves at stepsize
 step = 0.1;
-xq = min(hdgs):step:max(hdgs);
+numtrs = 100;
+[tuning_curves, posterior, pop_lh, xq, simChoice] = ...
+    dots3DMP_likelihood_decoding(data,meanFRs,hdgs,mods,cohs,deltas,numtrs,step);
 
-% pre-allocate
-tuning_curves = nan(length(mods),length(cohs),length(deltas),length(xq),numunits);
-r_obs         = nan(length(mods),length(cohs),length(deltas),length(hdgs),numunits,numtrs);
-lh            = nan(length(mods),length(cohs),length(deltas),length(hdgs),length(xq),numunits,numtrs);
+%% Fig 4 in paper...
 
+figure('position',[300 300 600 400],'color','w'); hold on
+h = 5; % hdgs(5) is +1.2
+d = 4;
 
-% surely there's a way to vectorize this...anyway, loops ftw
-for m=1:length(mods)
-for c=1:length(cohs)
-for d=1:length(deltas)
-for u=1:numunits
-    x = squeeze(meanFRs(m,c,d,:,u));
-        
-    if any(isnan(x)),continue,end % skip
- 
-    % tried using interp1, but causes errors... neurons (with low
-    % firing rate) have the same exact firing rate for different headings?
-    
-    % linear regression
-%     p = polyfit(hdgs,x,1);
-%     y = polyval(p,xq);
-%     y(y<0) = 0; % is this necessary?
-    
-    % or piecewise linear between headings % is this how Chris did it?  
-    y = linear_pcw_fit(x,hdgs,0.1);
+% select a few simulated trials to plot
+simTrs2plot = randperm(numtrs,5);
 
-    tuning_curves(m,c,d,:,u) = y;
-    
-    % random draws of single-trial firing for each condition
-    % ... and compute likelihood using tuning curve and function
-    
-    for h=1:length(hdgs)
-        [~,idx] = min(abs(xq-hdgs(h)));
-        r = poissrnd(tuning_curves(m,c,d,idx,u),numtrs,1);   
-
-        r_obs(m,c,d,h,u,:) = r;
-        
-        for i=1:length(xq)
-            tc = tuning_curves(m,c,2,i,u);
-            lh(m,c,d,h,i,u,:) = lh_func(tc,r); 
-        end
-    end
-end
-end
-end
-end
-
-%%
-
-% SJ 06-2021 something is still off here (or in above calcs)...
-% NOT YET WORKING
-
-popn_llk = squeeze(prod(lh,6));         % product of llks across population
-% can we use sum of logs here instead?
-
-% normalize to obtain posterior (assuming uniform prior)
-%popn_llk = popn_llk ./ max(sum(popn_llk,5),[],6);
-
-
-% randomly select a few simulated trials
-inds = randperm(size(popn_llk,6),10);
-
-% plot example e.g. Fig 4a in paper
-figure('position',[300 300 300 200]); ax = gca; hold on
-% hdgs(5) is +1.2
+% vestibular only
+ax=subplot(231); hold on;
                        %m,c,d,h, interphdgs, units
-temp = squeeze(popn_llk(1,1,2,5,:,inds));
+temp = squeeze(posterior(mods==1,cohs==16,deltas==0,h,:,simTrs2plot));
+plot(xq,temp,'linew',1,'color','k')
+ax.XLim = [-6 6]; ax.TickDir = 'out'; ax.XTick = -5:2.5:5;
+ylab = ylabel('Likelihood (p(r|\theta))');
+ylab.Position(2) = -0.1;
+ylim([0 0.4]);
 
-plot(xq,temp,'linew',1.5,'color','k')
-ax.XLim = [-6 6];
-ax.TickDir = 'out';
-ax.XTick = -5:5:5;
-ax.XMinorTick = 'on';
-ax.XAxis.MinorTickValues = -5:2.5:5;
-% ax.YTick = 0:0.1:0.2;
-% ax.YMinorTick = 'on';
-% ax.YAxis.MinorTickValues = 0:0.05:0.2;
-% ax.TickLength = [0.02 0.02];
-
-%% Fig 4c,f --> simulated psychometric curves
-
-% TO DO
-
+% visual only
+ax=subplot(232); hold on;                    
+plot(xq,squeeze(posterior(mods==2,cohs==60,deltas==0,h,:,simTrs2plot)),'color','r')
+plot(xq,squeeze(posterior(mods==2,cohs==16,deltas==0,h,:,simTrs2plot)),'color','m','linestyle',':');
+ax.XLim = [-6 6]; ax.TickDir = 'out'; ax.XTick = -5:2.5:5;
+ylim([0 0.4]);
+% combined, delta = +4, low coh
+% visual is to the right of vestibular, at low coh, likelihood decoding is
+% biased towards vestibular (left)
+ax=subplot(234); hold on;                   
+plot(xq,squeeze(posterior(mods==3,cohs==16,deltas==d,h,:,simTrs2plot)),'color','c','linestyle','-');
+ax.XLim = [-6 6]; ax.TickDir = 'out'; ax.XTick = -5:2.5:5;
+ylim([0 0.4]);
+% combined, delta = +4, high coh
+% visual is to the right of vestibular, at high coh, likelihood decoding is
+% biased towards visual (right)
+ax=subplot(235); hold on;                   
+plot(xq,squeeze(posterior(mods==3,cohs==60,deltas==d,h,:,simTrs2plot)),'color','b','linestyle','-');
+ax.XLim = [-6 6]; ax.TickDir = 'out'; ax.XTick = -5:2.5:5;
+ylim([0 0.4]);
+% #TODO - cumulative Gaussian fits to simChoices for psychometric curves
+% (4e + f)
+ax = subplot(233);
+ax = subplot(236);
 %% Fig. 5 congruency index and tuning curves
 % correlation between firing rate and heading for ves and vis separately,
 % then product of these two

@@ -27,7 +27,7 @@ for c = 1:length(cohs)
     end
 %     legend(h,'vestib','visual','comb','Location','northwest');
     
-    xlabel('heading angle (deg)'); ylabel('proportion rightward choices');
+    xlabel('heading angle (deg)'); ylabel('P(Right)');
     changeAxesFontSize(gca,15,15);
 
     % conf
@@ -40,7 +40,7 @@ for c = 1:length(cohs)
     end
 %     legend(h,'vestib','visual','comb','location','northwest');
     xlabel('heading angle (deg)'); 
-    if conftask==1, ylabel('saccadic endpoint (''confidence'', %)');
+    if conftask==1, ylabel('SEP (''confidence'', %)');
     elseif conftask==2, ylabel('proportion high bet');
     end
     changeAxesFontSize(gca,15,15);
@@ -89,7 +89,7 @@ for c = 1:length(cohs)
         if length(mods)>1; title(['coh = ' num2str(cohs(c))]); end
     end
     legend(h,L,'location','northwest');
-    xlabel('heading angle (deg)'); ylabel('proportion rightward choices');
+    xlabel('heading angle (deg)'); ylabel('P(Right)');
     changeAxesFontSize(gca,15,15);
 
     % conf
@@ -104,8 +104,8 @@ for c = 1:length(cohs)
     end
 %     legend(h,L,'location','northwest');
     xlabel('heading angle (deg)'); 
-    if conftask==1, ylabel('saccadic endpoint (''confidence'', %)');
-    elseif conftask==2, ylabel('proportion high bet');
+    if conftask==1, ylabel('SEP (''confidence'', %)');
+    elseif conftask==2, ylabel('P(high bet)');
     end
     changeAxesFontSize(gca,15,15);
 

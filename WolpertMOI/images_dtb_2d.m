@@ -87,14 +87,16 @@ P.lo.p = P.lo.cdf_t(:,end);
 try
     P.up.mean_t = P.up.pdf_t * R.t  ./P.up.p;
     P.lo.mean_t = P.lo.pdf_t * R.t  ./P.lo.p;
+   
 catch
     P.up.mean_t = P.up.pdf_t * R.t'  ./P.up.p;
     P.lo.mean_t = P.lo.pdf_t * R.t'  ./P.lo.p;
+    
 end
+% can we get mean confidence here too?
 
 P.y=g;
 P.dy=dg;
-
 
 % CF: log posterior odds of a correct response (Eq. 3 in Kiani et al. 2014)
 odds = (squeeze(sum(P.up.distr_loser,1)) / length(R.drift)) ./ ...

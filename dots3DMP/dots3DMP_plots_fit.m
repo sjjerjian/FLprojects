@@ -7,6 +7,7 @@ function dots3DMP_plots_fit(Data,fitInterp,conftask,RTtask,fitgauss) %#ok<INUSL>
 % the former and just the data points for the latter
 
 if nargin<3, conftask=1; end
+if nargin<4, RTtask = 0; end
 
 %% data
 
@@ -49,7 +50,7 @@ for c = 1:length(cohs)
     elseif conftask==2, ylabel('proportion high bet');
     end
     
-    if ~isnan(RTmean(1,1,2))
+    if RTtask
         subplot(3,length(cohs),c+length(cohs)*2);
         for m = 1:length(mods)
             h(m) = errorbar(hdgs, squeeze(RTmean(m,c,D,:)), squeeze(RTse(m,c,D,:)), [clr{c}{m}]); hold on;
@@ -70,7 +71,7 @@ clear L;
 figure(108);
 set(gcf,'Color',[1 1 1],'Position',[50 20 950+300*(length(cohs)-2) 800],'PaperPositionMode','auto'); clf;
 for c = 1:length(cohs)
-    subplot(2+(~isnan(RTmean(1,1,2))),length(cohs),c);
+    subplot(2+RTtask,length(cohs),c);
     for d = 1:length(deltas)     % m c d h
         h(d) = errorbar(hdgs, squeeze(pRight(3,c,d,:)), squeeze(pRightSE(3,c,d,:)), [clr{c}{d}]); hold on
         L{d} = sprintf('\x0394=%d',deltas(d));
@@ -90,7 +91,7 @@ for c = 1:length(cohs)
     elseif conftask==2, ylabel('proportion high bet');
     end  
     
-    if ~isnan(RTmean(1,1,2))
+    if RTtask
         subplot(3,length(cohs),c+length(cohs)*2);
         for d = 1:length(deltas)
             h(d) = errorbar(hdgs, squeeze(RTmean(3,c,d,:)), squeeze(RTse(3,c,d,:)), [clr{c}{d}]); hold on;

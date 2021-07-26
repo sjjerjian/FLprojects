@@ -14,7 +14,6 @@ close all
 
 %% decide which files to load
 
-
 % subject = 'hanzo';
 % paradigm = 'Dots';
 
@@ -58,8 +57,9 @@ close all
 % dateRange = 20200801:20201130; % good!
 
 
-% now do Genji!
 
+
+% now do Genji!
 
 
 % subject = 'human';
@@ -68,37 +68,33 @@ close all
 
 subject = 'human';
 paradigm = 'dots3DMP';
-% dateRange = 20200213:20200308; % RT
-dateRange = 20200213:20210331; % RT
+dateRange = 20200213:20210526; % RT
 
 % subject = 'human';
 % paradigm = 'dots3DMP';
 % dateRange = 20190612:20200308; % everything!
 
-% subjects  = {'hanzo','genji','lucio','zarya','human'};
-% selection = listdlg('ListString',subjects,'ListSize',[160 70],'Name','Select subject','SelectionMode','single');
-% subject = subjects{selection};
-% 
-% paradigms  = {'Dots','BanditDots','dots3DMP'};
-% selection = listdlg('ListString',paradigms,'ListSize',[160 70],'Name','Select subject','SelectionMode','single');
-% paradigm = paradigms{selection};
-% clear selection
-
-%%
+% subject = 'lucio';
+% paradigm = 'dots3DMP';
+% dateRange = 20200315:20210512; % RT
 
 dateStr = num2str(dateRange(1));
 for d = 2:length(dateRange)
     dateStr = [dateStr newline num2str(dateRange(d))];
 end
 
-localDir = ['/Users/chris/Documents/MATLAB/PLDAPS_data/' subject '/'];
-remoteDir = ['/var/services/homes/fetschlab/data/' subject '/'];
+% localDir = ['/Users/chris/Documents/MATLAB/PLDAPS_data/' subject '/'];
+localDir = ['/Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data/' subject '/'];
+% 
+% remoteDir = ['/var/services/homes/fetschlab/data/' subject '_basic/'];
+remoteDir = ['/var/services/homes/fetschlab/data/' subject 'dots3DMP_basic/'];
 
 
 %% get PDS files from server -- DON'T FORGET VPN
 % will skip files that already exist locally, unless overwrite set to 1
 
-overwriteLocalFiles = 1; % set to 1 to always use the server copy
+useVPN = 0;
+overwriteLocalFiles = 0; % set to 1 to always use the server copy
 getDataFromServer % now also includes pdsCleanup to reduce file size and complexity
 
 
@@ -127,6 +123,7 @@ data = rmfield(data,'dotPos'); % CAREFUL
 catch
 end
 
+disp('saving...');
 save([localDir(1:length(localDir)-length(subject)-1) file], 'data');
 
 % otherwise for larger files will need: 

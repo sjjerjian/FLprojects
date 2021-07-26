@@ -13,12 +13,13 @@ global call_num; call_num=1;
 if all(fixed)
     X = guess;
 else
-    
+   
 switch options.fitMethod
     case 'fms'
-        fitOptions = optimset('Display', 'iter', 'MaxFunEvals', 500*sum(fixed==0), 'MaxIter', ... 
-            500*sum(fixed==0), 'TolX', 1e-3, 'TolFun', 1e-2, 'UseParallel', 'Always');
-        [X, fval, ~] = fminsearch(@(x) dots3DMP_fit_2Dacc_err(x,guess,fixed,data,options), guess(fixed==0), fitOptions);
+        fitOptions = optimset('Display', 'iter', 'MaxFunEvals', 100*sum(fixed==0), 'MaxIter', ... 
+            100*sum(fixed==0), 'TolX',1e-2,'TolFun',1e-2,'UseParallel', 'Always');
+        [X, fval, ~] = fminsearch(@(x) feval(options.errfun,x,guess,fixed,data,options), guess(fixed==0), fitOptions);
+%         [X, fval, exitflag] = fminunc(@(x) feval(options.errfun,x,guess,fixed,data,options), guess(fixed==0), fitOptions);
         fprintf('fval: %f\n', fval);
 
     case 'global'
@@ -28,7 +29,7 @@ switch options.fitMethod
             'FinDiffType','central',...
             'UseParallel','always');
         problem = createOptimProblem('fmincon','x0',guess(fixed==0),'objective',...
-            @(x) dots3DMP_fit_2Dacc_err(x,guess,fixed,data,options),'lb',LB(fixed==0),...
+            @(x) feval(options.errfun,x,guess,fixed,data,options),'lb',LB(fixed==0),...
             'ub',UB(fixed==0),'options',fitOptions);
         gs = GlobalSearch;
         [X,~,~,~,~] = run(gs,problem);      
@@ -40,7 +41,7 @@ switch options.fitMethod
             'FinDiffType','central',...
             'UseParallel','always');
         problem = createOptimProblem('fmincon','x0',guess(fixed==0),'objective',...
-            @(x) dots3DMP_fit_2Dacc_err(x,guess,fixed,data,options),'lb',LB(fixed==0),...
+            @(x) feval(options.errfun,x,guess,fixed,data,options),'lb',LB(fixed==0),...
             'ub',UB(fixed==0),'options',fitOptions);
         ms = MultiStart('FunctionTolerance',2e-4,'XTolerance',5e-3,...
             'StartPointsToRun','bounds-ineqs','UseParallel','always');
@@ -54,7 +55,7 @@ switch options.fitMethod
 %         [X,~,~,~] = patternsearch(@(x) dots3DMP_fitDDM_err(x,data,options),...
 %             guess(fixed==0),[],[],[],[],LB(fixed==0),UB(fixed==0),[],fitOptions);
         
-        [X,~,~,~] = patternsearch(@(x) dots3DMP_fit_2Dacc_err(x,guess,fixed,data,options),...
+        [X,~,~,~] = patternsearch(@(x) feval(options.errfun,x,guess,fixed,data,options),...
             guess(fixed==0),[],[],[],[],LB(fixed==0),UB(fixed==0),[],fitOptions);
         
     case 'bads'
@@ -126,24 +127,34 @@ switch options.fitMethod
 
         X = bads(nllfun_ibs,guess,LB,UB,PLB,PUB); % 
 
-
-end
-
-% re-insert fixed params
-temp = X;
-X = zeros(size(fixed));
-X(fixed==0) = temp;
-X(fixed==1) = guess(fixed==1);
 end
 
 
+%%
+% re-insert initial fixed params in the appropriate places for final error calcs (since we have only
+    % fit the non-fixed ones).
+try 
+    temp = X;
+    X = zeros(size(fixed));
+    X(fixed==0) = temp;
+    X(fixed==1) = guess(fixed==1);
+catch
+    keyboard
+end
+
+end
+    
 % run err func again at the fitted/fixed params to generate a final
 % error value and model-generated data points (trial outcomes)
 options.ploterr = 0;
+% [err_final, fit] = dots3DMP_fit_2Dacc_err_nSims(X,X,true(size(X)),data,options);
+[err_final, fit] = feval(options.errfun,X,X,true(size(X)),data,options);
 
-% [err_final, fit] = dots3DMP_fit_2Dacc_err(X,X,false(size(X)),data,options);
-[err_final, fit] = dots3DMP_fit_2Dacc_err(X,X,true(size(X)),data,options);
 
+if ~options.runInterpFit
+    fit = [];
+    fitInterp = [];    
+else
 % *** now run it one more time with interpolated headings
 % to generate smooth plots ***
     % (this ordinarily works well to show the fits vs. data, but in the
@@ -165,33 +176,23 @@ mods = unique(data.modality);
 cohs = unique(data.coherence);
 deltas = unique(data.delta);
 
-nreps = 400; % 200-500 works
-[hdg, modality, coh, delta, ~] = dots3DMP_create_trial_list(hdgs,mods,cohs,deltas,nreps);
-
-% now replicate times nreps
-condlist = [hdg modality coh delta];
-trialTable = repmat(condlist,nreps,1);
-
-Dfit.heading = hdg;  
-Dfit.modality = modality;  
-Dfit.coherence = coh;  
-Dfit.delta = delta;
-
-%/end generate condition list
+nreps = 200;
+[Dfit.heading, Dfit.modality, Dfit.coherence, Dfit.delta, ~] = dots3DMP_create_trial_list(hdgs,mods,cohs,deltas,nreps,0);
 
 % the observables are just placeholders because the err func still needs to
 % calculate err even though in this case it's meaningless. What will be
 % plotted is fitInterp, not Dfit
+
+% in other words, we are using the already calculated fit parameters to
+% plot curves for simulated trial conditions
+
 Dfit.choice = ones(size(Dfit.heading));
 Dfit.RT     = ones(size(Dfit.heading));
 Dfit.conf   = ones(size(Dfit.heading));
 
-
 % [~,fitInterp] = dots3DMP_fitDDM_err(X,Dfit);
-% [~, fitInterp] = dots3DMP_fit_2Dacc_err(X,X,false(size(X)),Dfit,options);
-[~, fitInterp] = dots3DMP_fit_2Dacc_err(X,guess,zeros(size(X)),Dfit,options); 
+[~, fitInterp] = feval(options.errfun,X,X,true(size(X)),Dfit,options);
 
 end
-
-
+end
 

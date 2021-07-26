@@ -12,7 +12,7 @@ data.filename = {};
 data.subj = {};
 data.choice = []; % initialize this one field, you'll see why
 
-fieldExcludes = {'reward','rewardDelay','leftEarly','tooSlow','fixFP','FPHeld','eyeXYs','corrLoopActive','goodtrial', ...
+fieldExcludes = {'leftEarly','tooSlow','fixFP','FPHeld','eyeXYs','corrLoopActive','goodtrial', ...
                  'timeTargDisappears','probOfMemorySaccade','leftTargR','leftTargTheta', ...
                  'rightTargR','rightTargTheta','audioFeedback','textFeedback'};
 
@@ -62,17 +62,36 @@ for d = 1:length(dateRange)
                                 data.dotPos{T,1} = PDS.data{t}.stimulus.dotPos;
                             end
                             
+                            % to store all the reward amounts
+                            % maybe don't need this, all reward analyses
+                            % will have to be done within session first, so
+                            % go to cleaned-up PDS files
+%                             if isfield(PDS.data{t},'reward')
+%                                 data.reward{T,1} = PDS.data{t}.reward;                               
+%                                 try data.reward.fixRewarded(T,1) = PDS.data{t}.reward.fixRewarded; 
+%                                 catch data.reward.fixRewarded(T,1) = NaN; end
+%                                 try data.reward.HighConfOffered(T,1) = PDS.data{t}.reward.amountRewardHighConfOffered; 
+%                                 catch data.reward.HighConfOffered(T,1) = NaN; end
+%                                 try data.reward.LowConfOffered(T,1) = PDS.data{t}.reward.amountRewardLowConfOffered; 
+%                                 catch data.reward.LowConfOffered(T,1) = NaN; end
+%                                 try data.reward.rewardGiven(T,1) = PDS.data{t}.reward.rewardGiven; 
+%                                 catch data.reward.rewardGiven(T,1) = NaN; end
+%                                 try data.reward.rewardDelay(T,1) = PDS.data{t}.reward.rewardDelay; 
+%                                 catch data.reward.rewardDelay(T,1) = NaN; end
+% 
+%                             end
+                            
                             % dependent variables are stored in PDS.data.behavior
                             fnames = fieldnames(PDS.data{t}.behavior);
                             fnames(ismember(fnames,fieldExcludes)) = [];
                             for F = 1:length(fnames)
-                                % SJ 07/20, correct was defaulting to
-                                % logical, but then throwing error if a NaN
-                                % came up
+                                % SJ 07-20, correct defaults to logical but
+                                % throws an error for NaN - change to
+                                % double
                                 if strcmp(fnames{F},'correct'), data.correct(T,1) = 0; end
                                 eval(['data.' fnames{F} '(T,1) = PDS.data{t}.behavior.' fnames{F} ';']);
                             end
-                            
+                                                        
                             % noticed a couple extra things we need, not in either place -CF 02-2021
                             try
                                 data.oneTargPDW(T,1) = PDS.data{t}.postTarget.markOneConf;
