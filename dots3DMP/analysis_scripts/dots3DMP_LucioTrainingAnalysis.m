@@ -18,21 +18,6 @@ folder = '/Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data/';
 file = [subject '_' num2str(dateRange(1)) '-' num2str(dateRange(end)) '.mat'];
 load([folder file], 'data');
 
-% struct data has fields:
-% filename
-% subj: subject code
-% choice: 1=left, 2=right, nan = fixation break or otherwise invalid
-% heading: angle in deg relative to straight ahead, positive = rightward
-% coherence: dot motion coherence aka visual reliability
-% modality: stimulus modality: 1=ves, 2=vis, 3=comb
-% delta: conflict angle in deg, positive means visual right, vestib left
-% correct: was the choice correct, 1 or 0
-% conf: confidence rating via saccadic end-point to color-bar target
-%       (or in other datasets, PDW)
-
-
-% new 04/2020: selecting 'good' data
-
 % some new useful vars
 for k = 1:length(data.filename)
     data.date(k,1) = str2double(data.filename{k}(6:13));
@@ -57,8 +42,6 @@ end
 % for F = 1:length(fnames)
 %     eval(['data.' fnames{F} '(removethese) = [];']);
 % end
-
-
 
 %% remove invalid trials (fixation breaks (which gives nans))
 removethese = isnan(data.choice) | isnan(data.PDW) | data.oneConfTargTrial;

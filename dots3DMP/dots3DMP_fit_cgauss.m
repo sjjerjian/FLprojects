@@ -16,6 +16,7 @@ cgauss_err = @(param,choice,hdg) -(sum(log(cgauss(param,hdg(choice))))+sum(log(1
 % 'baseline' for flippedGauss is the highBet side, because of flip
 if conftask==1 % continuous, sacc endpoint
     % for continuous values, error is sum squared error
+    % don't impose min/max on b(1) and b(4) in case conf is not normalized
     flippedGauss = @(b,hdg) 1 - ( b(1) .* exp(-(hdg-b(2)).^2 ./ (2*b(3).^2)) + b(4));
     flippedGauss_err = @(param,SEP,hdg) nansum((flippedGauss(param,hdg)-SEP).^2);
 elseif conftask==2 % PDW, probabilities
@@ -24,10 +25,11 @@ elseif conftask==2 % PDW, probabilities
     % negative log likelihood of observing PDW data
     % log prob of observing high bet on all trials where subj bet
     % high, + log prob of low bet on trials where subj bet low
+    % equivalent to cgauss error function
     flippedGauss_err = @(param,pdw,hdg) -( sum(log(flippedGauss(param,hdg(pdw)))) + sum(log(1-flippedGauss(param,hdg(~pdw)))) );
 end
 
-% RT - Gaussian
+% RT - Gaussian, error is sum squared because RT is cont variable
 gauss = @(b,hdg) b(1) .* exp(-(hdg-b(2)).^2 ./ (2*b(3).^2)) + b(4);
 gauss_err = @(param,SEP,hdg) sum((gauss(param,hdg)-SEP).^2);
 

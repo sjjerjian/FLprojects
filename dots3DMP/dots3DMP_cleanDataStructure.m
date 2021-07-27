@@ -16,7 +16,7 @@ end
 
 % remove fixation breaks (indicated by nans), or one-target trials
 % also remove excludes based on filenames and dates
-removethese = isnan(data.choice) | isnan(data.RT) | isinf(data.RT) | isnan(data.PDW) | data.oneConfTargTrial | data.oneTargTrial;
+removethese = isnan(data.choice) | isnan(data.RT) | isinf(data.RT) | isnan(data.PDW) | data.oneTargConf | data.oneTargChoice;
 removethese = removethese | ismember(data.filename,excludes_filename) | ismember(data.date,excludes_date);
 fnames = fieldnames(data);
 for F = 1:length(fnames)
@@ -56,7 +56,7 @@ data.delta(data.delta==2) = 3;
 deltas = unique(data.delta); % aka conflict angle
 
 % simplify cohs (collapse similar ones)
-data.coherence(data.coherence<=0.5) = 0.4;
+data.coherence(data.coherence<=0.5) = 0.3;
 data.coherence(data.coherence>0.5) = 0.8;
 cohs = unique(data.coherence);
 
@@ -75,7 +75,7 @@ for F = 1:length(fnames)
 end
 
 % remove unnecessary fields and order fields
-data = rmfield(data,{'reward','subj','oneTargTrial','oneConfTargTrial','TargMissed','subjDate'});
+data = rmfield(data,{'reward','subj','oneTargTrial','oneConfTargTrial','TargMissed','subjDate','oneTargChoice','oneTargConf',});
 
 sorted_fnames = {'filename','date','heading','modality','coherence','delta','choice','RT','PDW','correct'};
 data = orderfields(data,sorted_fnames);

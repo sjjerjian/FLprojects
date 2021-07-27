@@ -2,7 +2,7 @@
 
 subject = 'lucio';
 paradigm = 'dots3DMP';
-dateRange = 20210714;
+dateRange = 20210721;
 
 dateStr = num2str(dateRange(1));
 for d = 2:length(dateRange)
@@ -19,10 +19,10 @@ getDataFromServer % now also includes pdsCleanup to reduce file size and complex
 
 %%
 localDir = ['/Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data/' subject '/'];
-% remoteDir = ['/var/services/homes/fetschlab/data/' subject '/' ];
+remoteDir = ['/var/services/homes/fetschlab/data/' subject '/' ];
 
-localDir = ['/Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data/'];
-remoteDir = ['/var/services/homes/fetschlab/data/'];
+% localDir = ['/Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data/'];
+% remoteDir = ['/var/services/homes/fetschlab/data/'];
 
 getDataFromServer % now also includes pdsCleanup to reduce file size and complexity
 
@@ -32,11 +32,11 @@ clear all
 
 subject = 'lucio';
 localDirNex = ['/Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data/' subject '/nexonar/'];
-% localDirPDS = ['/Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data/' subject '/'];
+localDirPDS = ['/Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data/' subject '/'];
 
-filename = 'lucio20210714dots3DMP1252';
+filename = 'lucio20210721dots3DMP1410';
 load(fullfile(localDirNex,[filename '_nexonar.mat']))
-% % load(fullfile(localDirPDS,[filename '.mat']))
+load(fullfile(localDirPDS,[filename '.mat']))
 
 % clean-up bug in nex trial storage
 % badtrialSeed = find(nex.pldaps.trialSeed==7);

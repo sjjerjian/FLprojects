@@ -1,14 +1,16 @@
 function dots3DMP_plots(parsedData,mods,cohs,deltas,hdgs,conftask,RTtask)
 
-% first select all trials, irrespective of delta
+% first, for all trials irrespective of delta
 D = length(deltas)+1; % (the extra column we made for pooling across deltas)
+% OR select just delta=0:
+D = find(deltas==0);
 
          %ves %vis %comb
 clr{1} = {'ko','mo','co'};
 clr{2} = {'ko','ro','bo'};
 clr{3} = {'ko','yo','go'};
 figure(101+D);
-set(gcf,'Color',[1 1 1],'Position',[300 1000 450+300*(length(cohs)-2) 500],'PaperPositionMode','auto'); clf;
+set(gcf,'Color',[1 1 1],'Position',[300 1000 450+300*(length(cohs)-2) 200+150*(conftask>0)+150*RTtask],'PaperPositionMode','auto'); clf;
 for c = 1:length(cohs)
     
     % CHOICE
@@ -24,7 +26,7 @@ for c = 1:length(cohs)
         if length(mods)>1; title(['coh = ' num2str(cohs(c))]); end
     end
     legend(h,'vestib','visual','comb','Location','northwest');
-    xlabel('heading angle (deg)'); ylabel('proportion rightward choices');
+    xlabel('heading angle (deg)'); ylabel('P(right)');
     try changeAxesFontSize(gca,15,15); catch; end
     
     % CONFIDENCE
@@ -36,7 +38,7 @@ for c = 1:length(cohs)
         end
         xlabel('heading angle (deg)');
         if conftask==1, ylabel('SEP (''confidence'', %)');
-        elseif conftask==2, ylabel('proportion high bet');
+        elseif conftask==2, ylabel('P(high bet)');
         end
         try changeAxesFontSize(gca,15,15); catch; end
     end
@@ -48,11 +50,8 @@ for c = 1:length(cohs)
             h(m) = errorbar(hdgs, squeeze(parsedData.RTmean(m,c,D,:)), squeeze(parsedData.RTse(m,c,D,:)), [clr{c}{m} '-'],'linewidth',1.5); hold on;
         end
         xlabel('heading angle (deg)'); ylabel('RT (s)');
-        if strcmp(parsedData.subject,'lucio')
-            ylim([0.5 0.9])
-        else
-            ylim([0.6 2.5]);
-        end
+        yRng = [min(parsedData.RTmean(:)) max(parsedData.RTmean(:))];
+        ylim(yRng.*[0.9 1.1])
     end
     try changeAxesFontSize(gca,15,15); catch; end
 end
@@ -68,7 +67,7 @@ clr{3} = {'bo','co','go'};
 
 clear L;
 figure(108);
-set(gcf,'Color',[1 1 1],'Position',[50 20 450+300*(length(cohs)-2) 500],'PaperPositionMode','auto'); clf;
+set(gcf,'Color',[1 1 1],'Position',[50 20 450+300*(length(cohs)-2) 200+150*(conftask>0)+150*RTtask],'PaperPositionMode','auto'); clf;
 for c = 1:length(cohs)
     subplot(1+double(conftask>0)+RTtask,length(cohs),c); box off; hold on;
     for d = 1:length(deltas)     % m c d h
@@ -83,7 +82,7 @@ for c = 1:length(cohs)
         if length(mods)>1; title(['coh = ' num2str(cohs(c))]); end
     end
     legend(h,L,'location','northwest');
-    xlabel('heading angle (deg)'); ylabel('proportion rightward choices');
+    xlabel('heading angle (deg)'); ylabel('P(right)');
     try changeAxesFontSize(gca,15,15); catch; end
     
     subplot(1+double(conftask>0)+double(RTtask),length(cohs),c+length(cohs)); box off; hold on;
@@ -94,7 +93,7 @@ for c = 1:length(cohs)
     ylim([0 1]); 
     xlabel('heading angle (deg)'); 
     if conftask==1, ylabel('SEP (''confidence'', %)');
-    elseif conftask==2, ylabel('proportion high bet');
+    elseif conftask==2, ylabel('P(high bet)');
     end
     try changeAxesFontSize(gca,15,15); catch; end
    
@@ -104,11 +103,8 @@ for c = 1:length(cohs)
             h(d) = errorbar(hdgs, squeeze(parsedData.RTmean(3,c,d,:)), squeeze(parsedData.RTse(3,c,d,:)), [clr{c}{d} '-'], 'linewidth', 1.5); hold on;
         end
         xlabel('heading angle (deg)'); ylabel('RT (s)');
-        if strcmp(parsedData.subject,'lucio')
-            ylim([0.5 0.9])
-        else
-            ylim([0.6 2.5]);
-        end
+        yRng = [min(parsedData.RTmean(:)) max(parsedData.RTmean(:))];
+        ylim(yRng.*[0.9 1.1])
     end
     try changeAxesFontSize(gca,15,15); catch; end
 end

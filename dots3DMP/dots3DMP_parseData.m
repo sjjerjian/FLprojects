@@ -11,8 +11,8 @@ n = nan(length(mods),length(cohs),length(deltas)+1,length(hdgs));
                                % add extra column^ for pooling all trials irrespective of delta
 pRight = n;
 
-if RTtask, RTmean = n; RTse = n; end
-if conftask, confMean = n; confSE = n; end
+RTmean = n; RTse = n;
+confMean = n; confSE = n;
 xVals = hdgs(1):0.1:hdgs(end);
 yVals = nan(length(mods),length(cohs),length(deltas)+1,length(xVals));
 

@@ -1,9 +1,12 @@
+% SJ 05-2021
+
 % confidence (PDW) for correct and error trials as a function of heading angle
 % ignore other stim conditions for now
+% eventually, look at this for different modalities?
 
-if ~isfield(data,'correct')
-    data.correct = (data.heading<0 & data.choice==1) | (data.heading>0 & data.choice==2) | (data.heading==0 & rand(size(data.heading))>0.5);
-end
+% if ~isfield(data,'correct')
+%     data.correct = (data.heading<0 & data.choice==1) | (data.heading>0 & data.choice==2) | (data.heading==0 & rand(size(data.heading))>0.5);
+% end
 
 for h = 1:length(hdgs)
     I = data.heading==hdgs(h) & data.correct;

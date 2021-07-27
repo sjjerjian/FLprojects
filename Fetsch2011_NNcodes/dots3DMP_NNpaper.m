@@ -7,7 +7,7 @@
 % likelihood calculations (Fig. 4) seem to be off
 
 %%
-
+clear;clc
 % load the data
 cd /Users/stevenjerjian/Desktop/FetschLab/Analysis/data
 load Fetsch_et_al_NatNeuro_2011.mat
@@ -25,7 +25,6 @@ hdgs   = unique(data.heading);
 % select monkey (optional), [] = select both, 'W' = m18, 'Y' = m24
 monkey = []; % [], 'W','Y'
 
-newdata = data;
 
 if ~isempty(monkey)
     switch monkey
@@ -38,7 +37,7 @@ if ~isempty(monkey)
     fnames = fieldnames(data);
     for F = 1:length(fnames)
         if strcmp(fnames(F), 'spikes')
-            newdata.spikes(removethese,:) = [];
+            data.spikes(removethese,:) = [];
         else
             eval(['newdata.' fnames{F} '(removethese) = [];']);
         end
@@ -47,11 +46,11 @@ end
 %% Psychometric curves (Fig 1)
 
 % logistic fits
-parsedData = dots3DMP_parseData_func(newdata,mods,cohs,deltas,hdgs);
+parsedData = dots3DMP_parseData_func(data,mods,cohs,deltas,hdgs);
 dots3DMP_plots_NN(parsedData,mods,cohs,deltas,hdgs);
 
 % cum Gaussian fits... use gfit results for the weights and thresholds
-gfit = dots3DMP_fit_cgauss_NN(newdata,mods,cohs,deltas);
+gfit = dots3DMP_fit_cgauss_NN(data,mods,cohs,deltas);
 dots3DMP_plots_cgauss_NN(gfit,parsedData,mods,cohs,deltas,hdgs)
 
 %% weights and psycophysical thresholds (~Fig 2)
@@ -88,16 +87,16 @@ numtrs = 100;
 %% Fig 4 in paper...
 
 figure('position',[300 300 600 400],'color','w'); hold on
-h = 5; % hdgs(5) is +1.2
-d = 4;
+h = 4; % hdgs(5) is +1.2
+d = 3;
 
 % select a few simulated trials to plot
-simTrs2plot = randperm(numtrs,5);
+simTrs2plot = randperm(numtrs,10);
 
 % vestibular only
 ax=subplot(231); hold on;
                        %m,c,d,h, interphdgs, units
-temp = squeeze(posterior(mods==1,cohs==16,deltas==0,h,:,simTrs2plot));
+temp = squeeze(posterior(mods==1,cohs==16,2,h,:,simTrs2plot));
 plot(xq,temp,'linew',1,'color','k')
 ax.XLim = [-6 6]; ax.TickDir = 'out'; ax.XTick = -5:2.5:5;
 ylab = ylabel('Likelihood (p(r|\theta))');
@@ -106,22 +105,22 @@ ylim([0 0.4]);
 
 % visual only
 ax=subplot(232); hold on;                    
-plot(xq,squeeze(posterior(mods==2,cohs==60,deltas==0,h,:,simTrs2plot)),'color','r')
-plot(xq,squeeze(posterior(mods==2,cohs==16,deltas==0,h,:,simTrs2plot)),'color','m','linestyle',':');
+plot(xq,squeeze(posterior(mods==2,cohs==60,2,h,:,simTrs2plot)),'color','r')
+plot(xq,squeeze(posterior(mods==2,cohs==16,2,h,:,simTrs2plot)),'color','m','linestyle',':');
 ax.XLim = [-6 6]; ax.TickDir = 'out'; ax.XTick = -5:2.5:5;
 ylim([0 0.4]);
 % combined, delta = +4, low coh
 % visual is to the right of vestibular, at low coh, likelihood decoding is
 % biased towards vestibular (left)
 ax=subplot(234); hold on;                   
-plot(xq,squeeze(posterior(mods==3,cohs==16,deltas==d,h,:,simTrs2plot)),'color','c','linestyle','-');
+plot(xq,squeeze(posterior(mods==3,cohs==16,d,h,:,simTrs2plot)),'color','c','linestyle','-');
 ax.XLim = [-6 6]; ax.TickDir = 'out'; ax.XTick = -5:2.5:5;
 ylim([0 0.4]);
 % combined, delta = +4, high coh
 % visual is to the right of vestibular, at high coh, likelihood decoding is
 % biased towards visual (right)
 ax=subplot(235); hold on;                   
-plot(xq,squeeze(posterior(mods==3,cohs==60,deltas==d,h,:,simTrs2plot)),'color','b','linestyle','-');
+plot(xq,squeeze(posterior(mods==3,cohs==60,d,h,:,simTrs2plot)),'color','b','linestyle','-');
 ax.XLim = [-6 6]; ax.TickDir = 'out'; ax.XTick = -5:2.5:5;
 ylim([0 0.4]);
 % #TODO - cumulative Gaussian fits to simChoices for psychometric curves

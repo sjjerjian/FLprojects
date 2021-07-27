@@ -9,12 +9,10 @@ clear;clc
 load('lucio_20210315-20210707_clean.mat')
 RTtask = 1; 
 conftask = 2;
-subject = 'lucio';
 
 % load('Human_20200213-20210707_clean.mat')
 % RTtask = 1;
 % conftask = 1;
-% subject = 'human';
 
 % psychometric/chronometric plots
 
@@ -23,25 +21,21 @@ cohs = unique(data.coherence);
 deltas = unique(data.delta); 
 hdgs = unique(data.heading);
 
-%%
+%% logistic fits
 
-
-% need to add in stuff to plots_NN to plot conf and RTs!
-
-% logistic fits
 parsedData = dots3DMP_parseData(data,mods,cohs,deltas,hdgs,conftask,RTtask);
 dots3DMP_plots(parsedData,mods,cohs,deltas,hdgs,conftask,RTtask);
 % dots3DMP_plots_func_forAumena(parsedData,mods,cohs,deltas,hdgs,conftask,RTtask);
 
-% cum Gaussian fits... use gfit results for the weights and thresholds
+%% cum Gaussian fits... use gfit results for the weights and thresholds
+
 gfit = dots3DMP_fit_cgauss(data,mods,cohs,deltas,conftask,RTtask);
-% dots3DMP_plots_cgauss_NN(gfit,parsedData,mods,cohs,deltas,hdgs)
+dots3DMP_plots_cgauss_func(gfit,parsedData,mods,cohs,deltas,hdgs,conftask,RTtask)
 
 
 %% 
-
-dots3DMP_parseData_splitConf;
-dots3DMP_plots_splitConf;
+parsedDatabyConf = dots3DMP_parseData_byConf(data,mods,cohs,deltas,hdgs,conftask,RTtask);
+% dots3DMP_plots_splitConf;
 
 %% 
 
