@@ -102,6 +102,9 @@ for t = 1:length(PDS.data) % loop over trials for this file
     % rename fields (dots3DMP)
     try PDS.conditions{t}.stimulus = renameStructField(PDS.conditions{t}.stimulus,'conflictAngle','delta'); catch; end
     try PDS.conditions{t}.stimulus = renameStructField(PDS.conditions{t}.stimulus,'stimCondition','modality'); catch; end
+    try PDS.data{t}.behavior = renameStructField(PDS.data{t}.behavior,'oneTargTrial','oneTargChoice'); catch; end
+    try PDS.data{t}.behavior = renameStructField(PDS.data{t}.behavior,'oneConfTargTrial','oneTargConf'); catch; end
+    
     try
         if PDS.conditions{t}.stimulus.modality==1 % don't need a bunch of nans for vestib trials, make it just one nan
             PDS.data{t}.stimulus.dotX = NaN;

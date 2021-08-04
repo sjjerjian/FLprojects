@@ -6,7 +6,7 @@
 
 clear;clc
 
-load('lucio_20210315-20210707_clean.mat')
+load('lucio_20210315-20210801_clean.mat')
 RTtask = 1; 
 conftask = 2;
 
@@ -35,7 +35,8 @@ dots3DMP_plots_cgauss_func(gfit,parsedData,mods,cohs,deltas,hdgs,conftask,RTtask
 
 %% 
 parsedDatabyConf = dots3DMP_parseData_byConf(data,mods,cohs,deltas,hdgs,conftask,RTtask);
-% dots3DMP_plots_splitConf;
+gfit = dots3DMP_fit_cgauss_byConf(data,mods,cohs,deltas,conftask,RTtask);
+
 
 %% 
 

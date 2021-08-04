@@ -7,7 +7,7 @@ RTtask = 1;
 
 subject = 'lucio';
 paradigm = 'dots3DMP';
-dateRange = 20210315:20210707; % RT
+dateRange = 20210315:20210801; % RT
 
 
 %%
@@ -104,14 +104,17 @@ end
 
 
 % remove one target trials
-removethese = data.oneConfTargTrial | data.oneTargTrial;
+removethese = data.oneTargChoice | data.oneTargConf;
 for F = 1:length(fnames)
     eval(['data.' fnames{F} '(removethese) = [];']);
 end
 
-
-data = rmfield(data,{'reward','subj','oneTargTrial','oneConfTargTrial','TargMissed','subjDate'});
-
+try data = rmfield(data,'reward'); catch, end
+try data = rmfield(data,'subj'); catch, end
+try data = rmfield(data,'oneTargChoice'); catch, end
+try data = rmfield(data,'oneTargConf'); catch, end
+try data = rmfield(data,'TargMissed'); catch, end
+try data = rmfield(data,'subjDate'); catch, end
 
 sorted_fnames = {'filename','date','heading','modality','coherence','delta','choice','RT','PDW','correct'};
 data = orderfields(data,sorted_fnames);
@@ -131,8 +134,7 @@ for u = 1:length(dates)
 end
 
 %% save it
-clearvars -except data folder
-save(fullfile(folder,[file(1:end-4) '_clean.mat']));
+save(fullfile(folder,[file(1:end-4) '_clean.mat']),'data');
 
 
 

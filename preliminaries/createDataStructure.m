@@ -14,7 +14,7 @@ data.choice = []; % initialize this one field, you'll see why
 
 fieldExcludes = {'leftEarly','tooSlow','fixFP','FPHeld','eyeXYs','corrLoopActive','goodtrial', ...
                  'timeTargDisappears','probOfMemorySaccade','leftTargR','leftTargTheta', ...
-                 'rightTargR','rightTargTheta','audioFeedback','textFeedback'};
+                 'rightTargR','rightTargTheta','audioFeedback','textFeedback','rewardDelay'};
 
 % now search localDir again for matching files and extract the desired variables from PDS
 allFiles = dir(localDir);
@@ -141,6 +141,41 @@ end
 if isfield(data,'saccEndPoint')
     data = rmfield(data,'saccEndPoint'); % either way, this gets removed
 end
+
+if isfield(data,'oneTargTrial')
+    if isfield(data,'oneTargChoice')
+        if length(data.oneTargTrial)<length(data.oneTargChoice) && length(data.oneTargChoice)==length(data.choice)
+            data.oneTargChoice(1:length(data.oneTargTrial)) = data.oneTargTrial;
+            data = rmfield(data,'oneTargTrial');
+        else
+            error('unsure, diagnose by looking at data');
+        end
+    elseif length(data.oneTargTrial)==length(data.choice)
+        data.oneTargChoice = data.oneTargTrial;
+        data = rmfield(data,'oneTargTrial');
+    else
+        error('unsure, diagnose by looking at data');
+    end
+end
+
+
+if isfield(data,'oneConfTargTrial')
+    if isfield(data,'oneTargConf')
+        if length(data.oneConfTargTrial)<length(data.oneTargConf) && length(data.oneTargConf)==length(data.choice)
+            data.oneTargConf(1:length(data.oneConfTargTrial)) = data.oneConfTargTrial;
+            data = rmfield(data,'oneConfTargTrial');
+        else
+            error('unsure, diagnose by looking at data');
+        end
+    elseif length(data.oneConfTargTrial)==length(data.choice)
+        data.oneTargConf = data.oneConfTargTrial;
+        data = rmfield(data,'oneConfTargTrial');
+    else
+        error('unsure, diagnose by looking at data');
+    end
+end
+
+
 
 disp('done.');
 
