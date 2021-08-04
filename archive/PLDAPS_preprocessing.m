@@ -14,7 +14,6 @@ close all
 
 %% decide which files to load
 
-
 % subject = 'hanzo';
 % paradigm = 'Dots';
 
@@ -67,17 +66,17 @@ close all
 % paradigm = 'dots3DMP';
 % dateRange = 20190612:20191231; % pre-RT
 
-% subject = 'human';
-% paradigm = 'dots3DMP';
-% dateRange = 20200213:20210512; % RT
+subject = 'human';
+paradigm = 'dots3DMP';
+dateRange = 20200213:20210526; % RT
 
 % subject = 'human';
 % paradigm = 'dots3DMP';
 % dateRange = 20190612:20200308; % everything!
 
-subject = 'lucio';
-paradigm = 'dots3DMP';
-dateRange = 20200315:20210512; % RT
+% subject = 'lucio';
+% paradigm = 'dots3DMP';
+% dateRange = 20200315:20210512; % RT
 
 dateStr = num2str(dateRange(1));
 for d = 2:length(dateRange)
@@ -86,14 +85,15 @@ end
 
 % localDir = ['/Users/chris/Documents/MATLAB/PLDAPS_data/' subject '/'];
 localDir = ['/Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data/' subject '/'];
-
-remoteDir = ['/var/services/homes/fetschlab/data/' subject '_basic/'];
-% remoteDir = ['/var/services/homes/fetschlab/data/' subject 'dots3DMP_basic/'];
+% 
+% remoteDir = ['/var/services/homes/fetschlab/data/' subject '_basic/'];
+remoteDir = ['/var/services/homes/fetschlab/data/' subject 'dots3DMP_basic/'];
 
 
 %% get PDS files from server -- DON'T FORGET VPN
 % will skip files that already exist locally, unless overwrite set to 1
 
+useVPN = 0;
 overwriteLocalFiles = 0; % set to 1 to always use the server copy
 getDataFromServer % now also includes pdsCleanup to reduce file size and complexity
 
@@ -123,6 +123,7 @@ data = rmfield(data,'dotPos'); % CAREFUL
 catch
 end
 
+disp('saving...');
 save([localDir(1:length(localDir)-length(subject)-1) file], 'data');
 
 % otherwise for larger files will need: 

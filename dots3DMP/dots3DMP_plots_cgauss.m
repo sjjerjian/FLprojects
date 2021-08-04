@@ -17,7 +17,7 @@ figure(201+D);
 set(gcf,'Color',[1 1 1],'Position',[300 500 950+300*(length(cohs)-2) 800],'PaperPositionMode','auto'); clf;
 for c = 1:length(cohs)
     % choice
-    subplot(2+(~isnan(RTmean(1,1,2))),length(cohs),c); box off; hold on;
+    subplot(1+double(conftask>0)+double(RTtask),length(cohs),c); box off; hold on;
     for m = 1:length(mods)     % m c d h
         beta = [muPMF(m,c,D) sigmaPMF(m,c,D)];
         h(m) = plot(xVals, cgauss(beta,xVals), [clr{c}{m}(1) '-'],'linewidth',1.5); hold on;
@@ -27,27 +27,29 @@ for c = 1:length(cohs)
     end
 %     legend(h,'vestib','visual','comb','Location','northwest');
     
-    xlabel('heading angle (deg)'); ylabel('proportion rightward choices');
-    changeAxesFontSize(gca,15,15);
+    xlabel('heading angle (deg)'); ylabel('P(Right)');
+    try changeAxesFontSize(gca,15,15); catch; end
 
     % conf
-    subplot(2+(~isnan(RTmean(1,1,2))),length(cohs),c+length(cohs)); box off; hold on;
-    for m = 1:length(mods)        
-        beta = [amplConf(m,c,D) muConf(m,c,D) sigmaConf(m,c,D) baselineConf(m,c,D)];
-        h(m) = plot(xVals, flippedGauss(beta,xVals), [clr{c}{m}(1) '-'],'linewidth',1.5); hold on;       
-        errorbar(hdgs, squeeze(confMean(m,c,D,:)), squeeze(confSE(m,c,D,:)), clr{c}{m},'linewidth',1.5);
-        ylim([0 max(max(confMean(:)),1)]); if length(mods)>1; title(['coh = ' num2str(cohs(c))]); end
+    if conftask
+        subplot(2+double(RTtask),length(cohs),c+length(cohs)); box off; hold on;
+        for m = 1:length(mods)
+            beta = [amplConf(m,c,D) muConf(m,c,D) sigmaConf(m,c,D) baselineConf(m,c,D)];
+            h(m) = plot(xVals, flippedGauss(beta,xVals), [clr{c}{m}(1) '-'],'linewidth',1.5); hold on;
+            errorbar(hdgs, squeeze(confMean(m,c,D,:)), squeeze(confSE(m,c,D,:)), clr{c}{m},'linewidth',1.5);
+            ylim([0 max(max(confMean(:)),1)]); if length(mods)>1; title(['coh = ' num2str(cohs(c))]); end
+        end
+        %     legend(h,'vestib','visual','comb','location','northwest');
+        xlabel('heading angle (deg)');
+        if conftask==1, ylabel('SEP (''confidence'', %)');
+        elseif conftask==2, ylabel('proportion high bet');
+        end
+        try changeAxesFontSize(gca,15,15); catch; end
     end
-%     legend(h,'vestib','visual','comb','location','northwest');
-    xlabel('heading angle (deg)'); 
-    if conftask==1, ylabel('saccadic endpoint (''confidence'', %)');
-    elseif conftask==2, ylabel('proportion high bet');
-    end
-    changeAxesFontSize(gca,15,15);
-
+    
     % RT
     if RTtask
-        subplot(3,length(cohs),c+length(cohs)*2); box off; hold on;
+        subplot(2+double(conftask>0),length(cohs),c+length(cohs)*2); box off; hold on;
         for m = 1:length(mods)        
             beta = [amplRT(m,c,D) muRT(m,c,D) sigmaRT(m,c,D) baselineRT(m,c,D)];
             h(m) = plot(xVals, gauss(beta,xVals), [clr{c}{m}(1) '-'],'linewidth',1.5); hold on;       
@@ -60,7 +62,8 @@ for c = 1:length(cohs)
             ylim([0.6 1.8]);
         end
         ylabel('RT (s)')
-        changeAxesFontSize(gca,15,15);
+        try changeAxesFontSize(gca,15,15); catch; end
+
 
     end
 end
@@ -79,7 +82,7 @@ figure(208);
 set(gcf,'Color',[1 1 1],'Position',[50 20 950+300*(length(cohs)-2) 800],'PaperPositionMode','auto'); clf;
 for c = 1:length(cohs)
     % choice
-    subplot(2+(~isnan(RTmean(1,1,2))),length(cohs),c); box off; hold on;
+    subplot(1+double(conftask>0)+double(RTtask),length(cohs),c); box off; hold on;
     for d = 1:length(deltas)     % m c d h
         beta = [muPMF(3,c,d) sigmaPMF(3,c,d)];
         h(d) = plot(xVals, cgauss(beta,xVals), [clr{c}{d}(1) '-'],'linewidth',1.5); hold on;
@@ -89,11 +92,12 @@ for c = 1:length(cohs)
         if length(mods)>1; title(['coh = ' num2str(cohs(c))]); end
     end
     legend(h,L,'location','northwest');
-    xlabel('heading angle (deg)'); ylabel('proportion rightward choices');
-    changeAxesFontSize(gca,15,15);
+    xlabel('heading angle (deg)'); ylabel('P(Right)');
+    try changeAxesFontSize(gca,15,15); catch; end
 
     % conf
-    subplot(2+(RTtask),length(cohs),c+length(cohs)); box off; hold on;
+    if conftask
+    subplot(2+double(RTtask),length(cohs),c+length(cohs)); box off; hold on;
     for d = 1:length(deltas)
         beta = [amplConf(3,c,d) muConf(3,c,d) sigmaConf(3,c,d) baselineConf(3,c,d)];
         h(d) = plot(xVals, flippedGauss(beta,xVals), [clr{c}{d}(1) '-'],'linewidth',1.5); hold on;       
@@ -104,14 +108,15 @@ for c = 1:length(cohs)
     end
 %     legend(h,L,'location','northwest');
     xlabel('heading angle (deg)'); 
-    if conftask==1, ylabel('saccadic endpoint (''confidence'', %)');
-    elseif conftask==2, ylabel('proportion high bet');
+    if conftask==1, ylabel('SEP (''confidence'', %)');
+    elseif conftask==2, ylabel('P(high bet)');
     end
-    changeAxesFontSize(gca,15,15);
+    try changeAxesFontSize(gca,15,15); catch; end
+    end
 
     % RT
     if RTtask
-        subplot(3,length(cohs),c+length(cohs)*2); box off; hold on;
+        subplot(2+double(conftask>0),length(cohs),c+length(cohs)*2); box off; hold on;
         for d = 1:length(deltas)
             beta = [amplRT(3,c,d) muRT(3,c,d) sigmaRT(3,c,d) baselineRT(3,c,d)];
             h(d) = plot(xVals, gauss(beta,xVals), [clr{c}{d}(1) '-'], 'linewidth',1.5); hold on;       
@@ -126,7 +131,7 @@ for c = 1:length(cohs)
         else
             ylim([0.6 1.8]);
         end
-        changeAxesFontSize(gca,15,15);
+        try changeAxesFontSize(gca,15,15); catch; end
     end    
     
 end

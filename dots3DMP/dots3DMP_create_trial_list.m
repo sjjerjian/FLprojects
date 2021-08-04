@@ -3,7 +3,7 @@ function [hdg,modality,coh,delta,ntrials] = dots3DMP_create_trial_list(hdgs,mods
 if nargin<6, shuff = 1; end
 
 %% build trial list
-% (can't just randsample the above vectors, because certain combinations of
+% (can't just randsample the condition vectors, because certain combinations of
 % modality, coh, delta etc are invalid)
     
 % repeat heading list once for ves, ncoh for vis, and ncoh x ndelta for comb
@@ -49,9 +49,13 @@ if any(ismember(mods,3)) % loop over coh and delta for comb
     end
 end
 
+
 % now replicate times nreps and shuffle (or not):
 condlist = [hdg modality coh delta];
 % trialTable = repmat(condlist,nreps,1); 
+if size(condlist,2)~=4
+    error('conditions lists should be column vectors!')
+end
 
 trialTable = repmat(condlist,nreps,1);
 if shuff

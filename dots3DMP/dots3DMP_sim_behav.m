@@ -58,9 +58,16 @@ sigma = mean([sigmaVes sigmaVis]);
 % SJ 04/2020
 
 % Hou et al. 2019, peak vel = 0.37m/s, SD = 210ms
-vel = normpdf(1:duration,duration/2,210);
-vel = 0.37*vel./max(vel);
-acc = gradient(vel)*1000; % multiply by 1000 to get from m/s/ms to m/s/s
+% vel = normpdf(1:duration,duration/2,210);
+% vel = 0.37*vel./max(vel);
+% acc = gradient(vel)*1000; % multiply by 1000 to get from m/s/ms to m/s/s
+
+
+ampl = 0.16; % movement in metres
+sigma = 0.14; %
+pos = normcdf(1:duration,duration/2,sigma*duration)*ampl;
+vel = gradient(pos)*1000; % meters/s
+acc = gradient(vel);
 
 % figure; hh=plot(1:duration,vel,1:duration,acc);
 % for i=1:length(hh)
@@ -112,7 +119,6 @@ conf = nan(ntrials,1);
 doneWith1 = 0;
 doneWith2 = 0;
 doneWith3 = 0;
-
 
 tic
 for n = 1:ntrials

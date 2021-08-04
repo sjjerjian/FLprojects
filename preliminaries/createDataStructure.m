@@ -12,9 +12,9 @@ data.filename = {};
 data.subj = {};
 data.choice = []; % initialize this one field, you'll see why
 
-fieldExcludes = {'reward','rewardDelay','leftEarly','tooSlow','fixFP','FPHeld','eyeXYs','corrLoopActive','goodtrial', ...
+fieldExcludes = {'leftEarly','tooSlow','fixFP','FPHeld','eyeXYs','corrLoopActive','goodtrial', ...
                  'timeTargDisappears','probOfMemorySaccade','leftTargR','leftTargTheta', ...
-                 'rightTargR','rightTargTheta','audioFeedback','textFeedback'};
+                 'rightTargR','rightTargTheta','audioFeedback','textFeedback','rewardDelay'};
 
 % now search localDir again for matching files and extract the desired variables from PDS
 allFiles = dir(localDir);
@@ -62,17 +62,36 @@ for d = 1:length(dateRange)
                                 data.dotPos{T,1} = PDS.data{t}.stimulus.dotPos;
                             end
                             
+                            % to store all the reward amounts
+                            % maybe don't need this, all reward analyses
+                            % will have to be done within session first, so
+                            % go to cleaned-up PDS files
+%                             if isfield(PDS.data{t},'reward')
+%                                 data.reward{T,1} = PDS.data{t}.reward;                               
+%                                 try data.reward.fixRewarded(T,1) = PDS.data{t}.reward.fixRewarded; 
+%                                 catch data.reward.fixRewarded(T,1) = NaN; end
+%                                 try data.reward.HighConfOffered(T,1) = PDS.data{t}.reward.amountRewardHighConfOffered; 
+%                                 catch data.reward.HighConfOffered(T,1) = NaN; end
+%                                 try data.reward.LowConfOffered(T,1) = PDS.data{t}.reward.amountRewardLowConfOffered; 
+%                                 catch data.reward.LowConfOffered(T,1) = NaN; end
+%                                 try data.reward.rewardGiven(T,1) = PDS.data{t}.reward.rewardGiven; 
+%                                 catch data.reward.rewardGiven(T,1) = NaN; end
+%                                 try data.reward.rewardDelay(T,1) = PDS.data{t}.reward.rewardDelay; 
+%                                 catch data.reward.rewardDelay(T,1) = NaN; end
+% 
+%                             end
+                            
                             % dependent variables are stored in PDS.data.behavior
                             fnames = fieldnames(PDS.data{t}.behavior);
                             fnames(ismember(fnames,fieldExcludes)) = [];
                             for F = 1:length(fnames)
-                                % SJ 07/20, correct was defaulting to
-                                % logical, but then throwing error if a NaN
-                                % came up
+                                % SJ 07-20, correct defaults to logical but
+                                % throws an error for NaN - change to
+                                % double
                                 if strcmp(fnames{F},'correct'), data.correct(T,1) = 0; end
                                 eval(['data.' fnames{F} '(T,1) = PDS.data{t}.behavior.' fnames{F} ';']);
                             end
-                            
+                                                        
                             % noticed a couple extra things we need, not in either place -CF 02-2021
                             try
                                 data.oneTargPDW(T,1) = PDS.data{t}.postTarget.markOneConf;
@@ -122,6 +141,41 @@ end
 if isfield(data,'saccEndPoint')
     data = rmfield(data,'saccEndPoint'); % either way, this gets removed
 end
+
+if isfield(data,'oneTargTrial')
+    if isfield(data,'oneTargChoice')
+        if length(data.oneTargTrial)<length(data.oneTargChoice) && length(data.oneTargChoice)==length(data.choice)
+            data.oneTargChoice(1:length(data.oneTargTrial)) = data.oneTargTrial;
+            data = rmfield(data,'oneTargTrial');
+        else
+            error('unsure, diagnose by looking at data');
+        end
+    elseif length(data.oneTargTrial)==length(data.choice)
+        data.oneTargChoice = data.oneTargTrial;
+        data = rmfield(data,'oneTargTrial');
+    else
+        error('unsure, diagnose by looking at data');
+    end
+end
+
+
+if isfield(data,'oneConfTargTrial')
+    if isfield(data,'oneTargConf')
+        if length(data.oneConfTargTrial)<length(data.oneTargConf) && length(data.oneTargConf)==length(data.choice)
+            data.oneTargConf(1:length(data.oneConfTargTrial)) = data.oneConfTargTrial;
+            data = rmfield(data,'oneConfTargTrial');
+        else
+            error('unsure, diagnose by looking at data');
+        end
+    elseif length(data.oneConfTargTrial)==length(data.choice)
+        data.oneTargConf = data.oneConfTargTrial;
+        data = rmfield(data,'oneConfTargTrial');
+    else
+        error('unsure, diagnose by looking at data');
+    end
+end
+
+
 
 disp('done.');
 
