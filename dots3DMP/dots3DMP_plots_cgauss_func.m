@@ -6,14 +6,15 @@ D = length(deltas)+1; % (the extra column we made for pooling across deltas)
 % OR select just delta=0:
 % D = find(deltas==0);
 
-modlabels = {'Ves','Vis','Comb'};
+% modlabels = {'Ves','Vis','Comb'};
 
          %ves %vis %comb
 clr{1} = {'ko','mo','co'};
 clr{2} = {'ko','ro','bo'};
 clr{3} = {'ko','yo','go'};
 figure(101+D);
-set(gcf,'Color',[1 1 1],'Position',[300 1000 450+300*(length(cohs)-2) 200+150*(conftask>0)+150*RTtask],'PaperPositionMode','auto'); clf;
+% set(gcf,'Color',[1 1 1],'Position',[300 1000 450+300*(length(cohs)-2) 200+150*(conftask>0)+150*RTtask],'PaperPositionMode','auto'); clf;
+set(gcf,'Color',[1 1 1],'Position',[300 600 600 800],'PaperPositionMode','auto'); clf;
 for c = 1:length(cohs)
     % choice
     subplot(1+double(conftask>0)+double(RTtask),length(cohs),c); box off; hold on;
@@ -22,7 +23,7 @@ for c = 1:length(cohs)
         h(m) = plot(parsedData.xVals, gfit.choice.func(beta,parsedData.xVals), [clr{c}{m}(1) '-'],'linewidth',1.5); hold on;
         errorbar(hdgs, squeeze(parsedData.pRight(m,c,D,:)), squeeze(parsedData.pRightSE(m,c,D,:)), clr{c}{m},'linewidth',1.5);
         ylim([0 1]); if length(mods)>1; title(['coh = ' num2str(cohs(c))]); end
-        text(hdgs(1)+0.5,1.0-m*0.07,sprintf('%s: mu = %.2f, s = %.2f',modlabels{m},beta(1),beta(2)),'color',clr{c}{m}(1))
+%         text(hdgs(1)+0.5,1.0-m*0.07,sprintf('%s: mu = %.2f, s = %.2f',modlabels{m},beta(1),beta(2)),'color',clr{c}{m}(1))
     end
 %     legend(h,'vestib','visual','comb','Location','northwest');
     
@@ -74,7 +75,8 @@ clr{3} = {'bo','co','go'};
 
 clear L;
 figure(208);
-set(gcf,'Color',[1 1 1],'Position',[50 20 450+300*(length(cohs)-2) 200+150*(conftask>0)+150*RTtask],'PaperPositionMode','auto'); clf;
+% set(gcf,'Color',[1 1 1],'Position',[50 20 450+300*(length(cohs)-2) 200+150*(conftask>0)+150*RTtask],'PaperPositionMode','auto'); clf;
+set(gcf,'Color',[1 1 1],'Position',[900 600 600 800],'PaperPositionMode','auto'); clf;
 for c = 1:length(cohs)
     % choice
     subplot(1+double(conftask>0)+double(RTtask),length(cohs),c); box off; hold on;
