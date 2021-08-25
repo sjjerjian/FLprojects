@@ -16,8 +16,8 @@ close all
 
 subject = 'lucio';
 paradigm = 'dots3DMP';
-dateRange = 20210315:20210714; % RT
-dateRange = 20210714;
+dateRange = 20210614:20210805; % RT
+% dateRange = 20210714;
 % subject = 'human';
 % paradigm = 'dots3DMP';
 % dateRange = 20200213:20210707; % RT
@@ -28,24 +28,36 @@ for d = 2:length(dateRange)
 end
 
 % localDir = ['/Users/chris/Documents/MATLAB/PLDAPS_data/' subject '/'];
-localDir = ['/Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data/' subject '/basic/'];
-
 % remoteDir = ['/var/services/homes/fetschlab/data/' subject '/'];
-remoteDir = ['/var/services/homes/fetschlab/data/' subject '/' subject '_basic/'];
 
+localDir = ['/Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data/' subject '/basic/'];
+remoteDir = ['/var/services/homes/fetschlab/data/' subject '/' subject '_basic/'];
 
 %% get PDS files from server -- DON'T FORGET VPN
 % will skip files that already exist locally, unless overwrite set to 1
 
-useVPN = 0;
+% useVPN = 0;
 overwriteLocalFiles = 0; % set to 1 to always use the server copy
 getDataFromServer % now also includes pdsCleanup to reduce file size and complexity
 
+%% get Nexonar files from server
+
+localDir = ['/Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data/' subject '/nexonar/'];
+remoteDir = ['/var/services/homes/fetschlab/data/' subject '/' subject '_nexonar/'];
+
+useVPN = 0;
+overwriteLocalFiles = 0; % set to 1 to always use the server copy
+getDataFromServer % will skip pdsCleanup for nexonar data
+
+%% rename localDirs for dataStructure
+
+localDir = ['/Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data/' subject '/basic/'];
+localDirNex = ['/Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data/' subject '/nexonar/'];
 
 %% create data structure
 
+addNexonarDataToStruct = 1; % SJ 08-2021
 createDataStructure
-
 
 %% optional: save data struct to a mat file so you don't have to repeat the time consuming step
 
