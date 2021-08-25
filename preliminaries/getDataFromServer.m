@@ -7,8 +7,10 @@
 % must be run by PLDAPS_preprocessing
 
 % 10-2020: CF updated for OEphys and newline
+% 08-2021: SJ updated for nexonar
 
 isoephys = strcmp(remoteDir(end-5:end-1),'neuro');
+isnexonar = strcmp(remoteDir(end-7:end-1),'nexonar'); 
 
 % get file list from local dir
 if ~exist(localDir,'file')
@@ -68,9 +70,10 @@ for n = 1:length(newlines)
             system(cmd,'-echo');
             
             % now clean it up and re-save
-            if ~isoephys
+            if ~isoephys && ~isnexonar
                 pdsCleanup
             end
+            
         else
             disp([remoteFiles{n} ' exists locally, not copied']);
             if isoephys

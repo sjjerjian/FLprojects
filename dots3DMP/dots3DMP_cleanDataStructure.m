@@ -1,6 +1,6 @@
 function [data, nTrialsByDate, nTrialsByBlock] = dots3DMP_cleanDataStructure(data,excludes_filename,excludes_date,minBlockTrialCount)
 
-% clean up the data structure to remove 
+% clean up the data structure to remove breakfixes, unused vars etc.
 
 % some new useful vars
 for k = 1:length(data.filename)
