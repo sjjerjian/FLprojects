@@ -45,9 +45,9 @@ guess_gauss  = [0.5 0 6 1];
 fitOptions = optimset('display','none','MaxFunEvals',1000,'MaxIter',1000);
 
 %% first, for all trials irrespective of delta
-D = length(deltas)+1; % (the extra column we made for pooling across deltas)
+% D = length(deltas)+1; % (the extra column we made for pooling across deltas)
 % OR select just delta=0:
-% D = find(deltas==0);
+D = find(deltas==0);
 
 % initialize vars for storing param fits
 % deal func looks nicer, but is slow for some reason...
@@ -322,5 +322,6 @@ if RTtask
     gfit.RT.guess = guess_gauss;
     
     gfit.RT.fval = fvalRT;
-
 end
+
+gfit.D = D;
