@@ -29,7 +29,7 @@ end
 % get file list from remote dir
 cmd = 'ifconfig en7 inet'; % check if on local MBI network or need VPN workaround
 [~,ifstuff] = system(cmd);
-if any(strfind(ifstuff,'172.'))
+if ~useVPN %any(strfind(ifstuff,'172.'))
     cmd = ['ssh fetschlab@172.30.3.33 ls ' remoteDir]; % MBI machine
 else
     cmd = ['ssh fetschlab@10.161.240.133 ls ' remoteDir]; % probably off campus, try proxy IP (requires VPN)
@@ -59,10 +59,10 @@ for n = 1:length(newlines)
         thisDate = remoteFiles{n}(dateStart(1):dateStart(1)+7); % dateStart(1) just in case '20' appears in a timestamp
     end
     
-    if any(strfind(dateStr,thisDate))
+    if any(strfind(dateStr,thisDate)) && contains(remoteFiles{n},paradigm)
         currentFileList{m,1} = remoteFiles{n}; m=m+1;
         if ~any(strfind(localFileList,remoteFiles{n})) || overwriteLocalFiles % always copy if overwrite option selected
-            if any(strfind(ifstuff,'172.'))
+            if ~useVPN %any(strfind(ifstuff,'172.'))
                 cmd = ['scp -r fetschlab@172.30.3.33:' remoteDir remoteFiles{n} ' ' localDir]; % MBI machine
             else
                 cmd = ['scp -r fetschlab@10.161.240.133:' remoteDir remoteFiles{n} ' ' localDir]; % probably off campus, try proxy IP (requires VPN)

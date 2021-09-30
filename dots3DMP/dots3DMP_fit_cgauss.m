@@ -51,20 +51,23 @@ D = length(deltas)+1; % (the extra column we made for pooling across deltas)
 
 % initialize vars for storing param fits
 % deal func looks nicer, but is slow for some reason...
-n = nan(length(mods),length(cohs),length(deltas));
+n = nan(length(mods),length(cohs),D);
 
 muPMF = n; muPMFse = n;
 sigmaPMF = n; sigmaPMFse = n;
+flagPMF = n;
 
 amplConf = n; amplConfse = n;
 muConf = n; muConfse = n;
 sigmaConf = n; sigmaConfse = n;
 baselineConf = n; baselineConfse = n;
+flagConf = n;
 
 amplRT = n; amplRTse = n;
 muRT = n; muRTse = n;
 sigmaRT = n; sigmaRTse = n;
 baselineRT = n; baselineRTse = n;
+flagRT = n;
 
 for c = 1:length(cohs)
     % choice

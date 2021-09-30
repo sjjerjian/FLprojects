@@ -9,10 +9,15 @@ if isfield(data,'PDW')
     data.conf = data.PDW;
 end
 
+removethese = data.delta~=0;
+% remove non-zero delta trials from data to exclude these from the
+% optimization!
+
 mods   = unique(data.modality)';
 cohs   = unique(data.coherence)'; 
 hdgs   = unique(data.heading)';
-deltas = unique(data.delta)';
+% deltas = unique(data.delta)';
+deltas = 0; % only simulate delta==0
 
 % don't just use trials from data to run simulations, use a fixed, large amount!
 nreps = options.nreps;
@@ -220,6 +225,8 @@ choice(choice==1) = 2; choice(choice==-1) = 1; % 1=left, 2=right
 
 % output var 'fit' gets the same values as data for the conditions, but the
 % simulated trial outcomes for the observables!
+% SJ 08-2021, sort of, but not strictly anymore the same as data
+% because sim ntrials is no longer yoked to the data ntrials
 fit.heading   = hdg;
 fit.coherence = coh;
 fit.modality  = modality;
@@ -230,6 +237,7 @@ fit.conf      = conf;
 
 fit.correct = (choice==2 & hdg>0) | (choice==1 & hdg<0);
 data.correct = (data.choice==2 & data.heading>0) | (data.choice==1 & data.heading<0);
+% what about heading==0, and abs(delta)>abs(heading)?
 
 %% calculate error
 
@@ -307,7 +315,7 @@ end
 %% calculate log likelihoods
 
 % % likelihood of rightward choice on each trial, under binomial assumptions
-% based on Palmer et al. 2005 coh version, but this ignores mod/coh in 3DMPtask
+% based on Palmer et al. 2005 coh version, but this ignores mod/coh in dots3DMPtask
 % Pr_model = 1 ./ (1 + exp(-2*k*B*sind(hdg)));
 
 % kluge to avoid log(0) issues
@@ -340,10 +348,11 @@ elseif options.conftask == 2 % PDW
     LL_conf = (sum(log(pHigh_model(PDW))) + sum(log(1-pHigh_model(~PDW))));   
 end
 
+% loss function - joint minimize, or choose subset
 
-% err = -(LL_choice + LL_conf + LL_RT); % negate for minimization
+err = -(LL_choice + LL_conf + LL_RT); % negate for minimization
 % err = -(LL_choice + LL_conf);
-err = -LL_choice;
+% err = -LL_choice;
 
 %% print progress report!
 fprintf('\n\n\n****************************************\n');

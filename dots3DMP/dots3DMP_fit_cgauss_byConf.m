@@ -28,6 +28,7 @@ guess_gauss  = [1 0 6 1];
 % easy for PDW
 % for sacc endpoint, for now just split by median
 % eventually...split for each subject separately?
+% or just make sure conf is normalized within subject before this stage
 if conftask==1
     hiConf = data.conf >= median(data.conf);
 elseif conftask==2 
@@ -43,7 +44,7 @@ D = length(deltas)+1; % (the extra column we made for pooling across deltas)
 % initialize vars for storing param fits
 % deal func looks nicer, but is slow for some reason...
 n = nan(length(mods),length(cohs),length(deltas),2);
- % ^2 for high and low confidence fits
+                                               % ^2 for high and low confidence fits
 
 muPMF = n; muPMFse = n;
 sigmaPMF = n; sigmaPMFse = n;

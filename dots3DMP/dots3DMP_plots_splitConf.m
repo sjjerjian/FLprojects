@@ -64,7 +64,7 @@ clr{3} = {'ko','yo','go'};
 
 %%
 figure(112+D);
-set(gcf,'Color',[1 1 1],'Position',[300 500 950+300*(length(cohs)-2) 800],'PaperPositionMode','auto'); clf;
+set(gcf,'Color',[1 1 1],'Position',[300 500 700+300*(length(cohs)-2) 500],'PaperPositionMode','auto'); clf;
 
 for c=1:length(cohs)
     for m=1:length(mods)

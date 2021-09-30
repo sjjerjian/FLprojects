@@ -1,6 +1,6 @@
-function wves = dots3DMP_cueWeights(gfit,cohs,deltas,conftask,RTtask)
+function wves = dots3DMP_cueWeights(gfit,cohs,deltas,conftask,ifplot)
 
-if nargin<5, RTtask = 0; end
+if nargin<5, ifplot = 0; end
 if nargin<4, conftask = 0; end
 
 D = length(deltas)+1;
@@ -32,6 +32,8 @@ for c = 1:length(cohs)      % m c d
         end
     end
     
+    %{
+    %%% RT-based is probably not very useful, don't bother for now
     % RT-based
     if RTtask
         wves.RT.pred(c) = (1/gfit.RT.sigma(1,1,D)^2) / ((1/gfit.RT.sigma(1,1,D)^2) + (1/gfit.RT.sigma(2,c,D)^2));
@@ -44,4 +46,19 @@ for c = 1:length(cohs)      % m c d
         
         end
     end
+    %}
 end
+
+if ifplot
+    
+    figure(501); hold on;
+    
+    plot(wves.choice.emp,'marker','o','color','r');
+    plot(wves.choice.pred,'marker','o','color','k');
+    
+    if conftask
+    plot(wves.conf.emp,'marker','o','color','r','linestyle','--');
+    plot(wves.conf.pred,'marker','o','color','k','linestyle','--');
+    end
+end
+    

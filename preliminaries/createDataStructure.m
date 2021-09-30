@@ -13,11 +13,10 @@ data.choice = []; % initialize this one field, you'll see why
 
 fieldExcludes = {'leftEarly','tooSlow','fixFP','FPHeld','eyeXYs','corrLoopActive','goodtrial', ...
                  'timeTargDisappears','probOfMemorySaccade','leftTargR','leftTargTheta', ...
-                 'rightTargR','rightTargTheta','audioFeedback','textFeedback','rewardDelay'};
+                 'rightTargR','rightTargTheta','audioFeedback','textFeedback','rewardDelay','reward'};
 
 % now search localDir again for matching files and extract the desired variables from PDS
 allFiles = dir(localDir);
-
 if addNexonarDataToStruct, allNexFiles = dir([localDirNex '/*.mat']); end
 
 for d = 1:length(dateRange)
@@ -129,7 +128,7 @@ for d = 1:length(dateRange)
                 end
             
             catch me
-                warning(['Could not load ' allFiles(f).name '. File may be corrupt -- skipping']);
+                warning(['Processing issue, or could not load ' allFiles(f).name '. File may be corrupt -- skipping']);
             end
 
         end
