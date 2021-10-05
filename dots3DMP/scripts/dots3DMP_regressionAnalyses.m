@@ -1,21 +1,76 @@
 % Regression models
 
 % SJ 06/2020 started
+% SJ 10/2021 modified significantly
+
+% Analysis of behavioral data
+
+% 
+
+
+% 1. improvement in accuracy when combined condition is presented
+% 2. effect of heading strength and RT on high bet probability/SEP
+% (logistic for PDW, multiple linear reg for SEP)
+% 3. effect of heading strength and RT on probability correct (logistic)
+% 4. improvement in accuracy when high bet is chosen
+tstatfun = @(beta,se) 1-tcdf(beta./se,length(beta)-1);
+
+
+% 1.
+
+
+%% 2. effect of heading strength and RT on P(high bet) / saccEP
+
+if conftask == 1
+    
+elseif conftask == 2
+    % P(High Bet) = [1 + exp(-b0 + b1*hdg + b2*RT) ] ^ -1
+    
+    D = [ones(size(data.heading)), data.RT, abs(data.heading), data.PDW];
+    [beta,llik,pred,se] = logistfit_se(D);
+    
+    p = tstatfun(beta,se);
+    
+end
+
+% p(3) is <<0.05, and coefficient is positive, i.e. stronger heading
+% increases probability of choosing high bet
+
+%% 3. effect of heading strength and RT on P(correct)
+
+% P(correct) = [1 + exp(-b0 + b1*hdg + b2*RT) ] ^ -1
+    
+D = [ones(size(data.heading)), data.RT, abs(data.heading), data.correct];
+[beta,llik,pred,se] = logistfit_se(D);
+p = tstatfun(beta,se);
+
+% beta +ve and p significant for both RT and heading --> longer RT does
+% result in increased p(correct) (on average), stronger heading increases
+% p(correct) as well
+
+%% 4. improvement in accuracy when high bet is chosen
+
+D = [ones(size(data.heading)), data.RT, data.PDW, abs(data.heading).*data.PDW abs(data.heading), data.correct];
+[beta,llik,pred,se] = logistfit_se(D);
+p = tstatfun(beta,se);
+
+% p(3:5) all significant, indicating p(high bet) improves accuracy across
+% all headings
+
+
+
+
+
+%{
+
+
 
 % Fit regression models to choice, RT, conf data
 % Choice data is going to be fitted by logistic regression (MLE method
 % under binomial assumptions i.e. trials are a list of Bernoulli)
 
-% note that confidence is treated as continuous variable here, i.e. this is
-% for saccadic endpoint task only!
 
-% simulations 
-% folder = '/Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data/';
-% file = 'RTdata_4-28-20.mat';
 
-% file = 'simKiani09_20200506.mat';
-% file = '2DAcc_simdata.mat';
-% load([folder file],'data','cohs','deltas','hdgs','mods')
 
 cohs   = unique(data.coherence);
 hdgs   = unique(data.heading);
@@ -45,20 +100,20 @@ p = tstatfun(beta,se);
 % affect choice, and beta coefficient is positive, so combined condition significantly increases sensitivity  
 % compare results when indicator variable refers to ves or vis only!
 
-%% RT and conf (c.f. Kiani et al 2014 analyses)
+%% RT and conf (c.f. Kiani 2009/2014 analyses)
 
 % 2. fit relationship between heading, RT and conf, separately for correct and
 % error trials
 
 goodRT = true(size(data.RT));
 
-% goodRT = data.RT<maxRT; % kluge, in hand-tuned sim there is a risk that a
+% goodRT = data.RT~=mode(data.RT); % kluge, in hand-tuned sim there is a risk that a
 % lot of RTs will max out at stimulus time, so that too many weak stim (and
 % error) trials have the same fixed RT - exclude these for now
 
 % normalize, esp if there are different ranges across sessions/subjects
-RT = data.RT/max(data.RT); 
-% RT = data.RT;
+%RT = data.RT/max(data.RT); 
+RT = data.RT;
 
 % excluding zero heading trials, if any
 data.correct = (data.choice==2 & data.heading>0) | (data.choice==1 & data.heading<0);
@@ -217,4 +272,4 @@ pDelta = 1-tcdf(beta./se,length(beta)-1);
 
 
 
-
+%}

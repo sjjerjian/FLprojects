@@ -13,7 +13,7 @@ isoephys = strcmp(remoteDir(end-5:end-1),'neuro');
 isnexonar = strcmp(remoteDir(end-7:end-1),'nexonar'); 
 
 % get file list from local dir
-if ~exist(localDir,'file')
+if ~exist(localDir,'dir')
     mkdir(localDir);
 end
 allFiles = dir(localDir);

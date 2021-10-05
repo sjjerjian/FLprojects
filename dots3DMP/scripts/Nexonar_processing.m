@@ -13,7 +13,7 @@ localDir = ['/Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data/' subject '/nexo
 remoteDir = ['/var/services/homes/fetschlab/data/' subject '/' subject '_nexonar/'];
 % remoteDir = ['/var/services/homes/fetschlab/data/'];
 
-
+subject = 'test';
 useVPN = 0;
 overwriteLocalFiles = 0; % set to 1 to always use the server copy
 getDataFromServer % now also includes pdsCleanup to reduce file size and complexity

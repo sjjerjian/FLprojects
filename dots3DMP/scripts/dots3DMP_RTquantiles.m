@@ -14,9 +14,6 @@ titles = {'Ves';'Vis-lo';'Vis-hi';'Comb-lo';'Comb-hi';'All'};
 
 nbins = 5;
 uhdg  = unique(abs(data.heading));
-if correct == 0
-    uhdg = uhdg(1:3);
-end
 
 mcols = {'Greys','Reds','Reds','Blues','Blues','Purples'};
 
@@ -34,7 +31,7 @@ for c = 1:size(ucond,1)+1 % the extra one is for all conditions pooled
         if correct>=0 % select only correct/incorrect trials (and all heading==0)
             I = I & (data.correct==correct | data.heading==0); 
         else
-            temp = data.correct | data.heading==0;
+            temp = data.correct;
             theseCorr = temp(I);
         end
         theseRT = data.RT(I);
@@ -54,18 +51,22 @@ for c = 1:size(ucond,1)+1 % the extra one is for all conditions pooled
         end
     end
 
-    figure(16);
+    figure(16+correct);
     set(gcf,'Color',[1 1 1],'Position',[200 200 270*2 170*3],'PaperPositionMode','auto');
     subplot(3,2,subplotInd(c));
 
+    if correct==0, maxhdg=3;
+    else, maxhdg = length(uhdg);
+    end
+    
     clear g L
     % (loop over h to allow animating figures one heading at a time)
-    for h = 1:length(uhdg)       
+    for h = 1:maxhdg      
 %         g(h) = plot(squeeze(X(c,h,:)),squeeze(Y(c,h,:)),'color',cmap(h,:),'LineWidth', 2); hold on;
         g(h) = errorbar(squeeze(X(c,h,:)),squeeze(Y(c,h,:)),squeeze(Ye(c,h,:)),'color',cmap(h,:),'LineWidth', 2); hold on;
 
         set(g(h),'MarkerSize',10,'MarkerFaceColor',cmap(h,:));
-        xlim([0.3 1.5]);
+        %xlim([0.3 1.5]);
         
         if correct == -1, ylim([.35 .95]); % all trials
         else, ylim([0 1]); 
@@ -73,14 +74,16 @@ for c = 1:size(ucond,1)+1 % the extra one is for all conditions pooled
            
         % set(gca,'Xtick',-2:1:2,'Ytick',-2:1:2);
         if c<=size(ucond,1) && ucond(c,2)==3,xlabel('RT (s)'); end 
-        if conftask==1 && mod(c,2), ylabel('SEP'); else, ylabel('P(High Bet)'); end
+        if mod(c,2)==0
+            if conftask==1, ylabel('SEP'); else, ylabel('P(High Bet)'); end
+        end
         changeAxesFontSize(gca,16,16); set(gca,'box','off');
         title(titles{c});
     end
     sh=suptitle('Confidence-RT'); set(sh,'fontsize',16,'fontweight','bold');
     
     if correct<0
-        figure(17); 
+        figure(20); 
         set(gcf,'Color',[1 1 1],'Position',[600 200 270*2 170*3],'PaperPositionMode','auto');
         subplot(3,2,subplotInd(c));
         
@@ -90,12 +93,12 @@ for c = 1:size(ucond,1)+1 % the extra one is for all conditions pooled
             g(h) = errorbar(squeeze(X(c,h,:)),squeeze(Yc(c,h,:)),squeeze(Yce(c,h,:)),'color',cmap(h,:),'LineWidth', 2); hold on;
             
             set(g(h),'MarkerSize',10,'MarkerFaceColor',cmap(h,:));
-            xlim([0.3 1.5]);
+            %xlim([0.3 1.5]);
             ylim([0.35 1])
             
             % set(gca,'Xtick',-2:1:2,'Ytick',-2:1:2);
             if c<=size(ucond,1) && ucond(c,2)==3,xlabel('RT (s)'); end 
-            if mod(c,2), ylabel('P(correct)'); end
+            if mod(c,2)==0, ylabel('P(correct)'); end
             changeAxesFontSize(gca,16,16); set(gca,'box','off');
             title(titles{c});
         end

@@ -50,7 +50,7 @@ for c = 1:length(cohs)      % m c d
 end
 
 if ifplot
-    
+    % NEEDS TIDYING
     figure(501); hold on;
     
     plot(wves.choice.emp,'marker','o','color','r');

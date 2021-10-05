@@ -131,7 +131,7 @@ end
 
 
 parsedData = struct();
-parsedData.subject = data.filename{1}(1:5);
+%parsedData.subject = data.filename{1}(1:5);
 parsedData.n = n;
 parsedData.pRight = pRight;
 parsedData.pRightSE = pRightSE;

@@ -17,7 +17,7 @@ confModel = 'evidence+time'; % 'evidence+time','evidence_only','time_only'
 
 plotExampleTrials = 0;
 
-nreps = 50; % number of repetitions of each unique trial type
+nreps = 200; % number of repetitions of each unique trial type
             % start small to verify it's working, then increase
             % (ntrials depends on num unique trial types)
 
@@ -29,7 +29,7 @@ deltas = [-2 0 2]; % conflict angle; positive means vis to the right
 mods = [1 2 3]; % stimulus modalities: ves, vis, comb
 duration = 2000; % stimulus duration (ms)
 
-theta = 0.4; % threshold for high bet in logOdds, ignored if conftask==1
+theta = 0.8; % threshold for high bet in logOdds, ignored if conftask==1
 
 kves  = 25;
 kvis  = [15 40];
@@ -117,6 +117,7 @@ end
     % process (Kiani et al. 2008)
 dur = ones(ntrials,1) * duration;
 
+% set individually depending on trial modality
 % Tnds = muTnd + randn(ntrials,1).*sdTnd;
 
 %% bounded evidence accumulation
@@ -380,7 +381,7 @@ end
 subject = 'simul';
 
 cd('/Users/stevenjerjian/Desktop/FetschLab/Analysis')
-save(sprintf('2DAccSim_conftask%d_%dtrs.mat',conftask,ntrials),'P','R','data','cohs','deltas','hdgs','mods','origParams','RTtask','conftask','subject')
+save(sprintf('2DAccSim_conftask%d_%dtrs.mat',conftask,ntrials),'data','cohs','deltas','hdgs','mods','origParams','RTtask','conftask','subject')
 
 %% plots
 if 0

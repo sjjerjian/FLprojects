@@ -63,7 +63,7 @@ for c=1:length(cohs)
     for m=1:length(mods)
 %         subplot(length(mods),length(cohs),c+(m-1)*length(cohs))
         subplot(1,length(mods),m)
-        if m==1 && c~=1, delete(gca); continue, end
+        if m==1 & c<1,continue,end
         
         for cc=1:2
             beta = [gfit.RT.ampl(m,c,D,cc) gfit.RT.mu(m,c,D,cc) gfit.RT.sigma(m,c,D,cc) gfit.RT.bsln(m,c,D,cc)];
