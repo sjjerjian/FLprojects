@@ -14,7 +14,6 @@ RTtask = 1;
 conftask = 2; % 1 - sacc endpoint, 2 - PDW
 confModel = 'evidence+time'; % 'evidence+time','evidence_only','time_only'
 
-
 plotExampleTrials = 0;
 
 nreps = 200; % number of repetitions of each unique trial type
@@ -386,25 +385,25 @@ save(sprintf('2DAccSim_conftask%d_%dtrs.mat',conftask,ntrials),'data','cohs','de
 %% plots
 if 0
     
-dots3DMP_parseData
-dots3DMP_plots
+mods   = unique(data.modality); 
+cohs   = unique(data.coherence); 
+deltas = unique(data.delta);
+hdgs   = unique(data.heading);
 
-%%
-dots3DMP_parseData_splitConf
-dots3DMP_plots_splitConf
+% means per condition, logistic fits
+parsedData = dots3DMP_parseData(data,mods,cohs,deltas,hdgs,conftask,RTtask); 
 
+% gaussian fits
+gfit = dots3DMP_fit_cgauss(data,mods,cohs,deltas,conftask,RTtask); 
 
-%% fit cumulative gaussians
-
-dots3DMP_fit_cgauss
-dots3DMP_plots_cgauss
-% dots3DMP_plots_cgauss_forTalk % nicer looking versions
+% plot it
+dots3DMP_plots_cgauss_byCoh(gfit,parsedData,mods,cohs,deltas,hdgs,conftask,RTtask)
 
 
 %% now try fitting the fake data to recover the generative parameters
 
-% options.errfun = 'dots3DMP_fit_2Dacc_err_nSims';
-options.errfun = 'dots3DMP_fit_2Dacc_err_12params_nSims';
+options.errfun = 'dots3DMP_fit_2Dacc_err_nSims';
+% options.errfun = 'dots3DMP_fit_2Dacc_err_12params_nSims';
 options.nreps  = 1000;
 
 options.confModel = 'evidence+time';
@@ -415,8 +414,8 @@ options.confModel = 'evidence+time';
 options.runInterpFit = 1; 
 
 
-options.fitMethod = 'fms'; %'fms','global','multi','pattern','bads'
-% options.fitMethod = 'global';
+% options.fitMethod = 'fms'; %'fms','global','multi','pattern','bads'
+options.fitMethod = 'global';
 % options.fitMethod = 'multi';
 % options.fitMethod = 'pattern';
 % options.fitMethod = 'bads';
@@ -437,7 +436,7 @@ guess   = [kves kvis(1:2) sigma(1:3) BVes BVis BComb TndVes TndVis TndComb];
 if conftask==2 % PDW
     theta = 0.6;
 
-    fixed   = [0 1 1 1 0 1];
+    fixed   = [0 1 1 1 1 1 1 1 1 1 1 1 1];
     guess   = [guess theta];
 end
 
@@ -456,6 +455,6 @@ if options.ploterr, options.fh = 400; end
 [X, err_final, fit, fitInterp] = dots3DMP_fitDDM(data,options,guess,fixed);
 
 % plot it!
-dots3DMP_plots_fit(data,fitInterp,conftask,RTtask)
+%dots3DMP_plots_fit(data,fitInterp,conftask,RTtask)
 
 end

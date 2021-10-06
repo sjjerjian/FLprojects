@@ -49,16 +49,16 @@ for c = 1:length(cohs)      % m c d
     %}
 end
 
-if ifplot
-    % NEEDS TIDYING
-    figure(501); hold on;
-    
-    plot(wves.choice.emp,'marker','o','color','r');
-    plot(wves.choice.pred,'marker','o','color','k');
-    
-    if conftask
-    plot(wves.conf.emp,'marker','o','color','r','linestyle','--');
-    plot(wves.conf.pred,'marker','o','color','k','linestyle','--');
-    end
-end
-    
+% if ifplot
+%     % NEEDS TIDYING
+%     figure(501); hold on;
+%     
+%     plot(wves.choice.emp,'marker','o','color','r');
+%     plot(wves.choice.pred,'marker','o','color','k');
+%     
+%     if conftask
+%     plot(wves.conf.emp,'marker','o','color','r','linestyle','--');
+%     plot(wves.conf.pred,'marker','o','color','k','linestyle','--');
+%     end
+% end
+%     

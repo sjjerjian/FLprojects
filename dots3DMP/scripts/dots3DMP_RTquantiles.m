@@ -66,7 +66,7 @@ for c = 1:size(ucond,1)+1 % the extra one is for all conditions pooled
         g(h) = errorbar(squeeze(X(c,h,:)),squeeze(Y(c,h,:)),squeeze(Ye(c,h,:)),'color',cmap(h,:),'LineWidth', 2); hold on;
 
         set(g(h),'MarkerSize',10,'MarkerFaceColor',cmap(h,:));
-        %xlim([0.3 1.5]);
+        xlim([0.3 1.5]);
         
         if correct == -1, ylim([.35 .95]); % all trials
         else, ylim([0 1]); 
@@ -93,7 +93,7 @@ for c = 1:size(ucond,1)+1 % the extra one is for all conditions pooled
             g(h) = errorbar(squeeze(X(c,h,:)),squeeze(Yc(c,h,:)),squeeze(Yce(c,h,:)),'color',cmap(h,:),'LineWidth', 2); hold on;
             
             set(g(h),'MarkerSize',10,'MarkerFaceColor',cmap(h,:));
-            %xlim([0.3 1.5]);
+            xlim([0.3 1.5]);
             ylim([0.35 1])
             
             % set(gca,'Xtick',-2:1:2,'Ytick',-2:1:2);

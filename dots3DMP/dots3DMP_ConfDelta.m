@@ -21,8 +21,8 @@ for c=1:length(cohs)
         n = n+1;
     end
 end
-figure(20); set(gcf,'Color',[1 1 1],'Position',[50 20 360 320],'PaperPositionMode','auto'); clf;
-[hsym,hxe,hye] = errorbar2(choiceBias, confBias, choiceBiasSE, confBiasSE, 'o', 2);
+figure(20); set(gcf,'Color',[1 1 1],'Position',[500 300 360 320],'PaperPositionMode','auto'); clf;
+[hsym,hxe,hye] = errorbar2(choiceBias, confBias, choiceBiasSE, confBiasSE, 'o', 2); % plot conditions color-coded??
 set(hsym,'MarkerSize',10,'MarkerFaceColor','w','Color','k');
 hold on; plot([-2 2],[-2 2],'k--','LineWidth',2); axis square;
 xlim([-2 2]); ylim([-2 2]);
@@ -34,7 +34,7 @@ changeAxesFontSize(gca,20,20); set(gca,'box','off')
 
 %% 1. relationship bw conf and weights
 
-hdgInd = 3;
+hdgInd = 1;
 
 % for each coh, bin trials by conf (try median split first), then calc
 % weights separately for low and high conf trials
@@ -67,7 +67,7 @@ catch
             0.2000    0.6275    0.1725];
 end
 
-figure(21); set(gcf,'Color',[1 1 1],'Position',[50 20 250 200],'PaperPositionMode','auto'); clf;
+figure(21); set(gcf,'Color',[1 1 1],'Position',[100 20 500 300],'PaperPositionMode','auto'); clf;
 h = plot([1 2], [PrightLow PrightHigh], 'ok-', 'MarkerSize',10, 'MarkerFaceColor','k');
 set(h,'Color', clr(1,:), 'MarkerFaceColor',clr(1,:));
 L{1} = sprintf('d=%d, c=%g, h=%g',deltas(end),cohs(2),hdgs(hdgInd));
@@ -79,7 +79,7 @@ changeAxesFontSize(gca,16,16); set(gca,'box','off');
 hold on;
 % if exportfigs; export_fig('medianSplit1','-eps'); end 
 
-%% low coh, left side of the graph, delta -3, 
+% low coh, left side of the graph, delta -3, 
 I = data.modality==3 & data.coherence==cohs(1) & data.heading<=hdgs(hdgInd) & data.delta==deltas(1);
 % when conf lower, Pright should be higher (anticorrelated)
 if conftask==1
@@ -99,8 +99,8 @@ set(h,'Color', clr(2,:), 'MarkerFaceColor', clr(2,:));
 L{2} = sprintf('d=%d, c=%g, h=%g',deltas(1),cohs(1),hdgs(hdgInd));
 
 
-%% 2. high coh, right side of the graph, delta -3, 
-I = data.modality==3 & ismember(data.coherence,cohs(2:end)) & data.heading>=hdgs(end-hdgInd+1) & data.delta==deltas(1);
+% 2. high coh, right side of the graph, delta -3, 
+I = data.modality==3 & ismember(data.coherence,cohs(2)) & data.heading>=hdgs(end-hdgInd+1) & data.delta==deltas(1);
 % when conf is lower, Pright should be lower (correlated)
 if conftask==1
     confLow = data.conf(I) < median(data.conf(I));
@@ -119,7 +119,7 @@ set(h,'Color', clr(3,:), 'MarkerFaceColor',clr(3,:));
 L{3} = sprintf('d=%d, c=%g, h=%g',deltas(1),cohs(2),hdgs(end-hdgInd+1));
 
 
-%% low coh, right side of the graph, delta +3, 
+% low coh, right side of the graph, delta +3, 
 I = data.modality==3 & data.coherence==cohs(1) & data.heading>=hdgs(end-hdgInd+1) & data.delta==deltas(end);
 % when conf lower, Pright should be lower (correlated)
 if conftask==1
@@ -138,67 +138,118 @@ set(h,'Color', clr(4,:), 'MarkerFaceColor',clr(4,:));
 % if exportfigs; export_fig('medianSplit4','-eps'); end
 L{4} = sprintf('d=%d, c=%g, h=%g',deltas(end),cohs(1),hdgs(end-hdgInd+1));
 
-legend(L);
+legend(L,'location','east');
+
+set(gca,'xticklabel',{'Low','High'})
+xlabel('Confidence')
 
 
 
 %% 3. does conflict affect confidence?
 
-maxhdg = 1.5;
+clear *Dzero* *Dnonzero* 
+uhdg = unique(abs(data.heading));
+
+isHdgCumul = 1;
+
+for h = 1:length(uhdg)
 for c = 1:length(cohs)
+    
+    % no conflict trials
     I = data.modality==3 & data.coherence==cohs(c) & data.delta==0;
-    I = I & abs(data.heading)<=maxhdg;
     
-    if conftask==1
-        confDzero(c) = mean(data.conf(I));
-        confDzeroSE(c) = std(data.conf(I))/sqrt(sum(I));
+    if isHdgCumul
+        I = I & abs(data.heading)<=uhdg(h);
     else
-        confDzero(c) = mean(data.PDW(I));
-        confDzeroSE(c) = sqrt( (confDzero(c).*(1-confDzero(c))) ./ sum(I));
+        I = I & abs(data.heading)==uhdg(h);
+    end
+
+    if conftask==1
+        confDzero(c,h) = mean(data.conf(I));
+        confDzeroSE(c,h) = std(data.conf(I))/sqrt(sum(I));
+    else
+        confDzero(c,h) = mean(data.PDW(I));
+        confDzeroSE(c,h) = sqrt( (confDzero(c).*(1-confDzero(c))) ./ sum(I));
     end
     
-    rtDzero(c) = mean(data.RT(I));
-    rtDzeroSE(c) = std(data.RT(I))/sqrt(sum(I));
+    rtDzero(c,h) = mean(data.RT(I));
+    rtDzeroSE(c,h) = std(data.RT(I))/sqrt(sum(I));
 
+    % conflict trials
     J = data.modality==3 & data.coherence==cohs(c) & data.delta~=0;
-    J = J & abs(data.heading)<=maxhdg;
-    
-    if conftask==1
-        confDnonzero(c) = mean(data.conf(J));
-        confDnonzeroSE(c) = std(data.conf(J))/sqrt(sum(J));
+    if isHdgCumul
+        J = J & abs(data.heading)<=uhdg(h);
     else
-        confDnonzero(c) = mean(data.PDW(J));
-        confDnonzeroSE(c) = sqrt( (confDzero(c).*(1-confDzero(c))) ./ sum(J));
+        J = J & abs(data.heading)==uhdg(h);
+    end
+
+
+    if conftask==1
+        confDnonzero(c,h) = mean(data.conf(J));
+        confDnonzeroSE(c,h) = std(data.conf(J))/sqrt(sum(J));
+    else
+        confDnonzero(c,h) = mean(data.PDW(J));
+        confDnonzeroSE(c,h) = sqrt( (confDzero(c).*(1-confDzero(c))) ./ sum(J));
     end
     
-    rtDnonzero(c) = mean(data.RT(J));
-    rtDnonzeroSE(c) = std(data.RT(J))/sqrt(sum(J));
+    rtDnonzero(c,h) = mean(data.RT(J));
+    rtDnonzeroSE(c,h) = std(data.RT(J))/sqrt(sum(J));
 
-%     [~,pvalConf(c)] = ttest2(data.conf(I),data.conf(J));
-%     [~,pvalRT(c)] = ttest2(data.RT(I),data.RT(J));
+    if conftask==1
+        [pvalConf(c,h)] = ranksum(data.conf(I),data.conf(J));
+%     [pvalRT(c)] = ttest2(data.RT(I),data.RT(J));
+    elseif conftask==2
+        % chi-squared test?
+    end
+end
 end
 
-barx = 1:length(cohs);
-bary = [confDzero ; confDnonzero]';
-errlow = [confDzeroSE ; confDnonzeroSE]';
-errhigh = errlow;
 
-figure(809); set(gcf,'Color',[1 1 1],'Position',[50 20 360 320],'PaperPositionMode','auto'); clf;
-bar(barx,bary); hold on;
-er = errorbar([barx-0.14;barx+0.14]',bary,errlow,errhigh,'k.');    
-ylim([0.5 1]);
-set(gca,'XTickLabel',[10 50 90],'Ytick',0:0.2:1);
-xlabel('Visual coherence (%)'); 
+% barx = cohs';
+% bary = [confDzero ; confDnonzero]';
+% errlow = [confDzeroSE ; confDnonzeroSE]';
+% errhigh = errlow;
+
+figure(809); set(gcf,'Color',[1 1 1],'Position',[1000 300 300 450],'PaperPositionMode','auto'); clf;
+for c=1:length(cohs)
+    subplot(length(cohs),1,c); hold on; title(sprintf('Coh = %.1f',cohs(c)));
+    errorbar(uhdg,confDzero(c,:),confDzeroSE(c,:),'color','k','linew',1.5);
+    errorbar(uhdg,confDnonzero(c,:),confDnonzeroSE(c,:),'color','r','linew',1.5);
+    
+    if conftask==1, ylabel('Mean SEP');
+    else, ylabel('Mean P(High Bet)')
+    end
+    axis([uhdg(1) uhdg(end) 0.5 0.8])
+    changeAxesFontSize(gca,20,20); set(gca,'box','off'); offsetAxes;
+
+end
+if isHdgCumul
+    xlabel('heading <= x (deg)')
+else
+    xlabel('heading (deg)');
+end
+text(7,0.65,'\Delta = 0','color','k','fontweight','bold','fontsize',16);
+text(7,0.6,'\Delta \neq 0','color','r','fontweight','bold','fontsize',16);
+%%
+
+%{
+bb = bar(barx,bary); hold on;
+er = errorbar([barx-0.06;barx+0.06]',bary,errlow,errhigh,'k.'); 
+set(bb(1),'facecolor','b');
+set(bb(2),'facecolor','g');
+ylim([0.52 0.8]);
+set(gca,'xtick',cohs,'Ytick',0:0.2:1);
+xlabel('Coherence'); 
 if conftask==1
     ylabel('Mean SEP');
 else
     ylabel('Mean P(High Bet)')
 end
-legend(sprintf('\{Delta}=0', '\{Delta}~=0','interpreter','latex')); legend('boxoff');
+text(cohs(end),0.74,'\Delta = 0','color','b','fontweight','bold','fontsize',16);
+text(cohs(end),0.7,'\Delta \neq 0','color','g','fontweight','bold','fontsize',16);
 changeAxesFontSize(gca,20,20); set(gca,'box','off');
 % if exportfigs; export_fig('confDeltaZeroNonzero','-eps'); end
 
-%{
 bary = [rtDzero ; rtDnonzero]';
 errlow = [rtDzeroSE ; rtDnonzeroSE]';
 errhigh = errlow;

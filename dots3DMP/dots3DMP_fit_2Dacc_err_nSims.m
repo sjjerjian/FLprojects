@@ -52,31 +52,31 @@ sdTnd = 60; % fixed SD
 % are their averages
 k = mean([kves kvis]);
 
-R{1}.t = 0.001:0.001:duration/1000;
-R{1}.Bup = BVes;
-R{1}.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
-R{1}.lose_flag = 1;
-R{1}.plotflag = 0; % 1 = plot, 2 = plot and export_fig
+RVes.t = 0.001:0.001:duration/1000;
+RVes.Bup = BVes;
+RVes.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
+RVes.lose_flag = 1;
+RVes.plotflag = 0; % 1 = plot, 2 = plot and export_fig
 
-PVes =  images_dtb_2d(R{1});
-
-
-R{2}.t = 0.001:0.001:duration/1000;
-R{2}.Bup = BVis;
-R{2}.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
-R{2}.lose_flag = 1;
-R{2}.plotflag = 0; % 1 = plot, 2 = plot and export_fig
-
-PVis =  images_dtb_2d(R{2});
+PVes =  images_dtb_2d(RVes);
 
 
-R{3}.t = 0.001:0.001:duration/1000;
-R{3}.Bup = BComb;
-R{3}.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
-R{3}.lose_flag = 1;
-R{3}.plotflag = 0; % 1 = plot, 2 = plot and export_fig
+RVis.t = 0.001:0.001:duration/1000;
+RVis.Bup = BVis;
+RVis.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
+RVis.lose_flag = 1;
+RVis.plotflag = 0; % 1 = plot, 2 = plot and export_fig
 
-PComb =  images_dtb_2d(R{3});
+PVis =  images_dtb_2d(RVis);
+
+
+RComb.t = 0.001:0.001:duration/1000;
+RComb.Bup = BComb;
+RComb.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
+RComb.lose_flag = 1;
+RComb.plotflag = 0; % 1 = plot, 2 = plot and export_fig
+
+PComb =  images_dtb_2d(RComb);
 
 
 % create acceleration and velocity profiles (arbitrary for now)
@@ -120,7 +120,7 @@ for n = 1:ntrials
     switch modality(n)
         case 1
             Tnd = muTndVes + randn.*sdTnd;
-            B = BVes; P = PVes;
+            B = BVes; P = PVes; R = RVes;
 
             mu = acc .* kves * sind(hdg(n)) / 1000; % mean of momentary evidence
                 % (I'm guessing drift rate in images_dtb is per second, hence div by 1000)
@@ -128,13 +128,13 @@ for n = 1:ntrials
             
         case 2
             Tnd = muTndVis + randn.*sdTnd;
-            B = BVis; P = PVis;
+            B = BVis; P = PVis; R = RVis;
             
             mu = vel .* kvis(cohs==coh(n)) * sind(hdg(n)) / 1000;
             s = [sigmaVis(cohs==coh(n)) sigmaVis(cohs==coh(n))];
         case 3
             Tnd = muTndComb + randn.*sdTnd;
-            B = BComb; P = PComb;
+            B = BComb; P = PComb; R = RComb;
             
             % positive delta defined as ves to the left, vis to the right
             muVes = acc .* kves               * sind(hdg(n)-delta(n)/2) / 1000;
@@ -208,15 +208,32 @@ for n = 1:ntrials
     diffV = abs((P.y+B)-finalV(n));
     diffT = abs(R.t-RT(n));
         
-    thisV = find(diffV==min(diffV));
-    thisT = find(diffT==min(diffT));
-    logOddsCorr(n) = P.logOddsCorrMap(thisV(1), thisT(1));
-    
-    if ~exist('theta','var')
-        expectedPctCorr(n) = logistic(logOddsCorr(n)); % convert to pct corr
-        conf(n) = 2*expectedPctCorr(n) - 1; % convert to 0..1
-    else
-        conf(n) = logOddsCorr(n) > theta;
+    switch options.confModel
+        case 'evidence+time'
+            % use map to look up log-odds that the motion is rightward
+            
+            thisV = find(diffV==min(diffV));
+            thisT = find(diffT==min(diffT));
+            logOddsCorr(n) = P.logOddsCorrMap(thisV(1), thisT(1));
+            
+            if options.conftask==1 % sacc endpoint
+                expectedPctCorr(n) = logistic(logOddsCorr(n)); % convert to pct corr
+                conf(n) = 2*expectedPctCorr(n) - 1; % convert to 0..1
+            elseif options.conftask==2 % PDW
+                conf(n) = logOddsCorr(n) > theta;
+            end
+        case 'evidence_only'
+            if options.conftask==1
+                conf(n) = max(diffV) ./ range(P.y);
+            elseif options.conftask==2
+                conf(n) = max(diffV) > theta;
+            end
+        case 'time_only'
+            if options.contask==1
+                conf(n) = 1 - RT(n) ./ range(P.t);
+            elseif options.conftask==2
+                conf(n) = RT(n) < theta;
+            end
     end
 end
 

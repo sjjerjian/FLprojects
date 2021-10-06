@@ -1,11 +1,10 @@
 function [gfitBoot,wvesBoot] = ...
-    dots3DMP_cgauss_bootstrap_func(data,gfit,mods,cohs,deltas,nboots)
+    dots3DMP_cgauss_bootstrap_func(data,gfit,mods,cohs,deltas,nboots,conftask,RTtask)
 % runs exactly the same gaussian fit as the regular cgauss, and computes
-% weights like the weight
+% weights like the weights function
 
 % if gfit passed in, use those funcs, otherwise redefine them!
 if ~isempty(gfit)
-    keyboard
     cgauss = gfit.choice.func;
     cgauss_err = gfit.choice.err;
     guess_cgauss = gfit.choice.guess; 
@@ -15,7 +14,7 @@ if ~isempty(gfit)
     guess_fgauss = gfit.conf.guess; 
     
     gauss = gfit.RT.func;
-    cgauss_err = gfit.RT.err;
+    gauss_err = gfit.RT.err;
     guess_gauss = gfit.RT.guess; 
 else
     cgauss = @(b,hdg) 1/2 * ( 1 + erf( (hdg-b(1))./(b(2)*sqrt(2)) ) );
@@ -70,7 +69,7 @@ for n = 1:nboots
     gfitBoot.conf.ampl{n}    = Nmcd;
     gfitBoot.conf.mu{n}      = Nmcd;
     gfitBoot.conf.sigma{n}   = Nmcd;
-    
+    gfitBoot.conf.bsln{n}    = Nmcd;
     % first the single-cues, and comb with either:
     % all trials irrespective of delta
     D = length(deltas)+1; % (the extra column we made for pooling across deltas)
@@ -92,15 +91,21 @@ for n = 1:nboots
             bootI = randsample(find(I),sum(I),true);
             
             if unc
-                [beta,~,~,~,~,~] = fminunc(@(x) cgauss_err(x,data.choice(bootI)==2,data.heading(bootI)), [0 3], options);
-                if conftask>0
-                    [betaConf,~,~,~,~,~] = fminunc(@(x) flippedGauss_err(x,conf(bootI),data.heading(bootI)), [0.7 0 4 0.1], options);
+                [beta,~,~,~,~,~] = fminunc(@(x) cgauss_err(x,data.choice(bootI)==2,data.heading(bootI)), guess_cgauss, options);
+                if conftask
+                    [betaConf,~,~,~,~,~] = fminunc(@(x) flippedGauss_err(x,conf(bootI)==1,data.heading(bootI)), guess_fgauss, options);
+                end
+                if RTtask
+                    [betaRT,~] = fminunc(@(x) gauss_err(x,data.RT(I),data.heading(I)), guess_gauss,options);
                 end
                 
             else
-                beta = fminsearch(@(x) cgauss_err(x,data.choice(bootI)==2,data.heading(bootI)), [0 3], options);
-                if conftask>0
-                    betaConf = fminsearch(@(x) flippedGauss_err(x,conf(bootI),data.heading(bootI)), [0.7 0 4 0.1], options);
+                beta = fminsearch(@(x) cgauss_err(x,data.choice(bootI)==2,data.heading(bootI)), guess_cgauss, options);
+                if conftask
+                    betaConf = fminsearch(@(x) flippedGauss_err(x,conf(bootI)==1,data.heading(bootI)), guess_fgauss, options);
+                end
+                if RTtask
+                    [betaRT,~] = fminsearch(@(x) gauss_err(x,data.RT(I),data.heading(I)), guess_gauss,options);
                 end
             end
             gfitBoot.choice.mu{n}(m,c,D)     = beta(1);
@@ -108,6 +113,12 @@ for n = 1:nboots
             gfitBoot.conf.ampl{n}(m,c,D)  = betaConf(1);
             gfitBoot.conf.mu{n}(m,c,D)    = betaConf(2);
             gfitBoot.conf.sigma{n}(m,c,D) = betaConf(3);
+            gfitBoot.conf.bsln{n}(m,c,D)  = betaConf(4);
+            
+%             gfitBoot.RT.ampl{n}(m,c,D)  = betaRT(1);
+%             gfitBoot.RT.mu{n}(m,c,D)    = betaRT(2);
+%             gfitBoot.RT.sigma{n}(m,c,D) = betaRT(3);
+%             gfitBoot.RT.bsln{n}(m,c,D)  = betaRT(4);
         end
     end
     
@@ -119,16 +130,21 @@ for n = 1:nboots
             bootI = randsample(find(I),sum(I),true);
             
             if unc
-                [beta,~,~,~,~,~] = fminunc(@(x) cgauss_err(x,data.choice(bootI)==2,data.heading(bootI)), [0 3], options);
-                if conftask>0
-                    [betaConf,~,~,~,~,~] = fminunc(@(x) flippedGauss_err(x,conf(bootI),data.heading(bootI)), [0.7 0 4 0.1], options);
+                [beta,~,~,~,~,~] = fminunc(@(x) cgauss_err(x,data.choice(bootI)==2,data.heading(bootI)), guess_cgauss, options);
+                if conftask
+                    [betaConf,~,~,~,~,~] = fminunc(@(x) flippedGauss_err(x,conf(bootI)==1,data.heading(bootI)), guess_fgaus, options);
                 end
+%                 if RTtask
+%                     [betaRT,~] = fminunc(@(x) gauss_err(x,data.RT(bootI),data.heading(bootI)), guess_gauss,fitOptions);
+%                 end
             else
-                beta = fminsearch(@(x) cgauss_err(x,data.choice(bootI)==2,data.heading(bootI)), [0 3], options);
-                if conftask>0
-                    betaConf = fminsearch(@(x) flippedGauss_err(x,conf(bootI),data.heading(bootI)), [0.7 0 4 0.1], options);
-            
+                beta = fminsearch(@(x) cgauss_err(x,data.choice(bootI)==2,data.heading(bootI)), guess_cgauss, options);
+                if conftask
+                    betaConf = fminsearch(@(x) flippedGauss_err(x,conf(bootI)==1,data.heading(bootI)), guess_fgauss, options);
                 end
+%                 if RTtask
+%                     [betaRT,~] = fminsearch(@(x) gauss_err(x,data.RT(bootI),data.heading(bootI)), guess_gauss,fitOptions);
+%                 end
             end
             
             gfitBoot.choice.mu{n}(3,c,d)     = beta(1);
@@ -136,12 +152,19 @@ for n = 1:nboots
             gfitBoot.conf.ampl{n}(3,c,d)  = betaConf(1);
             gfitBoot.conf.mu{n}(3,c,d)    = betaConf(2);
             gfitBoot.conf.sigma{n}(3,c,d) = betaConf(3);
+            gfitBoot.conf.bsln{n}(3,c,d)  = betaConf(4);
+            
+%             gfitBoot.RT.ampl{n}(3,c,d)  = betaRT(1);
+%             gfitBoot.RT.mu{n}(3,c,d)    = betaRT(2);
+%             gfitBoot.RT.sigma{n}(3,c,d) = betaRT(3);
+%             gfitBoot.RT.bsln{n}(3,c,d)  = betaRT(4);
+            
         end
     end
     
     % lastly compute the weights
     for c = 1:length(cohs)      % m c d
-        wvesBoot.choice.pred(n,c) = (1/gfitBoot.choice.sigma{n}(1,1,D)^2) / ((1/gfitBoot.choice.sigma{n}(1,1,D)^2) + (1/sigmaPMFboot{n}(2,c,D)^2));
+        wvesBoot.choice.pred(n,c) = (1/gfitBoot.choice.sigma{n}(1,1,D)^2) / ((1/gfitBoot.choice.sigma{n}(1,1,D)^2) + (1/gfitBoot.choice.sigma{n}(2,c,D)^2));
         % m c d
         actual(1) = (gfitBoot.choice.mu{n}(3,c,1)-gfitBoot.choice.mu{n}(3,c,2)+(deltas(1)/2)) / deltas(1);
         actual(2) = (gfitBoot.choice.mu{n}(3,c,3)-gfitBoot.choice.mu{n}(3,c,2)+(deltas(3)/2)) / deltas(3);
@@ -149,8 +172,6 @@ for n = 1:nboots
         
         actual(1) = (gfitBoot.conf.mu{n}(3,c,1)-gfitBoot.conf.mu{n}(3,c,2)+(deltas(1)/2)) / deltas(1);
         actual(2) = (gfitBoot.conf.mu{n}(3,c,3)-gfitBoot.conf.mu{n}(3,c,2)+(deltas(3)/2)) / deltas(3);
-        wvesBoot.choice.emp(n,c) = mean(actual);
+        wvesBoot.conf.emp(n,c) = mean(actual);
     end
-    
-    
 end
