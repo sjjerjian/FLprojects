@@ -6,7 +6,6 @@
 % VERSION 2.0: 08-30-19 CF
 % must be run by PLDAPS_preprocessing
 
-
 data = struct;
 data.filename = {};
 data.subj = {};
@@ -14,10 +13,12 @@ data.choice = []; % initialize this one field, you'll see why
 
 fieldExcludes = {'leftEarly','tooSlow','fixFP','FPHeld','eyeXYs','corrLoopActive','goodtrial', ...
                  'timeTargDisappears','probOfMemorySaccade','leftTargR','leftTargTheta', ...
-                 'rightTargR','rightTargTheta','audioFeedback','textFeedback','rewardDelay'};
+                 'rightTargR','rightTargTheta','audioFeedback','textFeedback','rewardDelay','reward'};
 
 % now search localDir again for matching files and extract the desired variables from PDS
 allFiles = dir(localDir);
+if addNexonarDataToStruct, allNexFiles = dir([localDirNex '/*.mat']); end
+
 for d = 1:length(dateRange)
     for f = 3:length(allFiles) % skip 1+2, they are are "." and ".."
         if contains(allFiles(f).name, subject) ... % check if the target file is in localDir
@@ -27,9 +28,12 @@ for d = 1:length(dateRange)
             disp(['loading ' allFiles(f).name]);
             
             try
+                
+
                 load([localDir allFiles(f).name],'-mat'); % load it. this is the time limiting step;
                                                           % will eventually change how data are saved to make this faster
                 if exist('PDS','var')
+                  
                     T = length(data.choice); % set trial counter to continue where left off (0, to start)
                     fprintf('\ncumulative trials processed = %d\n',T);
                     for t = 1:length(PDS.data) % loop over trials for this file,
@@ -85,9 +89,8 @@ for d = 1:length(dateRange)
                             fnames = fieldnames(PDS.data{t}.behavior);
                             fnames(ismember(fnames,fieldExcludes)) = [];
                             for F = 1:length(fnames)
-                                % SJ 07-20, correct defaults to logical but
-                                % throws an error for NaN - change to
-                                % double
+                                % SJ 07-2020, correct defaults to logical but
+                                % then gives error for NaN - use double instead
                                 if strcmp(fnames{F},'correct'), data.correct(T,1) = 0; end
                                 eval(['data.' fnames{F} '(T,1) = PDS.data{t}.behavior.' fnames{F} ';']);
                             end
@@ -104,11 +107,28 @@ for d = 1:length(dateRange)
                             
                         end
                     end
+                    
+                    % SJ 08-2021, adding Nexonar data in at this point
+                    if addNexonarDataToStruct
+                        matchingNexFile = cellfun(@(x) strcmp(x(1:25), allFiles(f).name(1:25)), {allNexFiles.name});
+                        if sum(matchingNexFile)==1
+                            load([localDirNex allNexFiles(matchingNexFile).name],'-mat'); % load the nexonar data
+                            
+                            nexPDS = dots3DMP_nexonarCleanUp(nex,PDS);
+                            data.nexonar = nexPDS';
+
+                        else
+                            % no matching nexonar data (not recorded?)
+                            % or possibly more than one matching file - should be impossible
+                            disp(['could not find matching nexonar data for ' allFiles(f).name '...skipping'])
+                        end
+                    end
+                    
                     clear PDS
                 end
             
             catch me
-                warning(['Could not load ' allFiles(f).name '. File may be corrupt -- skipping']);
+                warning(['Processing issue, or could not load ' allFiles(f).name '. File may be corrupt -- skipping']);
             end
 
         end
@@ -121,7 +141,7 @@ end
 if strcmp(subject(1:5),'human')
     data.conf = data.saccEndPoint;
 else
-    % do we still need this? SJ 07/2020
+    % do we still need this? SJ 07-2020
     if isfield(data,'postDecisionConfidence')
     if isfield(data,'PDW')
         if length(data.postDecisionConfidence)<length(data.PDW) && length(data.PDW)==length(data.choice)
@@ -142,6 +162,7 @@ if isfield(data,'saccEndPoint')
     data = rmfield(data,'saccEndPoint'); % either way, this gets removed
 end
 
+% SJ 07-2020
 if isfield(data,'oneTargTrial')
     if isfield(data,'oneTargChoice')
         if length(data.oneTargTrial)<length(data.oneTargChoice) && length(data.oneTargChoice)==length(data.choice)
@@ -158,7 +179,7 @@ if isfield(data,'oneTargTrial')
     end
 end
 
-
+% SJ 07-2020
 if isfield(data,'oneConfTargTrial')
     if isfield(data,'oneTargConf')
         if length(data.oneConfTargTrial)<length(data.oneTargConf) && length(data.oneTargConf)==length(data.choice)

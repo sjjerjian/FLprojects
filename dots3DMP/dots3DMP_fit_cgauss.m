@@ -21,8 +21,8 @@ if conftask==1 % continuous, sacc endpoint
 elseif conftask==2 % PDW, probabilities
     
     % dont force min/max 0,1... resulting in non-invertible Hessians
-%     flippedGauss = @(b,hdg) 1 - ( min(max(b(1),0),1) .* exp(-(hdg-b(2)).^2 ./ (2*b(3).^2)) + min(max(b(4),0),1));
-    flippedGauss = @(b,hdg) 1 - ( b(1) .* exp(-(hdg-b(2)).^2 ./ (2*b(3).^2)) + b(4));
+    flippedGauss = @(b,hdg) 1 - ( min(max(b(1),0),1) .* exp(-(hdg-b(2)).^2 ./ (2*b(3).^2)) + min(max(b(4),0),1));
+%     flippedGauss = @(b,hdg) 1 - ( b(1) .* exp(-(hdg-b(2)).^2 ./ (2*b(3).^2)) + b(4));
 
     % negative log likelihood of observing PDW data
     % log prob of observing high bet on all trials where subj bet
@@ -45,13 +45,13 @@ guess_gauss  = [0.5 0 6 1];
 fitOptions = optimset('display','none','MaxFunEvals',1000,'MaxIter',1000);
 
 %% first, for all trials irrespective of delta
-% D = length(deltas)+1; % (the extra column we made for pooling across deltas)
+D = length(deltas)+1; % (the extra column we made for pooling across deltas)
 % OR select just delta=0:
-D = find(deltas==0);
+% D = find(deltas==0);
 
 % initialize vars for storing param fits
 % deal func looks nicer, but is slow for some reason...
-n = nan(length(mods),length(cohs),length(deltas));
+n = nan(length(mods),length(cohs),D);
 
 muChoice = n; muChoiceSE = n;
 sigmaChoice = n; sigmaChoiceSE = n;
