@@ -30,6 +30,13 @@ duration = 2000; % stimulus duration (ms)
 
 theta = 0.8; % threshold for high bet in logOdds, ignored if conftask==1
 
+if conftask==2
+    timeToConf = 200; % additional processing time for confidence
+else
+    timeToConf = 0;
+end
+duration = duration + timeToConf;
+
 kves  = 25;
 kvis  = [15 40];
 sigmaVes = 0.02;
@@ -69,7 +76,7 @@ RComb.t = 0.001:0.001:duration/1000;
 RComb.Bup = BComb;
 RComb.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
 RComb.lose_flag = 1;
-RComb.plotflag = 0; % 1 = plot, 2 = plot and export_fig
+RComb.plotflag = 1; % 1 = plot, 2 = plot and export_fig
 
 PComb =  images_dtb_2d(RComb);
 % create acceleration and velocity profiles (arbitrary for now)
@@ -233,13 +240,13 @@ for n = 1:ntrials
             % would loser be relatively speaking (since logOdds map is
             % fixed)
 
-        whichWon = dv(end,:)==max(dv(end,:));
+        whichWon = dv(duration,:)==max(dv(duration,:));
         finalV(n) = dv(end,~whichWon) + B-dv(end,whichWon);
         % ^ effectively shifting the losing dv up by whatever the
         % difference is between the bound and the winning dv
+        
 %         finalV(n) = dv(end,~whichWon); % the not-whichWon is the loser
         % % finalV(n) = mean(dvEnds);
-        finalV(n) = dv(end,~whichWon) + B-dv(end,whichWon); %
 
         hitBound(n) = 0;
         a = [1 -1];
@@ -248,7 +255,7 @@ for n = 1:ntrials
     else
         RT(n) = min([cRT1 cRT2])/1000;
         whichWon = [cRT1<=cRT2 cRT1>cRT2];
-        finalV(n) = dv(min([cRT1 cRT2]),~whichWon); % the not-whichWon is the loser
+        finalV(n) = dv(min([cRT1 cRT2]+timeToConf),~whichWon); % the not-whichWon is the loser
         hitBound(n) = 1;
         a = [1 -1];
         choice(n) = a(whichWon);
