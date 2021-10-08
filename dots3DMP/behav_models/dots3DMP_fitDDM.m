@@ -1,8 +1,8 @@
 function [X, err_final, fit, fitInterp] = dots3DMP_fitDDM(data,options,guess,fixed)
 
 % parameter bounds for fitting
-LB = guess/4;
-UB = guess*4;
+LB = guess/10;
+UB = guess*10;
 
 % also set the "plausible" lower/upper bounds used by BADS
 PLB = guess/2;
@@ -17,7 +17,7 @@ else
 switch options.fitMethod
     case 'fms'
         fitOptions = optimset('Display', 'iter', 'MaxFunEvals', 100*sum(fixed==0), 'MaxIter', ... 
-            100*sum(fixed==0), 'TolX',1e-2,'TolFun',1e-2,'UseParallel', 'Always');
+            100*sum(fixed==0), 'TolX',1e-1,'TolFun',1e-1,'UseParallel', 'Always');
         [X, fval, ~] = fminsearch(@(x) feval(options.errfun,x,guess,fixed,data,options), guess(fixed==0), fitOptions);
 %         [X, fval, exitflag] = fminunc(@(x) feval(options.errfun,x,guess,fixed,data,options), guess(fixed==0), fitOptions);
         fprintf('fval: %f\n', fval);
@@ -27,6 +27,7 @@ switch options.fitMethod
         fitOptions = optimoptions(@fmincon,'Display','iter',...
             'Algorithm','interior-point',...
             'FinDiffType','central',...
+            'FinDiffRelStep',1e-4,...
             'UseParallel','always');
         problem = createOptimProblem('fmincon','x0',guess(fixed==0),'objective',...
             @(x) feval(options.errfun,x,guess,fixed,data,options),'lb',LB(fixed==0),...
@@ -39,6 +40,7 @@ switch options.fitMethod
         fitOptions = optimoptions(@fmincon,'Display','iter',...
             'Algorithm','interior-point',...
             'FinDiffType','central',...
+            'FinDiffRelStep',1e-4,...
             'UseParallel','always');
         problem = createOptimProblem('fmincon','x0',guess(fixed==0),'objective',...
             @(x) feval(options.errfun,x,guess,fixed,data,options),'lb',LB(fixed==0),...
@@ -152,7 +154,7 @@ options.ploterr = 0;
 
 
 if ~options.runInterpFit
-    fit = [];
+%     fit = [];
     fitInterp = [];    
 else
 % *** now run it one more time with interpolated headings
