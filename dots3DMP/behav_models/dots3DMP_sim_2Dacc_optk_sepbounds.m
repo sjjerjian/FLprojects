@@ -371,9 +371,8 @@ choice(choice==0) = sign(randn); % not needed under usual circumstances
 % sanity check:
 pCorrect_total = (sum(choice==1 & hdg>0) + sum(choice==-1 & hdg<0)) / ntrials
 
-
-
-
+correct = (choice==1 & hdg>0) | (choice==-1 & hdg<0) | ...
+    (rand<0.5 & (hdg==0 | abs(hdg)<abs(delta)));
 
 %% format data like the real expt
 
@@ -386,6 +385,10 @@ data.delta = delta;
 data.choice = choice;
 data.RT = RT; % already in seconds
 data.conf = conf;
+
+
+data.correct = (data.choice==2 & data.heading>0) | (data.choice==1 & data.heading<0) | ...
+    (rand<0.5 & (data.heading==0 | abs(data.heading)<abs(data.delta)));
 
 if conftask==2
     data.PDW=data.conf;
@@ -416,7 +419,7 @@ dots3DMP_plots_cgauss_byCoh(gfit,parsedData,mods,cohs,deltas,hdgs,conftask,RTtas
 %% now try fitting the fake data to recover the generative parameters
 
 % options.errfun = 'dots3DMP_fit_2Dacc_err_nSims';
-options.errfun = 'dots3DMP_fit_2Dacc_err_optk_sepbounds';
+options.errfun = 'dots3DMP_fit_2Dacc_err_sepbounds_noSim';
 options.nreps  = 100;
 
 options.confModel = 'evidence+time';
@@ -427,14 +430,14 @@ options.confModel = 'evidence+time';
 options.runInterpFit = 0; 
 
 
-% options.fitMethod = 'fms'; %'fms','global','multi','pattern','bads'
+options.fitMethod = 'fms'; %'fms','global','multi','pattern','bads'
 % options.fitMethod = 'global';
 % options.fitMethod = 'multi';
-options.fitMethod = 'pattern';
+% options.fitMethod = 'pattern';
 % options.fitMethod = 'bads';
 
 % initial guess (or hand-tuned params)
-kves    = 10;
+kves    = 28;
 kvis    = [20 40];
 sigma   = [0.03 0.03 0.03];
 BVes    = 0.8;
@@ -447,9 +450,9 @@ fixed   = [0 1 1 1 1 1 1 1 1 1 1 1];
 guess   = [kves kvis(1:2) sigma(1:3) BVes BVis BComb TndVes TndVis TndComb];
 
 if conftask==2 % PDW
-    theta = 0.8;
+    theta = 0.75;
 
-    fixed   = [0 1 1 1 1 1 1 1 1 1 1 1 1];
+    fixed   = [1 1 1 1 1 1 1 1 1 1 1 1 0];
     guess   = [guess theta];
 end
 
@@ -468,8 +471,8 @@ if options.ploterr, options.fh = 400; end
 [X, err_final, fit, fitInterp] = dots3DMP_fitDDM(data,options,guess,fixed);
 
 % plot it!
-fitInterp = fit;
-dots3DMP_plots_fit(data,fitInterp,conftask,RTtask)
+% fitInterp = fit;
+% dots3DMP_plots_fit(data,fitInterp,conftask,RTtask) % needs UPDATING!
 
 
 end
