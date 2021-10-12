@@ -27,7 +27,7 @@ changeAxesFontSize(gca,11,11);
 subplot(3,1,3);
 errorbar(cohs, pHigh, pHighSE, 'ro-');
 set(gca,'xtick',ticks,'tickdir','out');
-ylim([0 1]); xlim([-0.55 0.55]);
+ylim([0.5 1]); xlim([-0.55 0.55]);
 xlabel('motion strength (% coh)'); ylabel('proportion high bet');
 changeAxesFontSize(gca,11,11);
 
