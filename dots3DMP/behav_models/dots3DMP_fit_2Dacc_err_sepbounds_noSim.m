@@ -22,28 +22,19 @@ duration = 2000; % stimulus duration (ms)
 
 kves  = param(1);
 kvis  = param([2 3]);
-sigmaVes = param(4);
-sigmaVis = param([5 6]);
-BVes     = abs(param(7)); % don't accept negative bound heights
-BVis     = abs(param(8)); % fixed across cohs
-BComb    = abs(param(9));
-muTndVes = param(10);
-muTndVis = param(11); % fixed across cohs
-muTndComb = param(12);
+BVes     = abs(param(4)); % don't accept negative bound heights
+BVis     = abs(param(5)); % fixed across cohs
+BComb    = abs(param(6));
+muTnd    = param(7);
+ttc      = param(8);
 
-if numel(param)==13, theta = param(13); end % only relevant for PDW
+try theta = param(9); catch; end % only relevant for PDW
 
-paramNames = {'kves','kvisLow','kvisHigh','sigmaVes','sigmaVisLow','sigmaVisHigh','BVes','BVis','BComb','muTndVes','muTndVis','muTndComb','theta'};
+paramNames = {'kves','kvisLow','kvisHigh','BVes','BVis','BComb','muTnd','T2Conf','theta'};
 
-if options.conftask==2
-    timeToConf = 350; % additional processing time for confidence
-else
-    timeToConf = 0;
-end
-duration = duration + timeToConf;
+duration = duration + ttc;
 
 sdTnd = 60; % fixed SD
-% Tnds = muTnd + randn(ntrials,1).*sdTnd; % fixed for all sims of given trial
 
 % assume the mapping is based on an equal amount of experience with the 
 % *three* levels of reliability (ves, vis-low, vis-high) hence k and sigma
@@ -83,6 +74,7 @@ if options.conftask==1
     confdata = confdata*1000;
 end
 
+usetrs_data  = data.correct | data.heading==0; % use only correct (and 0 hdg) trials for RT/SEP fits
 choiceD  = logical(data.choice-1);
 
 pRight_model = nan(length(data.heading),1);
@@ -93,6 +85,7 @@ n = nan(length(mods),length(cohs),length(deltas),length(hdgs));
 meanRT_fit = n;     meanRT_data = n;    sigmaRT = n;
 meanConf_fit = n;   meanConf_data = n;  sigmaConf = n;
 nCor = n;
+
 
 for m = 1:length(mods)
 for c = 1:length(cohs)
@@ -110,9 +103,9 @@ for d = 1:length(deltas)
         % and then assigned to the actual data trials of each condition in pRight_model for
         % log likelihood calculation
         
-        if m==1,     Ptemp = PVes; muTnd = muTndVes;
-        elseif m==2, Ptemp = PVis; muTnd = muTndVis;
-        elseif m==3, Ptemp = PComb; muTnd = muTndComb;
+        if m==1,     Ptemp = PVes; 
+        elseif m==2, Ptemp = PVis; 
+        elseif m==3, Ptemp = PComb; 
         end
         
         % SJ 10-11-2021 replaced redundant Monte Carlo simulation with computations
@@ -129,10 +122,14 @@ for d = 1:length(deltas)
         
         
         % RT/Conf Mean and SE from data, Conf Mean from model
-        % use only correct trials (and 0
         N = 10000;
-        conf_distr = Ptemp.up.pdf_t(uh,:) .* squeeze(Ptemp.up.distr_loser(uh,:,:))';
+%         conf_distr = Ptemp.up.pdf_t(uh,:) .* squeeze(Ptemp.up.distr_loser(uh,:,:))';
+        conf_distr = Ptemp.up.pdf_t(uh,:) .* circshift(squeeze(Ptemp.up.distr_loser(uh,:,:))',-ttc,2); % shift distr_loser forward in time
         conf_distr(conf_distr<0) = 0;
+        
+        % SJ 10/12/2021 can we just compare P(conf) to theta directly for P(High bet)? 
+        % for now doing randsample from logOdds Map according to p, then
+        % compare to theta below
         try
             confSamples = randsample(Ptemp.logOddsCorrMap(:),N,true,conf_distr(:));
         catch
@@ -141,12 +138,11 @@ for d = 1:length(deltas)
         % use only correct trials + all zero heading trials (for RT and
         % SEP)
         
-        usetrs_data  = data.correct | data.heading==0;
         
         nCor(m,c,d,h) = sum(Jdata & usetrs_data);
         
         if options.RTtask            
-            meanRT_fit(m,c,d,h) = Ptemp.up.mean_t(uh)*1000+muTnd;
+            meanRT_fit(m,c,d,h) = Ptemp.up.mean_t(uh)*1000+muTnd+randn.*sdTnd;
             
             meanRT_data(m,c,d,h) = mean(RTdata(Jdata & usetrs_data));
             sigmaRT(m,c,d,h) = std(RTdata(Jdata & usetrs_data)) / sqrt(nCor(m,c,d,h));
@@ -157,6 +153,7 @@ for d = 1:length(deltas)
             
             meanConf_data(m,c,d,h) = mean(confdata(Jdata & usetrs_data));
             sigmaConf(m,c,d,h) = std(confdata(Jdata & usetrs_data)) / sqrt(nCor(m,c,d,h));
+            
         elseif options.conftask == 2 % PDW
             pHigh_model(Jdata) = sum(confSamples > theta) / N;
         end
@@ -205,9 +202,9 @@ elseif options.conftask == 2 % PDW
 end
 
 
-err = -(LL_choice + LL_conf + LL_RT); % negate for minimization
+% err = -(LL_choice + LL_conf + LL_RT); % negate for minimization
 % err = -(LL_choice + LL_conf);
-% err = -LL_choice;
+err = -LL_choice;
 
 fit.pRight_model = pRight_model;
 if options.conftask==1
@@ -232,6 +229,7 @@ fprintf('err: %f\n', err);
 fprintf('split errs: Choice: %.2f, Conf: %.2f, RT: %.2f\n',LL_choice,LL_conf,LL_RT)
 if options.ploterr && strcmp(options.fitMethod,'fms')
     figure(options.fh); hold on
+    if call_num==1,clf; end
     plot(call_num, err, '.','MarkerSize',12,'color','k');
     drawnow;
 end

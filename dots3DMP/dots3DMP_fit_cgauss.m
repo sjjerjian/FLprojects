@@ -38,7 +38,7 @@ gauss_err = @(param,RT,hdg) sum((gauss(param,hdg)-RT).^2);
 unc = 0; % saves biases from fminunc instead of fminsearch (SEs always are fminunc, and plots are always fminsearch)
 
 % parameter initial guesses
-guess_cgauss = [0 3];
+guess_cgauss = [0 2];
 guess_fgauss = [0.2 0 6 0.5];
 guess_gauss  = [0.5 0 6 1];
 

@@ -53,6 +53,10 @@ parsedData = dots3DMP_parseData(data,mods,cohs,deltas,hdgs,conftask,RTtask);
 gfit = dots3DMP_fit_cgauss(data,mods,cohs,deltas,conftask,RTtask); 
 
 %% plots
+
+% logistic fits
+% dots3DMP_plots(parsedData,mods,cohs,deltas,hdgs,conftask,RTtask)
+
 % separate subplots for each coh, with all mods on same subplot
 dots3DMP_plots_cgauss_byCoh(gfit,parsedData,mods,cohs,deltas,hdgs,conftask,RTtask)
 

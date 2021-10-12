@@ -51,7 +51,7 @@ for c = 1:length(cohs)
     
     % RT
     if RTtask
-        subplot(2+double(conftask>0),length(cohs),c+length(cohs)*2); box off; hold on;
+        subplot(2+double(conftask>0),length(cohs),c+length(cohs)*(2-(conftask==0))); box off; hold on;
         for m = 1:length(mods)        
             beta = [gfit.RT.ampl(m,c,D) gfit.RT.mu(m,c,D) gfit.RT.sigma(m,c,D) gfit.RT.bsln(m,c,D)];
             h(m) = plot(parsedData.xVals, gfit.RT.func(beta,parsedData.xVals), [clr{c}{m}(1) '-'],'linewidth',1.5); hold on;       
@@ -115,7 +115,7 @@ for c = 1:length(cohs)
 
     % RT
     if RTtask
-        subplot(2+double(conftask>0),length(cohs),c+length(cohs)*2); box off; hold on;
+        subplot(2+double(conftask>0),length(cohs),c+length(cohs)*(2-(conftask==0))); box off; hold on;
         for d = 1:length(deltas)
             beta = [gfit.RT.ampl(3,c,d) gfit.RT.mu(3,c,d) gfit.RT.sigma(3,c,d) gfit.RT.bsln(3,c,d)];
             h(d) = plot(parsedData.xVals, gfit.RT.func(beta,parsedData.xVals), [clr{c}{d}(1) '-'],'linewidth',1.5); hold on;

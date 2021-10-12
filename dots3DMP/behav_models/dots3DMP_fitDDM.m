@@ -1,8 +1,8 @@
 function [X, err_final, fit, fitInterp] = dots3DMP_fitDDM(data,options,guess,fixed)
 
 % parameter bounds for fitting
-LB = guess/10;
-UB = guess*10;
+LB = guess/4;
+UB = guess*4;
 
 % also set the "plausible" lower/upper bounds used by BADS
 PLB = guess/2;
