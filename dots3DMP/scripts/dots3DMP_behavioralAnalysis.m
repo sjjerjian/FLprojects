@@ -34,7 +34,7 @@ switch subject
         
     case 'simul' % load simulated data
 
-        load('2DAccSim_conftask2_16200trs.mat')
+        load('2DAccSim_conftask2_8100trs.mat')
         % conftask & RTtask should already be saved in file
 end
 
@@ -53,12 +53,16 @@ parsedData = dots3DMP_parseData(data,mods,cohs,deltas,hdgs,conftask,RTtask);
 gfit = dots3DMP_fit_cgauss(data,mods,cohs,deltas,conftask,RTtask); 
 
 %% plots
+
+% logistic fits
+% dots3DMP_plots(parsedData,mods,cohs,deltas,hdgs,conftask,RTtask)
+
 % separate subplots for each coh, with all mods on same subplot
-% dots3DMP_plots_cgauss_byCoh(gfit,parsedData,mods,cohs,deltas,hdgs,conftask,RTtask)
+dots3DMP_plots_cgauss_byCoh(gfit,parsedData,mods,cohs,deltas,hdgs,conftask,RTtask)
 
 % or...separate subplots for each mod/delta, and all cohs on same subplot
 % this one needs tidying to look nice
-dots3DMP_plots_cgauss_byModDelta(gfit,parsedData,mods,cohs,deltas,hdgs,conftask,RTtask)
+% dots3DMP_plots_cgauss_byModDelta(gfit,parsedData,mods,cohs,deltas,hdgs,conftask,RTtask)
 
 %% psychophysical cue weights
 % assume wvis always = 1-wves
@@ -66,7 +70,7 @@ dots3DMP_plots_cgauss_byModDelta(gfit,parsedData,mods,cohs,deltas,hdgs,conftask,
 wves = dots3DMP_cueWeights(gfit,cohs,deltas,conftask,1);
 
 % bootstrapping for error bars
-nboots = 100;
+nboots = 10;
 [gfitBoot,wvesBoot] = dots3DMP_cgauss_bootstrap_func(data,gfit,mods,cohs,deltas,nboots,conftask,RTtask);
 
 % plot the weights
@@ -84,7 +88,7 @@ end
 % 0 will only use lower headings since there are few errors for easier
 % ones
 
-dots3DMP_RTquantiles(data,conftask,1)
+dots3DMP_RTquantiles(data,conftask,-1)
 
 %% PDW and RT for correct vs incorrect trials
 

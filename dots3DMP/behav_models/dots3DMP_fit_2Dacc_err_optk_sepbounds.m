@@ -1,4 +1,4 @@
-function [err,fit] = dots3DMP_fit_2Dacc_err_12params_nSims(param, guess, fixed, data, options)
+function [err,fit] = dots3DMP_fit_2Dacc_err_optk_sepbounds(param, guess, fixed, data, options)
 
 global call_num
 
@@ -12,7 +12,8 @@ end
 mods   = unique(data.modality)';
 cohs   = unique(data.coherence)'; 
 hdgs   = unique(data.heading)';
-deltas = unique(data.delta)';
+% deltas = unique(data.delta)';
+deltas = 0;
 
 % don't just use trials from data to run simulations, use a fixed, large amount!
 nreps = options.nreps;
@@ -24,7 +25,6 @@ nreps = options.nreps;
 % delta    = data.delta;
 
 duration = 2000; % stimulus duration (ms)
-dur = ones(ntrials,1) * duration; % fixed for all sims
 
 kves  = param(1);
 kvis  = param([2 3]);
@@ -38,6 +38,15 @@ muTndVis = param(11); % fixed across cohs
 muTndComb = param(12);
 
 if numel(param)==13, theta = param(13); end % only relevant for PDW
+
+if options.conftask==2
+    timeToConf = 350; % additional processing time for confidence
+else
+    timeToConf = 0;
+end
+duration = duration + timeToConf;
+
+dur = ones(ntrials,1) * duration; % fixed for all sims
 
 sdTnd = 60; % fixed SD
 % Tnds = muTnd + randn(ntrials,1).*sdTnd; % fixed for all sims of given trial
@@ -152,19 +161,19 @@ for n = 1:ntrials
     % favoring the correct decision (as in Kiani eqn. 3 and images_dtb)
     
     % decision outcome
-    cRT1 = find(dv(:,1)>=B, 1);
-    cRT2 = find(dv(:,2)>=B, 1);
+    cRT1 = find(dv(1:dur(n)-timeToConf,1)>=B, 1);
+    cRT2 = find(dv(1:dur(n)-timeToConf,2)>=B, 1);
     % the options are:
     % (1) only right accumulator hits bound,
     if ~isempty(cRT1) && isempty(cRT2)
         RT(n) = cRT1/1000 + Tnd;
-        finalV(n) = dv(cRT1,2); % only 1 hit, so 2 is the loser
+        finalV(n) = dv(cRT1+timeToConf,2); % only 1 hit, so 2 is the loser
         hitBound(n) = 1;
         choice(n) = 1;
     % (2) only left accumulator hits bound, 
     elseif isempty(cRT1) && ~isempty(cRT2)
         RT(n) = cRT2/1000 + Tnd;
-        finalV(n) = dv(cRT2,1); % only 2 hit, so 1 is the loser
+        finalV(n) = dv(cRT2+timeToConf,1); % only 2 hit, so 1 is the loser
         hitBound(n) = 1;
         choice(n) = -1;
     % (3) neither hits bound,
@@ -176,7 +185,7 @@ for n = 1:ntrials
             % would be their average?)
             % SJ 07/2020 finalV is technically distance of loser from bound (when winner
             % hits), so in this case, should also account for where winner is wrt bound 
-        whichWon = dv(end,:)==max(dv(end,:));
+        whichWon = dv(dur(n)-timeToConf,:)==max(dv(dur(n)-timeToConf,:));
         
 %         finalV(n) = dv(end,~whichWon); % the not-whichWon is the loser
         % % finalV(n) = mean(dvEnds); 
@@ -189,7 +198,7 @@ for n = 1:ntrials
     else
         RT(n) = min([cRT1 cRT2])/1000 + Tnd;
         whichWon = [cRT1<=cRT2 cRT1>cRT2];
-        finalV(n) = dv(min([cRT1 cRT2]),~whichWon); % the not-whichWon is the loser
+        finalV(n) = dv(min([cRT1 cRT2]+timeToConf),~whichWon); % the not-whichWon is the loser
         hitBound(n) = 1;
         a = [1 -1];
         choice(n) = a(whichWon);
@@ -241,10 +250,12 @@ fit.choice    = choice;
 fit.RT        = RT;
 fit.conf      = conf;
 
-fit.correct = (choice==2 & hdg>0) | (choice==1 & hdg<0);
-data.correct = (data.choice==2 & data.heading>0) | (data.choice==1 & data.heading<0);
+fit.correct = ((choice==2 & hdg>0) | (choice==1 & hdg<0)) | ((hdg==0 | abs(hdg)<abs(delta)) & rand(size(hdg))<0.5);
+data.correct = (data.choice==2 & data.heading>0) | (data.choice==1 & data.heading<0) | ...
+    ((data.heading==0 | abs(data.heading)<abs(data.delta)) & rand(size(data.heading))<0.5);
 
 %% calculate error
+
 
 RTdata = data.RT .* 1000;
 RTfit  = mean(fit.RT,2)  .* 1000;
@@ -283,14 +294,17 @@ for d = 1:length(deltas)
         n(m,c,d,h) = sum(Jdata);
         nmodel(m,c,d,h) = sum(Jmodel);
 
-        % pRight predictions by model have to be averaged across trials
-        % and then assigned to trials of each condition in pRight_model for
+        % pRight_model stores the predictions made by the model for the
+        % probability of a rightward choice on each trial condition in the
+        % data
+        % and then assigned to the actual data trials of each condition in pRight_model for
         % log likelihood calculation
         
         if m==1, Ptemp = PVes; muTnd = muTndVes;
         elseif m==2, Ptemp = PVis; muTnd = muTndVis;
         elseif m==3, Ptemp = PComb; muTnd = muTndComb;
         end
+        
 %         if hdgs(h)<0
 %             % if hdg is leftward, then pRight is p(incorrect response)
 %             pRight_model(Jdata) = Ptemp.lo.p(abs(hdgs(h))==(hdgs(hdgs>=0)));  
@@ -303,7 +317,8 @@ for d = 1:length(deltas)
             pHigh_model(Jdata) = sum(Jmodel & conffit==1)/nmodel(m,c,d,h); % 1 is high
         end
         
-        % use only correct trials (or 0 hdg) for RT and conf
+        % RT and SEP fits
+        % use only correct trials (or 0 hdg)
         usetrs_data  = data.correct | data.heading==0;
         usetrs_model = fit.correct | hdg==0;
         
@@ -347,7 +362,7 @@ pRight_model(pRight_model==1) = 1-eps;
 
 % log likelihood of choice is summed log likelihood across all trials (log
 % probability of observing choice given model)
-LL_choice = (sum(log(pRight_model(choiceD))) + sum(log(1-pRight_model(~choiceD))));
+LL_choice = (nansum(log(pRight_model(choiceD))) + nansum(log(1-pRight_model(~choiceD))));
 
 % log likelihood of mean RTs, under Gaussian approximation
 LL_RT = 0;
@@ -368,7 +383,7 @@ elseif options.conftask == 2 % PDW
     pHigh_model(pHigh_model==0) = eps; 
     pHigh_model(pHigh_model==1) = 1-eps;
     PDW = logical(data.conf);
-    LL_conf = (sum(log(pHigh_model(PDW))) + sum(log(1-pHigh_model(~PDW))));   
+    LL_conf = (nansum(log(pHigh_model(PDW))) + nansum(log(1-pHigh_model(~PDW))));   
 end
 
 
@@ -386,7 +401,7 @@ end
 fprintf('\n');
 
 fprintf('err: %f\n', err);
-fprintf('split errs: Choice: %.2f, Conf: %.2f, RT: %.2f\t',LL_choice,LL_conf,LL_RT)
+fprintf('split errs: Choice: %.2f, Conf: %.2f, RT: %.2f\n',LL_choice,LL_conf,LL_RT)
 if options.ploterr && strcmp(options.fitMethod,'fms')
     figure(options.fh); hold on
     plot(call_num, err, '.','MarkerSize',12,'color','k');

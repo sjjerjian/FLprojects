@@ -16,33 +16,38 @@ confModel = 'evidence+time'; % 'evidence+time','evidence_only','time_only'
 
 plotExampleTrials = 0;
 
-nreps = 200; % number of repetitions of each unique trial type
+nreps = 2000; % number of repetitions of each unique trial type
             % start small to verify it's working, then increase
             % (ntrials depends on num unique trial types)
 
-cohs = [0.4 0.8]; % visual coherence levels (these are really just labels, since k's are set manually)
+cohs = [0.3 0.8]; % visual coherence levels (these are really just labels, since k's are set manually)
 % hdgs = [-10 -5 -2.5 -1.25 0 1.25 2.5 5 10]; % heading angles
 % hdgs = [-10 -3.5 -1.25 1.25 3.5 10]; % heading angles
 hdgs = [-12 -6 -3 -1.5 0 1.5 3 6 12];
-deltas = [-2 0 2]; % conflict angle; positive means vis to the right
+deltas = [-3 0 3]; % conflict angle; positive means vis to the right
 mods = [1 2 3]; % stimulus modalities: ves, vis, comb
 duration = 2000; % stimulus duration (ms)
 
-theta = 0.8; % threshold for high bet in logOdds, ignored if conftask==1
+theta = 0.9; % threshold for high bet in logOdds, ignored if conftask==1
 
-kves  = 25;
-kvis  = [15 40];
-sigmaVes = 0.02;
-sigmaVis = [0.02 0.02];
-BVes     = 0.7; % don't accept negative bound heights
+if conftask==2
+    timeToConf = 350; % additional processing time for confidence
+else
+    timeToConf = 0;
+end
+duration = duration + timeToConf;
+
+kves  = 30;
+kvis  = [20 40];
+knoise = [0.07 0.07];
+sigmaVes = 0.03;
+sigmaVis = [0.03 0.03];
+BVes     = 0.8; % don't accept negative bound heights
 BVis     = 1.2; % fixed across cohs
 BComb    = 1.0;
-muTndVes = 300;
-muTndVis = 300; % fixed across cohs
-muTndComb = 300;
+muTnd    = 300; % fixed across mods SJ 10/11/2021
 
 sdTnd = 60; % fixed SD
-% Tnds = muTnd + randn(ntrials,1).*sdTnd; % fixed for all sims of given trial
 
 % assume the mapping is based on an equal amount of experience with the 
 % *three* levels of reliability (ves, vis-low, vis-high) hence k and sigma
@@ -92,14 +97,14 @@ acc = abs(acc./max(acc)); % (and abs)
 
 origParams.kves = kves;
 origParams.kvis = kvis;
+% origParams.knoise = knoise;
 origParams.sigmaVes = sigmaVes;
 origParams.sigmaVis = sigmaVis;
 origParams.BVes = BVes;
 origParams.BVis = BVis;
 origParams.BComb = BComb;
-origParams.TndVes = muTndVes;
-origParams.TndVis = muTndVis;
-origParams.TndComb = muTndComb;
+origParams.muTnd = muTnd;
+origParams.ttc   = timeToConf;
 
 if conftask==2
     origParams.theta = theta; % PDW only
@@ -116,8 +121,7 @@ end
     % process (Kiani et al. 2008)
 dur = ones(ntrials,1) * duration;
 
-% set individually depending on trial modality
-% Tnds = muTnd + randn(ntrials,1).*sdTnd;
+Tnds = muTnd + randn(ntrials,1).*sdTnd;
 
 %% bounded evidence accumulation
 
@@ -147,24 +151,24 @@ S = [1 -1/sqrt(2) ; -1/sqrt(2) 1];
 
 tic
 for n = 1:ntrials
-%     Tnd = Tnds(n) / 1000; % Tnd for nth trial in seconds
+    Tnd = Tnds(n) / 1000; % Tnd for nth trial in seconds
 
     switch modality(n)
         case 1
-            Tnd = (muTndVes + randn.*sdTnd)/1000;
+%             Tnd = (muTndVes + randn.*sdTnd)/1000;
             B = BVes; P = PVes; R = RVes;
 
             mu = acc .* kves * sind(hdg(n)) / 1000; % mean of momentary evidence
                 % (I'm guessing drift rate in images_dtb is per second, hence div by 1000)
             s = [sigmaVes sigmaVes]; % standard deviaton vector (see below)
         case 2
-            Tnd = (muTndVis + randn.*sdTnd)/1000;
+%             Tnd = (muTndVis + randn.*sdTnd)/1000;
             B = BVis; P = PVis; R = RVis;
             
             mu = vel .* kvis(cohs==coh(n)) * sind(hdg(n)) / 1000;
             s = [sigmaVis(cohs==coh(n)) sigmaVis(cohs==coh(n))];
         case 3
-            Tnd = (muTndComb + randn.*sdTnd)/1000;
+%             Tnd = (muTndComb + randn.*sdTnd)/1000;
             B = BComb; P = PComb; R = RComb;
             
             % positive delta defined as ves to the left, vis to the right
@@ -174,6 +178,10 @@ for n = 1:ntrials
             % optimal weights (Drugo et al.)
             wVes = sqrt( kves^2 / (kvis(cohs==coh(n))^2 + kves^2) );
             wVis = sqrt( kvis(cohs==coh(n))^2 / (kvis(cohs==coh(n))^2 + kves^2) );
+            
+            % corrupt optimal weights with noise
+%             wVes = wVes + randn*knoise(1);
+%             wVis = wVis + randn*knoise(2);
 
 %             wVes = rand; wVis = 1 - wVes;
 
@@ -205,41 +213,32 @@ for n = 1:ntrials
 
 %     dv_all{n} = dv;
     % decision outcome
-    cRT1 = find(dv(:,1)>=B, 1);
-    cRT2 = find(dv(:,2)>=B, 1);
+    cRT1 = find(dv(1:dur(n)-timeToConf,1)>=B, 1);
+    cRT2 = find(dv(1:dur(n)-timeToConf,2)>=B, 1);
     % the options are:
     % (1) only right accumulator hits bound,
     if ~isempty(cRT1) && isempty(cRT2)
         RT(n) = cRT1/1000;
-        finalV(n) = dv(cRT1,2); % only 1 hit, so 2 is the loser
+        finalV(n) = dv(cRT1+timeToConf,2); % only 1 hit, so 2 is the loser
         hitBound(n) = 1;
         choice(n) = 1;
     % (2) only left accumulator hits bound,
     elseif isempty(cRT1) && ~isempty(cRT2)
         RT(n) = cRT2/1000;
-        finalV(n) = dv(cRT2,1); % only 2 hit, so 1 is the loser
+        finalV(n) = dv(cRT2+timeToConf,1); % only 2 hit, so 1 is the loser
         hitBound(n) = 1;
         choice(n) = -1;
     % (3) neither hits bound,
     elseif isempty(cRT1) && isempty(cRT2)
-        RT(n) = dur(n)/1000;
-            % this is interesting: which DV matters for confidence
-            % if neither hits bound? for now take the (abs) maximum,
-            % ie whichever was closest to hitting bound. (alternative
-            % would be their average?)
-            % SJ 07/2020 finalV is fully determined by distance of loser from bound when winner
-            % hits, so in this case, should also account for where winner is wrt bound
-            % imagine winner 'did' hit bound, then where
-            % would loser be relatively speaking (since logOdds map is
-            % fixed)
-
-        whichWon = dv(end,:)==max(dv(end,:));
+        RT(n) = (dur(n)-timeToConf)/1000;
+        
+            % which DV matters for confidence if neither hits bound? 
+            % SJ 07/2020 logOddsCorrMap is fixed, so just shift finalV up
+            % so that 'winner' did hit bound,
+        whichWon = dv(dur(n)-timeToConf,:)==max(dv(dur(n)-timeToConf,:));
         finalV(n) = dv(end,~whichWon) + B-dv(end,whichWon);
-        % ^ effectively shifting the losing dv up by whatever the
+        % ^  shifting the losing dv up by whatever the
         % difference is between the bound and the winning dv
-%         finalV(n) = dv(end,~whichWon); % the not-whichWon is the loser
-        % % finalV(n) = mean(dvEnds);
-        finalV(n) = dv(end,~whichWon) + B-dv(end,whichWon); %
 
         hitBound(n) = 0;
         a = [1 -1];
@@ -248,14 +247,14 @@ for n = 1:ntrials
     else
         RT(n) = min([cRT1 cRT2])/1000;
         whichWon = [cRT1<=cRT2 cRT1>cRT2];
-        finalV(n) = dv(min([cRT1 cRT2]),~whichWon); % the not-whichWon is the loser
+        finalV(n) = dv(min([cRT1 cRT2]+timeToConf),~whichWon); % the not-whichWon is the loser
         hitBound(n) = 1;
         a = [1 -1];
         choice(n) = a(whichWon);
     end
-
+    
     diffV = abs((P.y+B)-finalV(n));
-    diffT = abs(R.t-RT(n));
+    diffT = abs(R.t-(RT(n)+timeToConf));
             
     switch confModel
         case 'evidence+time'
@@ -297,7 +296,7 @@ for n = 1:ntrials
             hold on; box off;
             xlabel('Time (ms)');
             ylabel('Accum. evidence');
-            ylim([-1.25 1.1].*B); xlim([0 duration]);
+            ylim([-1.25 1.5].*B); xlim([0 duration]);
             %             set(gca,'yTick',-0.5:0.5:2);
             set(gca,'xTick',0:500:2000);
             changeAxesFontSize(gca,18,18);
@@ -353,14 +352,15 @@ figure(1000); %yl = get(gca,'ylim');
 plot(1:length(vel),vel+yl(1),'k--','linew',0.5)
 end
 
-choice(choice==0) = sign(randn); % not needed under usual circumstances
+choice(choice==0) = sign(randn(sum(choice==0),1)); % not needed under usual circumstances
 
 % sanity check:
-pCorrect_total = (sum(choice==1 & hdg>0) + sum(choice==-1 & hdg<0)) / ntrials
+% pCorrect_total = (sum(choice==1 & hdg>0) + sum(choice==-1 & hdg<0)) / ntrials
 
+correct = (choice==1 & hdg>0) | (choice==-1 & hdg<0) | ...
+    (rand<0.5 & (hdg==0 | abs(hdg)<abs(delta)));
 
-
-
+pCorrect_total = sum(correct) / ntrials
 
 %% format data like the real expt
 
@@ -373,6 +373,10 @@ data.delta = delta;
 data.choice = choice;
 data.RT = RT; % already in seconds
 data.conf = conf;
+data.correct = correct;
+
+% data.correct = (data.choice==2 & data.heading>0) | (data.choice==1 & data.heading<0) | ...
+%     (rand<0.5 & (data.heading==0 | abs(data.heading)<abs(data.delta)));
 
 if conftask==2
     data.PDW=data.conf;
@@ -389,6 +393,7 @@ mods   = unique(data.modality);
 cohs   = unique(data.coherence); 
 deltas = unique(data.delta);
 hdgs   = unique(data.heading);
+% conftask = 2;
 
 % means per condition, logistic fits
 parsedData = dots3DMP_parseData(data,mods,cohs,deltas,hdgs,conftask,RTtask); 
@@ -397,52 +402,65 @@ parsedData = dots3DMP_parseData(data,mods,cohs,deltas,hdgs,conftask,RTtask);
 gfit = dots3DMP_fit_cgauss(data,mods,cohs,deltas,conftask,RTtask); 
 
 % plot it
-dots3DMP_plots_cgauss_byCoh(gfit,parsedData,mods,cohs,deltas,hdgs,conftask,RTtask)
+dots3DMP_plots(parsedData,mods,cohs,deltas,hdgs,conftask,RTtask)
+% dots3DMP_plots_cgauss_byCoh(gfit,parsedData,mods,cohs,deltas,hdgs,conftask,RTtask)
 
 
 %% now try fitting the fake data to recover the generative parameters
 
-options.errfun = 'dots3DMP_fit_2Dacc_err_nSims';
-% options.errfun = 'dots3DMP_fit_2Dacc_err_12params_nSims';
-options.nreps  = 1000;
+% options.errfun = 'dots3DMP_fit_2Dacc_err_nSims';
+options.errfun = 'dots3DMP_fit_2Dacc_err_sepbounds_noSim';
+% options.nreps  = 100;
+% options.confModel = 'evidence+time';
 
-options.confModel = 'evidence+time';
+
 % choose whether to run fit with interpolated headings
+
 % this is sort of redundant  for now, because model fits are
 % generated via Monte Carlo and are going to be too noisy for a nice
 % interpolated fit
-options.runInterpFit = 1; 
+
+% SJ 10/2021, no longer doing model fits via Monte Carlo
+options.runInterpFit = 0; 
 
 
 % options.fitMethod = 'fms'; %'fms','global','multi','pattern','bads'
-options.fitMethod = 'global';
+% options.fitMethod = 'global';
 % options.fitMethod = 'multi';
-% options.fitMethod = 'pattern';
+options.fitMethod = 'pattern';
 % options.fitMethod = 'bads';
 
 % initial guess (or hand-tuned params)
-kves    = 20;
-kvis    = [15 35];
-sigma   = [0.03 0.03 0.03];
-BVes    = 1;
-BVis    = 2;
-BComb   = 1.5;
-TndVes  = 300;
-TndVis  = 300;
-TndComb = 300;
-fixed   = [0 1 1 1 1 1 1 1 1 1 1 1];
-guess   = [kves kvis(1:2) sigma(1:3) BVes BVis BComb TndVes TndVis TndComb];
+kves    = 30;
+kvis    = [20 40];
+BVes    = 0.8;
+BVis    = 1.2;
+BComb   = 1.0;
+Tnd     = 300;
+Ttc     = 300; % time to confidence!
+
+% initial guess (or hand-tuned params)
+% kves    = 10;
+% kvis    = [10 10];
+% BVes    = 1;
+% BVis    = 1;
+% BComb   = 1;
+% Tnd     = 500;
+
+fixed   = [0 1 1 1 1 1 1 1];
+guess   = [kves kvis(1:2) BVes BVis BComb Ttc Tnd];
 
 if conftask==2 % PDW
-    theta = 0.6;
+    theta = 0.8;
 
-    fixed   = [0 1 1 1 1 1 1 1 1 1 1 1 1];
+    fixed   = [0 1 1 1 1 1 1 1 1];
+
     guess   = [guess theta];
 end
 
 % ************************************
-% set all fixed to 1 for hand-tuning:
-% fixed(:)=1;
+% set all fixed to 1 for hand-tuning, or 0 for full fit
+fixed(:)=0;
 % ************************************
 
 % plot error trajectory (prob doesn't work with parallel fit methods)
@@ -455,6 +473,8 @@ if options.ploterr, options.fh = 400; end
 [X, err_final, fit, fitInterp] = dots3DMP_fitDDM(data,options,guess,fixed);
 
 % plot it!
-%dots3DMP_plots_fit(data,fitInterp,conftask,RTtask)
+% fitInterp = fit;
+% dots3DMP_plots_fit(data,fitInterp,conftask,RTtask) % needs UPDATING!
+
 
 end

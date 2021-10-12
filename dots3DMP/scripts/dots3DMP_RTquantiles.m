@@ -17,6 +17,8 @@ uhdg  = unique(abs(data.heading));
 
 mcols = {'Greys','Reds','Reds','Blues','Blues','Purples'};
 
+xRange = prctile(data.RT,[10 90]);
+
 for c = 1:size(ucond,1)+1 % the extra one is for all conditions pooled
     
     cmap = flipud(cbrewer('seq',mcols{c},length(uhdg)*2));
@@ -66,7 +68,7 @@ for c = 1:size(ucond,1)+1 % the extra one is for all conditions pooled
         g(h) = errorbar(squeeze(X(c,h,:)),squeeze(Y(c,h,:)),squeeze(Ye(c,h,:)),'color',cmap(h,:),'LineWidth', 2); hold on;
 
         set(g(h),'MarkerSize',10,'MarkerFaceColor',cmap(h,:));
-        xlim([0.3 1.5]);
+        xlim(xRange);
         
         if correct == -1, ylim([.35 .95]); % all trials
         else, ylim([0 1]); 
@@ -93,7 +95,7 @@ for c = 1:size(ucond,1)+1 % the extra one is for all conditions pooled
             g(h) = errorbar(squeeze(X(c,h,:)),squeeze(Yc(c,h,:)),squeeze(Yce(c,h,:)),'color',cmap(h,:),'LineWidth', 2); hold on;
             
             set(g(h),'MarkerSize',10,'MarkerFaceColor',cmap(h,:));
-            xlim([0.3 1.5]);
+            xlim(xRange);
             ylim([0.35 1])
             
             % set(gca,'Xtick',-2:1:2,'Ytick',-2:1:2);

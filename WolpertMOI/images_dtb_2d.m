@@ -93,7 +93,6 @@ catch
     P.lo.mean_t = P.lo.pdf_t * R.t'  ./P.lo.p;
     
 end
-% can we get mean confidence here too?
 
 P.y=g;
 P.dy=dg;

@@ -57,12 +57,14 @@ if conftask==2
     confErrSE = sqrt( (confErr.*(1-confErr)) ./ nErr );
 end
 
+xRange = [min([RTCorr(:);RTErr(:)]) max([RTCorr(:);RTErr(:)])] .* [0.95 1.05];
+
 figure('color','white','position',[300 300 400 400]);
 subplot(221); hold on
 for c = 1:nconds
     errorbar(uhdg,confCorr(:,c),confCorrSE(:,c),'color',mcols(c,:),'linestyle','-.','linew',1.5,'marker','o');
 end
-xtickangle(45); ylabel('P(High Bet');
+xtickangle(45); ylabel('P(High Bet)');
 set(gca,'xtick',uhdg,'tickdir','out');
 ylim([0 1])
 try changeAxesFontSize(gca,12,12); offsetAxes; catch; end
@@ -72,7 +74,7 @@ subplot(223); hold on
 for c = 1:nconds
     errorbar(uhdg,confErr(:,c),confErrSE(:,c),'color',mcols(c,:),'linestyle','-','linew',1.5,'marker','o');
 end
-xlabel('heading (deg)'); xtickangle(45); ylabel('P(High Bet');
+xlabel('heading (deg)'); xtickangle(45); ylabel('P(High Bet)');
 set(gca,'xtick',uhdg,'tickdir','out');
 ylim([0 1])
 try changeAxesFontSize(gca,12,12); offsetAxes; catch; end
@@ -81,7 +83,7 @@ subplot(222); hold on
 for c = 1:nconds
     errorbar(RTCorr(:,c),confCorr(:,c),confCorrSE(:,c),'color',mcols(c,:),'linestyle','-','linew',1.5,'marker','o');
 end
-axis([0.3 1.0 0 1])
+axis([xRange 0 1])
 try changeAxesFontSize(gca,12,12); offsetAxes; catch; end
 
 subplot(224); hold on
@@ -89,7 +91,7 @@ for c = 1:nconds
     errorbar(RTErr(:,c),confErr(:,c),confErrSE(:,c),'color',mcols(c,:),'linestyle','-','linew',1.5,'marker','o');
 end
 xlabel('RT (s)')
-axis([0.3 1.0 0 1])
+axis([xRange 0 1])
 try changeAxesFontSize(gca,12,12); offsetAxes; catch; end
 
 
