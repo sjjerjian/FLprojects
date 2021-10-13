@@ -13,6 +13,7 @@ close all
 RTtask = 1;
 conftask = 2; % 1 - sacc endpoint, 2 - PDW
 confModel = 'evidence+time'; % 'evidence+time','evidence_only','time_only'
+useVelAcc = 1;
 
 plotExampleTrials = 0;
 
@@ -20,7 +21,7 @@ nreps = 1000; % number of repetitions of each unique trial type
             % start small to verify it's working, then increase
             % (ntrials depends on num unique trial types)
 
-cohs = [0.3 0.8]; % visual coherence levels (these are really just labels, since k's are set manually)
+cohs = [0.4 0.8]; % visual coherence levels (these are really just labels, since k's are set manually)
 % hdgs = [-10 -5 -2.5 -1.25 0 1.25 2.5 5 10]; % heading angles
 % hdgs = [-10 -3.5 -1.25 1.25 3.5 10]; % heading angles
 hdgs = [-12 -6 -3 -1.5 0 1.5 3 6 12];
@@ -37,13 +38,14 @@ else
 end
 duration = duration + timeToConf;
 
-kves  = 25;
-kvis  = [15 40];
-sigmaVes = 0.025;
+kmult = 65; % try to reduce number of params
+kvis  = kmult*cohs; % [20 40];
+kves  = mean(kvis); % for now, assume straddling
+sigmaVes = 0.03;
 sigmaVis = [0.03 0.025];
-BVes     = 0.9; % don't accept negative bound heights
-BVis     = 1.5; % fixed across cohs
-BComb    = 1.1;
+BVes     = 0.8; % don't accept negative bound heights
+BVis     = 1.2; % fixed across cohs
+BComb    = 1.0;
 muTnd    = 300; % fixed across mods SJ 10/11/2021
 
 sdTnd = 60; % fixed SD
@@ -76,6 +78,8 @@ RComb.lose_flag = 1;
 RComb.plotflag = 0; % 1 = plot, 2 = plot and export_fig
 
 PComb =  images_dtb_2d(RComb);
+
+
 % create acceleration and velocity profiles (arbitrary for now)
 % SJ 04/2020
 % Hou et al. 2019, peak vel = 0.37m/s, SD = 210ms
@@ -91,12 +95,17 @@ acc = gradient(vel);
 % acc = gradient(vel)*1000; % multiply by 1000 to get from m/s/ms to m/s/s
 
 % normalize
-vel = vel./max(vel);
-acc = abs(acc./max(acc)); % (and abs)
+vel = vel/mean(vel);
+acc = abs(acc)/mean(abs(acc)); % (and abs)
+
+if useVelAcc==0
+    vel = ones(size(vel))*mean(vel);
+    acc = vel;
+end
 
 origParams.kves = kves;
 origParams.kvis = kvis;
-% origParams.knoise = knoise;
+origParams.kmult = kmult;
 origParams.sigmaVes = sigmaVes;
 origParams.sigmaVis = sigmaVis;
 origParams.BVes = BVes;
@@ -420,7 +429,7 @@ options.errfun = 'dots3DMP_fit_2Dacc_err_sepbounds_noSim';
 % interpolated fit
 
 % SJ 10/2021, no longer doing model fits via Monte Carlo
-options.runInterpFit = 0; 
+options.runInterpFit = 1; 
 
 
 options.fitMethod = 'fms'; %'fms','global','multi','pattern','bads'
@@ -431,7 +440,8 @@ options.fitMethod = 'fms'; %'fms','global','multi','pattern','bads'
 
 % initial guess (or hand-tuned params)
 kves    = 25;
-kvis    = [15 40];
+kmult   = 50;
+kvis    = kmult.*cohs;
 BVes    = 0.9;
 BVis    = 1.5;
 BComb   = 1.1;
@@ -464,6 +474,7 @@ fixed(:)=1;
 
 % plot error trajectory (prob doesn't work with parallel fit methods)
 options.ploterr  = 1;
+options.dummyRun = 0;
 options.RTtask   = RTtask;
 options.conftask = conftask; % 1 - sacc endpoint, 2 - PDW
 
@@ -472,7 +483,6 @@ if options.ploterr, options.fh = 400; end
 [X, err_final, fit, fitInterp] = dots3DMP_fitDDM(data,options,guess,fixed);
 
 % plot it!
-fitInterp = fit;
-dots3DMP_plots_fit(Data,fitInterp,mods,cohs,deltas,hdgs,conftask,RTtask,fitgauss) % NEEDS CLEANUP
+dots3DMP_plots_fit_byCoh(data,fitInterp,conftask,RTtask,0) % NEEDS CLEANUP
 
 end
