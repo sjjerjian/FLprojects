@@ -28,10 +28,10 @@ deltas = [-3 0 3]; % conflict angle; positive means vis to the right
 mods = [1 2 3]; % stimulus modalities: ves, vis, comb
 duration = 2000; % stimulus duration (ms)
 
-theta = 0.8; % threshold for high bet in logOdds, ignored if conftask==1
+theta = 0.9; % threshold for high bet in logOdds, ignored if conftask==1
 
 if conftask==2
-    timeToConf = 300; % additional processing time for confidence
+    timeToConf = 350; % additional processing time for confidence
 else
     timeToConf = 0;
 end
@@ -423,10 +423,10 @@ options.errfun = 'dots3DMP_fit_2Dacc_err_sepbounds_noSim';
 options.runInterpFit = 0; 
 
 
-options.fitMethod = 'fms'; %'fms','global','multi','pattern','bads'
+% options.fitMethod = 'fms'; %'fms','global','multi','pattern','bads'
 % options.fitMethod = 'global';
 % options.fitMethod = 'multi';
-% options.fitMethod = 'pattern';
+options.fitMethod = 'pattern';
 % options.fitMethod = 'bads';
 
 % initial guess (or hand-tuned params)
@@ -472,7 +472,6 @@ if options.ploterr, options.fh = 400; end
 [X, err_final, fit, fitInterp] = dots3DMP_fitDDM(data,options,guess,fixed);
 
 % plot it!
-fitInterp = fit;
-dots3DMP_plots_fit(Data,fitInterp,mods,cohs,deltas,hdgs,conftask,RTtask,fitgauss) % NEEDS CLEANUP
+% dots3DMP_plots_fit(data,fitInterp,conftask,RTtask) % needs UPDATING!
 
 end
