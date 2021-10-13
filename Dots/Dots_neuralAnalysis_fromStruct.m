@@ -1,24 +1,13 @@
 % NEW: load/plot data from Miguel struct
 
-
-%%
-
-
-%%
-
-
-%%
-
-
-%%
-
-
 clear
 close all
 
 % load PrelimDataStruct
 load DataStruct_10-26-2020_12-18-2020
 
+
+%%
 plotflag = 0;
 
 extRaster = [50 150]; % extend raster this much before dots onset (1) and after dots offset (2)

@@ -44,6 +44,7 @@ sdTnd = 60; % fixed SD
 % *three* levels of reliability (ves, vis-low, vis-high) hence k is the
 % mean
 % still need separate logOddsMaps if bound heights are different
+
 k = mean([kves kvis]);
 
 RVes.t = 0.001:0.001:duration/1000;
@@ -54,6 +55,8 @@ RVes.plotflag = 0; % 1 = plot, 2 = plot and export_fig
 PVesConf =  images_dtb_2d(RVes);
 VesLogOdds = PVesConf.logOddsCorrMap;
 
+PVes =  images_dtb_2d(RVes);
+
 RVis.t = 0.001:0.001:duration/1000;
 RVis.Bup = BVis;
 RVis.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
@@ -61,6 +64,8 @@ RVis.lose_flag = 1;
 RVis.plotflag = 0; % 1 = plot, 2 = plot and export_fig
 PVisConf =  images_dtb_2d(RVis);
 VisLogOdds = PVisConf.logOddsCorrMap;
+
+PVis =  images_dtb_2d(RVis);
 
 RComb.t = 0.001:0.001:duration/1000;
 RComb.Bup = BComb;
@@ -112,6 +117,7 @@ for c = 1:length(cohs)
 end
 
 
+PComb =  images_dtb_2d(RComb);
 
 %%
 
@@ -162,6 +168,7 @@ for d = 1:length(deltas)
         % SJ 10-11-2021 replaced redundant Monte Carlo simulation with computations
         % from method of images 
         % for choices, P.up/lo.p contains probabilities of bound hit
+
         
         if hdgs(h)<0
             % if hdg is leftward, then pRight is p(incorrect response)
@@ -257,7 +264,6 @@ elseif options.conftask == 2 % PDW
     PDW = logical(data.conf);
     LL_conf = (nansum(log(pHigh_model(PDW))) + nansum(log(1-pHigh_model(~PDW))));   
 end
-
 
 err = -(LL_choice + LL_conf + LL_RT); % negate for minimization
 % err = -(LL_choice + LL_conf);

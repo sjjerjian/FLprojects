@@ -46,7 +46,7 @@ load([folder file], 'data');
 
 % clean up RT variable for mixed RT/non-RT datasets
 if isfield(data,'RT')
-    data.RT(data.RT>1.5)=nan; % anything over 1.5s is almost certainly invalid,
+    data.RT(data.RT>2)=nan; % anything over 2s is almost certainly invalid,
                               % and this also gets rid of the infs
     data.RT(data.RT<0.01)=nan; % zeroes too
 else
@@ -99,6 +99,12 @@ if exist('maxTrialNum','var')
     end
 end
 
+% TEMP: also remove non-PDW trials
+removethese = isnan(data.PDW) | isnan(data.RT);
+fnames = fieldnames(data);
+for F = 1:length(fnames)
+    eval(['data.' fnames{F} '(removethese) = [];']);
+end
 
 %% parse data
 
@@ -138,7 +144,7 @@ Dots_parse
 Dots_plot
 
 
-% % for nicer looking graphs:
+%% for nicer looking graphs:
 Dots_plot_forTalk
 
 

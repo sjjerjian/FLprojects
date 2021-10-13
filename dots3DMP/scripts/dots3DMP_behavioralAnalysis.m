@@ -34,7 +34,7 @@ switch subject
         
     case 'simul' % load simulated data
 
-        load('2DAccSim_conftask2_162000trs.mat')
+        load('2DAccSim_conftask2_8100trs.mat')
         % conftask & RTtask should already be saved in file
 end
 
