@@ -13,6 +13,7 @@ close all
 RTtask = 1;
 conftask = 2; % 1 - sacc endpoint, 2 - PDW
 confModel = 'evidence+time'; % 'evidence+time','evidence_only','time_only'
+useVelAcc = 1;
 
 plotExampleTrials = 0;
 
@@ -20,7 +21,7 @@ nreps = 1000; % number of repetitions of each unique trial type
             % start small to verify it's working, then increase
             % (ntrials depends on num unique trial types)
 
-cohs = [0.3 0.8]; % visual coherence levels (these are really just labels, since k's are set manually)
+cohs = [0.4 0.8]; % visual coherence levels (these are really just labels, since k's are set manually)
 % hdgs = [-10 -5 -2.5 -1.25 0 1.25 2.5 5 10]; % heading angles
 % hdgs = [-10 -3.5 -1.25 1.25 3.5 10]; % heading angles
 hdgs = [-12 -6 -3 -1.5 0 1.5 3 6 12];
@@ -37,28 +38,30 @@ else
 end
 duration = duration + timeToConf;
 
-kves  = 25;
-kvis  = [15 40];
-sigmaVes = 0.025;
-sigmaVis = [0.03 0.025];
-BVes     = 0.9; % don't accept negative bound heights
-BVis     = 1.5; % fixed across cohs
-BComb    = 1.1;
-muTnd    = 300; % fixed across mods SJ 10/11/2021
+kmult = 65; % try to reduce number of params
+kvis  = kmult*cohs; % [20 40];
+kves  = mean(kvis); % for now, assume straddling
+knoise = [0.07 0.07];
+sigmaVes = 0.03;
+sigmaVis = [0.03 0.03];
+BVes     = 0.8;
+BVis     = 1.2; % fixed across cohs
+BComb    = 1.0;
+muTnd    = 300; % fixed across mods SJ 10/11/2021 [unlike Drugo
 
 sdTnd = 60; % fixed SD
 
 % assume the mapping is based on an equal amount of experience with the 
 % *three* levels of reliability (ves, vis-low, vis-high) hence k and sigma
-% are their averages
+% are their averages, for the purpose of expected logOddsCorr
 k = mean([kves kvis]);
 
+% try just one set of MOI calculations,
 RVes.t = 0.001:0.001:duration/1000;
 RVes.Bup = BVes;
 RVes.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
 RVes.lose_flag = 1;
 RVes.plotflag = 0; % 1 = plot, 2 = plot and export_fig
-
 PVes =  images_dtb_2d(RVes);
 
 RVis.t = 0.001:0.001:duration/1000;
@@ -66,7 +69,6 @@ RVis.Bup = BVis;
 RVis.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
 RVis.lose_flag = 1;
 RVis.plotflag = 0; % 1 = plot, 2 = plot and export_fig
-
 PVis =  images_dtb_2d(RVis);
 
 RComb.t = 0.001:0.001:duration/1000;
@@ -74,13 +76,20 @@ RComb.Bup = BComb;
 RComb.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
 RComb.lose_flag = 1;
 RComb.plotflag = 0; % 1 = plot, 2 = plot and export_fig
-
 PComb =  images_dtb_2d(RComb);
+
+
+R.t = 0.001:0.001:duration/1000;
+R.Bup = BVes;
+R.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
+R.lose_flag = 1;
+R.plotflag = 0; % 1 = plot, 2 = plot and export_fig
+P =  images_dtb_2d(R);
+
 % create acceleration and velocity profiles (arbitrary for now)
 % SJ 04/2020
 % Hou et al. 2019, peak vel = 0.37m/s, SD = 210ms
 % 07/2020 lab settings...160cm in 1.3s, sigma=0.14
-
 ampl = 0.16; % movement in metres
 pos = normcdf(1:duration,duration/2,0.14*duration)*ampl;
 vel = gradient(pos)*1000; % metres/s
@@ -91,8 +100,14 @@ acc = gradient(vel);
 % acc = gradient(vel)*1000; % multiply by 1000 to get from m/s/ms to m/s/s
 
 % normalize
-vel = vel./max(vel);
-acc = abs(acc./max(acc)); % (and abs)
+vel = vel/mean(vel);
+acc = abs(acc)/mean(abs(acc)); % (and abs)
+
+if useVelAcc==0
+    vel = ones(size(vel))*mean(vel);
+    acc = vel;
+end
+
 
 origParams.kves = kves;
 origParams.kvis = kvis;
@@ -154,26 +169,19 @@ for n = 1:ntrials
 
     switch modality(n)
         case 1
-%             Tnd = (muTndVes + randn.*sdTnd)/1000;
-            B = BVes; P = PVes; R = RVes;
-
+            B = BVes; P = P; R = R;
             mu = acc .* kves * sind(hdg(n)) / 1000; % mean of momentary evidence
                 % (I'm guessing drift rate in images_dtb is per second, hence div by 1000)
             s = [sigmaVes sigmaVes]; % standard deviaton vector (see below)
         case 2
-%             Tnd = (muTndVis + randn.*sdTnd)/1000;
             B = BVis; P = PVis; R = RVis;
-            
             mu = vel .* kvis(cohs==coh(n)) * sind(hdg(n)) / 1000;
             s = [sigmaVis(cohs==coh(n)) sigmaVis(cohs==coh(n))];
         case 3
-%             Tnd = (muTndComb + randn.*sdTnd)/1000;
             B = BComb; P = PComb; R = RComb;
-            
             % positive delta defined as ves to the left, vis to the right
             muVes = acc .* kves               * sind(hdg(n)-delta(n)/2) / 1000;
             muVis = vel .* kvis(cohs==coh(n)) * sind(hdg(n)+delta(n)/2) / 1000;
-
             % optimal weights (Drugo et al.)
             wVes = sqrt( kves^2 / (kvis(cohs==coh(n))^2 + kves^2) );
             wVis = sqrt( kvis(cohs==coh(n))^2 / (kvis(cohs==coh(n))^2 + kves^2) );
@@ -198,8 +206,7 @@ for n = 1:ntrials
             s = [sigmaComb sigmaComb];
     end
 
-%     Mu = [mu,-mu]; % mean vector for 2D DV
-    Mu = [mu; -mu]';
+    Mu = [mu; -mu]'; % mean vector for 2D DV
 
     % convert correlation to covariance matrix
     V = diag(s)*S*diag(s);
@@ -347,18 +354,15 @@ end
 toc
 
 if plotExampleTrials
-figure(1000); %yl = get(gca,'ylim');
-plot(1:length(vel),vel+yl(1),'k--','linew',0.5)
+    figure(1000); %yl = get(gca,'ylim');
+    plot(1:length(vel),vel+yl(1),'k--','linew',0.5)
 end
 
 choice(choice==0) = sign(randn(sum(choice==0),1)); % not needed under usual circumstances
 
 % sanity check:
-% pCorrect_total = (sum(choice==1 & hdg>0) + sum(choice==-1 & hdg<0)) / ntrials
-
 correct = (choice==1 & hdg>0) | (choice==-1 & hdg<0) | ...
     (rand<0.5 & (hdg==0 | abs(hdg)<abs(delta)));
-
 pCorrect_total = sum(correct) / ntrials
 
 %% format data like the real expt
@@ -382,11 +386,12 @@ if conftask==2
 end
 subject = 'simul';
 
-cd('/Users/stevenjerjian/Desktop/FetschLab/Analysis')
-save(sprintf('2DAccSim_conftask%d_%dtrs.mat',conftask,ntrials),'data','cohs','deltas','hdgs','mods','origParams','RTtask','conftask','subject')
+% cd('/Users/stevenjerjian/Desktop/FetschLab/Analysis')
+% cd('/Users/stevenjerjian/Desktop/FetschLab/Analysis')
+% save(sprintf('2DAccSim_conftask%d_%dtrs.mat',conftask,ntrials),'data','cohs','deltas','hdgs','mods','origParams','RTtask','conftask','subject')
 
 %% plots
-if 0
+% if 0
     
 mods   = unique(data.modality); 
 cohs   = unique(data.coherence); 
@@ -405,13 +410,81 @@ dots3DMP_plots(parsedData,mods,cohs,deltas,hdgs,conftask,RTtask)
 % dots3DMP_plots_cgauss_byCoh(gfit,parsedData,mods,cohs,deltas,hdgs,conftask,RTtask)
 
 
-%% now try fitting the fake data to recover the generative parameters
 
-% options.errfun = 'dots3DMP_fit_2Dacc_err_nSims';
-options.errfun = 'dots3DMP_fit_2Dacc_err_sepbounds_noSim';
-% options.nreps  = 100;
-% options.confModel = 'evidence+time';
 
+ 
+% %% now try fitting the fake data to recover the generative parameters
+% 
+% % options.errfun = 'dots3DMP_fit_2Dacc_err_nSims';
+% options.errfun = 'dots3DMP_fit_2Dacc_err_sepbounds_noSim';
+% % options.nreps  = 100;
+% % options.confModel = 'evidence+time';
+% 
+% 
+% % choose whether to run fit with interpolated headings
+% 
+% % this is sort of redundant  for now, because model fits are
+% % generated via Monte Carlo and are going to be too noisy for a nice
+% % interpolated fit
+% 
+% % SJ 10/2021, no longer doing model fits via Monte Carlo
+% options.runInterpFit = 0; 
+% 
+% 
+% % options.fitMethod = 'fms'; %'fms','global','multi','pattern','bads'
+% % options.fitMethod = 'global';
+% % options.fitMethod = 'multi';
+% options.fitMethod = 'pattern';
+% % options.fitMethod = 'bads';
+% 
+% % initial guess (or hand-tuned params)
+% kves    = 30;
+% kvis    = [20 40];
+% BVes    = 0.8;
+% BVis    = 1.2;
+% BComb   = 1.0;
+% Tnd     = 300;
+% Ttc     = 300; % time to confidence!
+% 
+% % initial guess (or hand-tuned params)
+% % kves    = 10;
+% % kvis    = [10 10];
+% % BVes    = 1;
+% % BVis    = 1;
+% % BComb   = 1;
+% % Tnd     = 500;
+% 
+% fixed   = [0 1 1 1 1 1 1 1];
+% guess   = [kves kvis(1:2) BVes BVis BComb Ttc Tnd];
+% 
+% if conftask==2 % PDW
+%     theta = 0.8;
+% 
+%     fixed   = [0 1 1 1 1 1 1 1 1];
+% 
+%     guess   = [guess theta];
+% end
+% 
+% % ************************************
+% % set all fixed to 1 for hand-tuning, or 0 for full fit
+% fixed(:)=0;
+% % ************************************
+% 
+% % plot error trajectory (prob doesn't work with parallel fit methods)
+% options.ploterr  = 1;
+% options.RTtask   = RTtask;
+% options.conftask = conftask; % 1 - sacc endpoint, 2 - PDW
+% 
+% if options.ploterr, options.fh = 400; end
+% 
+% [X, err_final, fit, fitInterp] = dots3DMP_fitDDM(data,options,guess,fixed);
+% 
+% % plot it!
+% % fitInterp = fit;
+% % dots3DMP_plots_fit(data,fitInterp,conftask,RTtask) % needs UPDATING!
+% 
+% 
+% % end
 
 % choose whether to run fit with interpolated headings
 
