@@ -6,8 +6,9 @@ load('/Users/chris/Documents/MATLAB/Fall2020_Dataset.mat')
 dbstop if error
 
 
+%to do
+% split SU vs MU
 
-% SU vs MU
 % remove dataCell{1}.Exp.PLDAPS.TwoPDWs==0
 
 

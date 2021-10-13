@@ -56,7 +56,6 @@ sdTnd = 60; % fixed SD
 % are their averages, for the purpose of expected logOddsCorr
 k = mean([kves kvis]);
 
-% try just one set of MOI calculations,
 RVes.t = 0.001:0.001:duration/1000;
 RVes.Bup = BVes;
 RVes.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
