@@ -16,7 +16,7 @@ confModel = 'evidence+time'; % 'evidence+time','evidence_only','time_only'
 
 plotExampleTrials = 0;
 
-nreps = 2000; % number of repetitions of each unique trial type
+nreps = 1000; % number of repetitions of each unique trial type
             % start small to verify it's working, then increase
             % (ntrials depends on num unique trial types)
 
@@ -28,23 +28,22 @@ deltas = [-3 0 3]; % conflict angle; positive means vis to the right
 mods = [1 2 3]; % stimulus modalities: ves, vis, comb
 duration = 2000; % stimulus duration (ms)
 
-theta = 0.9; % threshold for high bet in logOdds, ignored if conftask==1
+theta = 0.8; % threshold for high bet in logOdds, ignored if conftask==1
 
 if conftask==2
-    timeToConf = 350; % additional processing time for confidence
+    timeToConf = 300; % additional processing time for confidence
 else
     timeToConf = 0;
 end
 duration = duration + timeToConf;
 
-kves  = 30;
-kvis  = [20 40];
-knoise = [0.07 0.07];
-sigmaVes = 0.03;
-sigmaVis = [0.03 0.03];
-BVes     = 0.8; % don't accept negative bound heights
-BVis     = 1.2; % fixed across cohs
-BComb    = 1.0;
+kves  = 25;
+kvis  = [15 40];
+sigmaVes = 0.025;
+sigmaVis = [0.03 0.025];
+BVes     = 0.9; % don't accept negative bound heights
+BVis     = 1.5; % fixed across cohs
+BComb    = 1.1;
 muTnd    = 300; % fixed across mods SJ 10/11/2021
 
 sdTnd = 60; % fixed SD
@@ -424,18 +423,18 @@ options.errfun = 'dots3DMP_fit_2Dacc_err_sepbounds_noSim';
 options.runInterpFit = 0; 
 
 
-% options.fitMethod = 'fms'; %'fms','global','multi','pattern','bads'
+options.fitMethod = 'fms'; %'fms','global','multi','pattern','bads'
 % options.fitMethod = 'global';
 % options.fitMethod = 'multi';
-options.fitMethod = 'pattern';
+% options.fitMethod = 'pattern';
 % options.fitMethod = 'bads';
 
 % initial guess (or hand-tuned params)
-kves    = 30;
-kvis    = [20 40];
-BVes    = 0.8;
-BVis    = 1.2;
-BComb   = 1.0;
+kves    = 25;
+kvis    = [15 40];
+BVes    = 0.9;
+BVis    = 1.5;
+BComb   = 1.1;
 Tnd     = 300;
 Ttc     = 300; % time to confidence!
 
@@ -460,7 +459,7 @@ end
 
 % ************************************
 % set all fixed to 1 for hand-tuning, or 0 for full fit
-fixed(:)=0;
+fixed(:)=1;
 % ************************************
 
 % plot error trajectory (prob doesn't work with parallel fit methods)
@@ -473,8 +472,7 @@ if options.ploterr, options.fh = 400; end
 [X, err_final, fit, fitInterp] = dots3DMP_fitDDM(data,options,guess,fixed);
 
 % plot it!
-% fitInterp = fit;
-% dots3DMP_plots_fit(data,fitInterp,conftask,RTtask) % needs UPDATING!
-
+fitInterp = fit;
+dots3DMP_plots_fit(Data,fitInterp,mods,cohs,deltas,hdgs,conftask,RTtask,fitgauss) % NEEDS CLEANUP
 
 end

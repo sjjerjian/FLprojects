@@ -14,7 +14,7 @@ cd /Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data/dataStructs
 
 %% select subject, load the data
 
-subject = 'lucio';
+subject = 'simul';
 
 switch subject
     
@@ -34,7 +34,7 @@ switch subject
         
     case 'simul' % load simulated data
 
-        load('2DAccSim_conftask2_8100trs.mat')
+        load('2DAccSim_conftask2_162000trs.mat')
         % conftask & RTtask should already be saved in file
 end
 

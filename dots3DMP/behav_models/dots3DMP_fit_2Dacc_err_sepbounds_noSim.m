@@ -30,15 +30,16 @@ ttc      = param(8);
 
 try theta = param(9); catch; end % only relevant for PDW
 
-paramNames = {'kves','kvisLow','kvisHigh','BVes','BVis','BComb','muTnd','T2Conf','theta'};
+paramNames = {'kves','kvisLo','kvisHi','BVes','BVis','BComb','muTnd','T2Conf','theta'};
 
 duration = duration + ttc;
 
 sdTnd = 60; % fixed SD
 
-% assume the mapping is based on an equal amount of experience with the 
-% *three* levels of reliability (ves, vis-low, vis-high) hence k and sigma
-% are their averages
+% assume the mapping for confidence is based on an equal amount of experience with the 
+% *three* levels of reliability (ves, vis-low, vis-high) hence k is the
+% mean
+% still need separate logOddsMaps if bound heights are different
 k = mean([kves kvis]);
 
 RVes.t = 0.001:0.001:duration/1000;
@@ -46,24 +47,52 @@ RVes.Bup = BVes;
 RVes.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
 RVes.lose_flag = 1;
 RVes.plotflag = 0; % 1 = plot, 2 = plot and export_fig
-
-PVes =  images_dtb_2d(RVes);
+PVesConf =  images_dtb_2d(RVes);
+VesLogOdds = PVesConf.logOddsCorrMap;
 
 RVis.t = 0.001:0.001:duration/1000;
 RVis.Bup = BVis;
 RVis.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
 RVis.lose_flag = 1;
 RVis.plotflag = 0; % 1 = plot, 2 = plot and export_fig
-
-PVis =  images_dtb_2d(RVis);
+PVisConf =  images_dtb_2d(RVis);
+VisLogOdds = PVisConf.logOddsCorrMap;
 
 RComb.t = 0.001:0.001:duration/1000;
 RComb.Bup = BComb;
 RComb.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
 RComb.lose_flag = 1;
 RComb.plotflag = 0; % 1 = plot, 2 = plot and export_fig
+PCombConf =  images_dtb_2d(RComb);
+CombLogOdds = PCombConf.logOddsCorrMap;
 
-PComb =  images_dtb_2d(RComb);
+% now compute the P we need for model choices and RTs (modality-specific)
+
+RVes.t = 0.001:0.001:duration/1000;
+RVes.Bup = BVes;
+RVes.drift = kves * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
+RVes.lose_flag = 1;
+RVes.plotflag = 0; % 1 = plot, 2 = plot and export_fig
+PVes =  images_dtb_2d(RVes);
+
+for c = 1:length(cohs)
+    RVis.t = 0.001:0.001:duration/1000;
+    RVis.Bup = BVis;
+    RVis.drift = kvis(c) * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
+    RVis.lose_flag = 1;
+    RVis.plotflag = 0; % 1 = plot, 2 = plot and export_fig
+    PVis{c} =  images_dtb_2d(RVis);
+    
+    kcomb(c) = sqrt(kves.^2 + kvis(c).^2);
+    RComb.t = 0.001:0.001:duration/1000;
+    RComb.Bup = BComb;
+    RComb.drift = kcomb(c) * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
+    RComb.lose_flag = 1;
+    RComb.plotflag = 0; % 1 = plot, 2 = plot and export_fig
+    PComb{c} =  images_dtb_2d(RComb);
+end
+
+
 
 %%
 
@@ -103,15 +132,14 @@ for d = 1:length(deltas)
         % and then assigned to the actual data trials of each condition in pRight_model for
         % log likelihood calculation
         
-        if m==1,     Ptemp = PVes; 
-        elseif m==2, Ptemp = PVis; 
-        elseif m==3, Ptemp = PComb; 
+        if m==1,     Ptemp = PVes;  logOddsMap = VesLogOdds; %k = kves; B = BVes;
+        elseif m==2, Ptemp = PVis{c};  logOddsMap = VisLogOdds; %k = kvis(c); B = BVis;
+        elseif m==3, Ptemp = PComb{c}; logOddsMap = CombLogOdds; %k = kcomb(c); B = BComb;
         end
         
         % SJ 10-11-2021 replaced redundant Monte Carlo simulation with computations
         % from method of images 
         % for choices, P.up/lo.p contains probabilities of bound hit
-        % fo
         
         if hdgs(h)<0
             % if hdg is leftward, then pRight is p(incorrect response)
@@ -119,6 +147,9 @@ for d = 1:length(deltas)
         else
             pRight_model(Jdata) = Ptemp.up.p(uh);  
         end
+        
+        % Palmer 2005 method
+%         pRight_model(Jdata) = 1 ./ (1 + exp(-2*k*B*sind(hdgs(h))));
         
         
         % RT/Conf Mean and SE from data, Conf Mean from model
@@ -131,13 +162,11 @@ for d = 1:length(deltas)
         % for now doing randsample from logOdds Map according to p, then
         % compare to theta below
         try
-            confSamples = randsample(Ptemp.logOddsCorrMap(:),N,true,conf_distr(:));
+            confSamples = randsample(logOddsMap(:),N,true,conf_distr(:));
         catch
             keyboard
         end
-        % use only correct trials + all zero heading trials (for RT and
-        % SEP)
-        
+      
         
         nCor(m,c,d,h) = sum(Jdata & usetrs_data);
         
@@ -202,9 +231,9 @@ elseif options.conftask == 2 % PDW
 end
 
 
-% err = -(LL_choice + LL_conf + LL_RT); % negate for minimization
+err = -(LL_choice + LL_conf + LL_RT); % negate for minimization
 % err = -(LL_choice + LL_conf);
-err = -LL_choice;
+% err = -LL_choice;
 
 fit.pRight_model = pRight_model;
 if options.conftask==1
