@@ -6,10 +6,16 @@ load('/Users/chris/Documents/MATLAB/Fall2020_Dataset.mat')
 dbstop if error
 
 
-% prelims
+%to do
+% split SU vs MU
+
+% remove dataCell{1}.Exp.PLDAPS.TwoPDWs==0
+
+
+% prelims dataCell{1}.Exp.unitType
 
 plotTuningFits = 0;
-plotEverythingElse = 0;
+plotEverythingElse = 1;
 
 excludes = [4,5];
 
@@ -62,14 +68,14 @@ useRemap = ...
 29,4];
 
 extRaster = [50 150]; % extend raster this much before dots onset (1) and after dots offset (2)
-latency = [60 0]; % cutoffs for spike rate [vs dots onset (1) and offset (2)]; latency(2) must be < extRaster(2)!
+latency = [60 20]; % cutoffs for spike rate [post dots onset (1) and post dots offset (2)]; latency(2) must be < extRaster(2)!
 convKernel = fspecial('average', [1 40]); % N ms wide boxcar (acausal, centered)
 
 % some manual plotting lims
 psth_xlim1 = 400;
 psth_xlim2 = [-300 100];
 
-maxCoh = 0; % maximum coherence for inclusion in CP/confP and choice/conf-cond PSTH
+maxCoh = 0; % maximum coherence for inclusion in CP+confP and choice/conf-cond PSTH
 % should be 0! unless testing code / sanity checks, or calcuating residuals
 
 %%%%%%%%%%%%%%%%
@@ -151,11 +157,11 @@ for n = 1:length(dataCell)
             plot(dirs,FRmean,'bo-',gdirs,tuning_vonMises(beta,gdirs),'r-');
             set(gca,'xtick',0:45:360,'xlim',[0 360]);
             title(num2str([n c]));
-%             pause
+            pause
         end
         
   %**************
-  %repeat for remap
+  %repeat for Remap
   %**************
   
         if ismember([n c],useRemap,'rows')                        
@@ -569,15 +575,15 @@ nanmean(ConfP_all(:))
 
 %% choose
 
-CP = CP_high(~isnan(CP_high));
+% CP = CP_high(~isnan(CP_high));
 % or
-% CP = CP_low(~isnan(CP_low));
+CP = CP_low(~isnan(CP_low));
 % or
 % CP = CP_all(~isnan(CP_all));
 
-% ConfP = ConfP_pref(~isnan(ConfP_pref));
+ConfP = ConfP_pref(~isnan(ConfP_pref));
 % or
-ConfP = ConfP_null(~isnan(ConfP_null));
+% ConfP = ConfP_null(~isnan(ConfP_null));
 % or
 % ConfP = ConfP_all(~isnan(ConfP_all));
 
