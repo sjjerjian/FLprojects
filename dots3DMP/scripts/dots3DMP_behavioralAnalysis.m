@@ -14,7 +14,7 @@ cd /Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data/dataStructs
 
 %% select subject, load the data
 
-subject = 'lucio';
+subject = 'simul';
 
 switch subject
     
