@@ -8,18 +8,13 @@ global call_num
 % set parameters for this run based on guess and fixed params flag
 param = getParam(param, guess, fixed);
 
-if isfield(data,'PDW')
-    data.conf = data.PDW;
-end
-
 mods   = unique(data.modality)';
 cohs   = unique(data.coherence)'; 
 hdgs   = unique(data.heading)';
 
-if options.dummyRun
-    deltas = unique(data.delta)';
-else
-    deltas = 0;
+% don't fit deltas unless dummyRun (for predicted curves)
+if options.dummyRun, deltas = unique(data.delta)';
+else,                deltas = 0;
 end
 
 duration = 2000; % stimulus duration (ms)
@@ -32,13 +27,17 @@ BComb    = abs(param(6));
 muTnd    = param(7);
 ttc      = param(8);
 
-try theta = param(9); catch; end % only relevant for PDW
+% only relevant for PDW
+if options.conftask==2
+    data.conf = data.PDW;
+    theta = param(9); 
+end 
 
 paramNames = {'kves','kvisLo','kvisHi','BVes','BVis','BComb','muTnd','T2Conf','theta'};
+% paramNames = {'kves','kvisLo','kvisHi','B','muTnd','T2Conf','theta'};
 
 duration = duration + ttc;
-
-sdTnd = 60; % fixed SD
+% sdTnd = 60; % fixed SD
 
 % assume the mapping for confidence is based on an equal amount of experience with the 
 % *three* levels of reliability (ves, vis-low, vis-high) hence k is the
@@ -55,8 +54,6 @@ RVes.plotflag = 0; % 1 = plot, 2 = plot and export_fig
 PVesConf =  images_dtb_2d(RVes);
 VesLogOdds = PVesConf.logOddsCorrMap;
 
-PVes =  images_dtb_2d(RVes);
-
 RVis.t = 0.001:0.001:duration/1000;
 RVis.Bup = BVis;
 RVis.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
@@ -64,8 +61,6 @@ RVis.lose_flag = 1;
 RVis.plotflag = 0; % 1 = plot, 2 = plot and export_fig
 PVisConf =  images_dtb_2d(RVis);
 VisLogOdds = PVisConf.logOddsCorrMap;
-
-PVis =  images_dtb_2d(RVis);
 
 RComb.t = 0.001:0.001:duration/1000;
 RComb.Bup = BComb;
@@ -76,7 +71,6 @@ PCombConf =  images_dtb_2d(RComb);
 CombLogOdds = PCombConf.logOddsCorrMap;
 
 % now compute the P we need for model choices and RTs (modality-specific)
-
 RVes.t = 0.001:0.001:duration/1000;
 RVes.Bup = BVes;
 RVes.drift = kves * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
@@ -92,10 +86,8 @@ for c = 1:length(cohs)
     RVis.plotflag = 0; % 1 = plot, 2 = plot and export_fig
     PVis{c} =  images_dtb_2d(RVis);
     
-    kcombsq = kves^2 + kvis(c)^2;
-    
-    wVes = sqrt( kves^2 / kcombsq );
-    wVis = sqrt( kvis(c)^2 / kcombsq );
+    wVes = sqrt( kves^2 / (kves^2 + kvis(c)^2) );
+    wVis = sqrt( kvis(c)^2 / (kves^2 + kvis(c)^2) );
     
     for d = 1:length(deltas)
         % positive delta defined as ves to the left, vis to the right
@@ -105,7 +97,7 @@ for c = 1:length(cohs)
         RComb.t = 0.001:0.001:duration/1000;
         RComb.Bup = BComb;
         
-%         kcomb(c) = sqrt(kcombsq);
+%         kcomb(c) = sqrt(kves^2 + kvis(c)^2);
 %         RComb.drift = kcomb(c) * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
         
         Rcomb.drift = wVes.*muVes + wVis.*muVis;
@@ -140,7 +132,6 @@ meanRT_fit = n;     meanRT_data = n;    sigmaRT = n;
 meanConf_fit = n;   meanConf_data = n;  sigmaConf = n;
 nCor = n;
 
-
 for m = 1:length(mods)
 for c = 1:length(cohs)
 for d = 1:length(deltas)
@@ -155,8 +146,7 @@ for d = 1:length(deltas)
         n(m,c,d,h) = sum(Jdata);
 
         % pRight_model stores the predictions made by the model for the
-        % probability of a rightward choice on each trial condition in the
-        % data
+        % probability of a rightward choice on each trial condition
         % and then assigned to the actual data trials of each condition in pRight_model for
         % log likelihood calculation
         
@@ -177,12 +167,10 @@ for d = 1:length(deltas)
             pRight_model(Jdata) = Ptemp.up.p(uh);  
         end
         pRight_fit(m,c,d,h) = mean(pRight_model(Jdata));
-
         
         % Palmer 2005 method
 %         pRight_model(Jdata) = 1 ./ (1 + exp(-2*k*B*sind(hdgs(h))));
         
-%         if hdgs(h)==0,keyboard,end
         % RT/Conf Mean and SE from data, Conf Mean from model
 %         N = 10000;
 %         conf_distr = Ptemp.up.pdf_t(uh,:) .* squeeze(Ptemp.up.distr_loser(uh,:,:))';
