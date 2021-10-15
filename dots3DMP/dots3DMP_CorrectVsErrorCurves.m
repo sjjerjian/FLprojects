@@ -55,6 +55,10 @@ end
 if conftask==2
     confCorrSE = sqrt( (confCorr.*(1-confCorr)) ./ nCorr );
     confErrSE = sqrt( (confErr.*(1-confErr)) ./ nErr );
+else
+    fprintf('not showing errors')
+    confCorrSE = zeros(size(confCorr));
+    confErrSE = zeros(size(confErr));
 end
 
 xRange = [min([RTCorr(:);RTErr(:)]) max([RTCorr(:);RTErr(:)])] .* [0.95 1.05];

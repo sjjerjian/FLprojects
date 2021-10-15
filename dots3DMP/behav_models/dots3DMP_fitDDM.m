@@ -149,7 +149,7 @@ end
 % run err func again at the fitted/fixed params to generate a final
 % error value and model-generated data points (trial outcomes)
 options.ploterr = 0;
-options.dummyRun = 1;
+options.dummyRun = 0;
 % [err_final, fit] = dots3DMP_fit_2Dacc_err_nSims(X,X,true(size(X)),data,options);
 [err_final, fit] = feval(options.errfun,X,X,true(size(X)),data,options);
 
@@ -195,8 +195,13 @@ Dfit.RT      = ones(size(Dfit.heading));
 Dfit.conf    = ones(size(Dfit.heading));
 Dfit.correct = ones(size(Dfit.heading));
 
+if options.conftask==2
+    Dfit.PDW = ones(size(Dfit.heading));
+end
+
 % [~,fitInterp] = dots3DMP_fitDDM_err(X,Dfit);
 fixed = true(size(X)); % fix all params
+options.dummyRun = 1;
 [~, fitInterp] = feval(options.errfun,X,X,fixed,Dfit,options);
 
 

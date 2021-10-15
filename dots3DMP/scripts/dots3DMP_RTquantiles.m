@@ -17,7 +17,7 @@ uhdg  = unique(abs(data.heading));
 
 mcols = {'Greys','Reds','Reds','Blues','Blues','Purples'};
 
-xRange = prctile(data.RT,[10 90]);
+xRange = prctile(data.RT,[5 95]);
 
 for c = 1:size(ucond,1)+1 % the extra one is for all conditions pooled
     
@@ -37,14 +37,24 @@ for c = 1:size(ucond,1)+1 % the extra one is for all conditions pooled
             theseCorr = temp(I);
         end
         theseRT = data.RT(I);
-        theseConf = data.PDW(I);
+        
+        if conftask==1
+            theseConf = data.conf(I);
+        elseif conftask==2
+            theseConf = data.PDW(I);
+        end
         
         rtQ = [0 quantile(theseRT,nbins-1) inf]; % or quintiles
         for q = 1:length(rtQ)-1
             J = theseRT>=rtQ(q) & theseRT<rtQ(q+1);
             X(c,h,q) = mean(theseRT(J));
             Y(c,h,q) = mean(theseConf(J));
-            Ye(c,h,q) = std(theseConf(J)) / sqrt(sum(J));
+            
+            if conftask==1
+                Ye(c,h,q) = std(theseConf(J)) / sqrt(sum(J));
+            elseif conftask==2
+                Ye(c,h,q) = sqrt( (Y(c,h,q).*(1-Y(c,h,q))) ./ sum(theseConf(J)) );
+            end
             
             if correct<0
                 Yc(c,h,q) = mean(theseCorr(J));
@@ -61,6 +71,8 @@ for c = 1:size(ucond,1)+1 % the extra one is for all conditions pooled
     else, maxhdg = length(uhdg);
     end
     
+    
+    if conftask
     clear g L
     % (loop over h to allow animating figures one heading at a time)
     for h = 1:maxhdg      
@@ -69,20 +81,21 @@ for c = 1:size(ucond,1)+1 % the extra one is for all conditions pooled
 
         set(g(h),'MarkerSize',10,'MarkerFaceColor',cmap(h,:));
         xlim(xRange);
-        
-        if correct == -1, ylim([.35 .95]); % all trials
-        else, ylim([0 1]); 
-        end
+        ylim([0 1])
+%         if correct == -1, ylim([.35 .95]); % all trials
+%         else, ylim([0 1]); 
+%         end
            
         % set(gca,'Xtick',-2:1:2,'Ytick',-2:1:2);
         if c<=size(ucond,1) && ucond(c,2)==3,xlabel('RT (s)'); end 
         if mod(c,2)==0
-            if conftask==1, ylabel('SEP'); else, ylabel('P(High Bet)'); end
+            if conftask==1, ylabel('Sacc EP'); else, ylabel('P(High Bet)'); end
         end
         changeAxesFontSize(gca,16,16); set(gca,'box','off');
         title(titles{c});
     end
     sh=suptitle('Confidence-RT'); set(sh,'fontsize',16,'fontweight','bold');
+    end
     
     if correct<0
         figure(20); 
@@ -96,7 +109,7 @@ for c = 1:size(ucond,1)+1 % the extra one is for all conditions pooled
             
             set(g(h),'MarkerSize',10,'MarkerFaceColor',cmap(h,:));
             xlim(xRange);
-            ylim([0.35 1])
+            ylim([0 1])
             
             % set(gca,'Xtick',-2:1:2,'Ytick',-2:1:2);
             if c<=size(ucond,1) && ucond(c,2)==3,xlabel('RT (s)'); end 

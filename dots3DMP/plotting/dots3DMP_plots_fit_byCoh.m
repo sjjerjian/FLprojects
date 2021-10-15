@@ -27,7 +27,7 @@ if conftask==1, confYL = 'Sacc EP';
 elseif conftask==2, confYL = 'P(High Bet)';
 end
 
-D = 2;
+D = find(deltas==0);
 % first, for all trials irrespective of delta
 % D = length(deltas)+1; % (the extra column we made for pooling across deltas)
     % OR omit the zero delta, for some plots
@@ -37,32 +37,32 @@ D = 2;
 clr{1} = {'ko','mo','co'};
 clr{2} = {'ko','ro','bo'};
 clr{3} = {'ko','yo','go'};
-figure(101+D);
+figure(101);
 set(gcf,'Color',[1 1 1],'Position',[300 500 950+300*(length(cohs)-2) 800],'PaperPositionMode','auto'); clf;
 for c = 1:length(cohs)
-    subplot(spRows,length(cohs),c); %#ok<*NODEF>
+    subplot(spRows,length(cohs),c); hold on;
     for m = 1:length(mods)     % m c d h
-        h(m) = errorbar(hdgs, squeeze(parsedData.pRight(m,c,D,:)), squeeze(parsedData.pRightSE(m,c,D,:)), [clr{c}{m}]); hold on; %#ok<*IDISVAR>
-        ylim([0 1]);
+        h(m) = errorbar(hdgs, squeeze(parsedData.pRight(m,c,D,:)), squeeze(parsedData.pRightSE(m,c,D,:)), [clr{c}{m}]); 
         if length(mods)>1; title(['coh = ' num2str(cohs(c))]); end
     end
     legend(h,'vestib','visual','comb','Location','northwest');
     xlabel('heading angle (deg)'); ylabel('P(Right)');
-
+    ylim([0 1]);
+        
     if conftask>0
-        subplot(spRows,length(cohs),c+length(cohs));
+        subplot(spRows,length(cohs),c+length(cohs)); hold on
         for m = 1:length(mods)
             h(m) = errorbar(hdgs, squeeze(parsedData.confMean(m,c,D,:)), squeeze(parsedData.confSE(m,c,D,:)), [clr{c}{m}]);
-            ylim([0 1]); hold on;
         end
         xlabel('heading angle (deg)');
         ylabel(confYL);
+        ylim([0 1]); 
     end
     
     if RTtask
-        subplot(spRows,length(cohs),c+length(cohs)*(2-(conftask==0)));
+        subplot(spRows,length(cohs),c+length(cohs)*(2-(conftask==0))); hold on
         for m = 1:length(mods)
-            h(m) = errorbar(hdgs, squeeze(parsedData.RTmean(m,c,D,:)), squeeze(parsedData.RTse(m,c,D,:)), [clr{c}{m}]); hold on;
+            h(m) = errorbar(hdgs, squeeze(parsedData.RTmean(m,c,D,:)), squeeze(parsedData.RTse(m,c,D,:)), [clr{c}{m}]); 
         end
         xlabel('heading angle (deg)'); ylabel('RT (s)');
     end
@@ -80,30 +80,30 @@ clear L;
 figure(108);
 set(gcf,'Color',[1 1 1],'Position',[50 20 950+300*(length(cohs)-2) 800],'PaperPositionMode','auto'); clf;
 for c = 1:length(cohs)
-    subplot(spRows,length(cohs),c);
+    subplot(spRows,length(cohs),c); hold on
     for d = 1:length(deltas)     % m c d h
-        h(d) = errorbar(hdgs, squeeze(parsedData.pRight(3,c,d,:)), squeeze(parsedData.pRightSE(3,c,d,:)), [clr{c}{d}]); hold on
+        h(d) = errorbar(hdgs, squeeze(parsedData.pRight(3,c,d,:)), squeeze(parsedData.pRightSE(3,c,d,:)), [clr{c}{d}]); 
         L{d} = sprintf('\x0394=%d',deltas(d));
-        ylim([0 1]);
         if length(mods)>1; title(['coh = ' num2str(cohs(c))]); end
     end
+    ylim([0 1]);
     legend(h,L,'location','northwest');
     xlabel('heading angle (deg)'); ylabel('proportion rightward choices');
     
     if conftask>0
-        subplot(spRows,length(cohs),c+length(cohs));
+        subplot(spRows,length(cohs),c+length(cohs)); hold on
         for d = 1:length(deltas)
             h(d) = errorbar(hdgs, squeeze(parsedData.confMean(3,c,d,:)), squeeze(parsedData.confSE(3,c,d,:)), [clr{c}{d}]);
-            ylim([0 1]); hold on;
         end
+        ylim([0 1]); 
         xlabel('heading angle (deg)');
         ylabel(confYL);
     end
     
     if RTtask
-        subplot(spRows,length(cohs),c+length(cohs)*(2-(conftask==0)));
+        subplot(spRows,length(cohs),c+length(cohs)*(2-(conftask==0))); hold on
         for d = 1:length(deltas)
-            h(d) = errorbar(hdgs, squeeze(parsedData.RTmean(3,c,d,:)), squeeze(parsedData.RTse(3,c,d,:)), [clr{c}{d}]); hold on;
+            h(d) = errorbar(hdgs, squeeze(parsedData.RTmean(3,c,d,:)), squeeze(parsedData.RTse(3,c,d,:)), [clr{c}{d}]); 
         end
         xlabel('heading angle (deg)'); ylabel('RT (s)');
     end
@@ -121,24 +121,24 @@ mods   = unique(fitInterp.modality);
 cohs   = unique(fitInterp.coherence);
 deltas = unique(fitInterp.delta);
 hdgs   = unique(fitInterp.heading);
+D = find(deltas==0);
 
 if fitgauss
     
 %     gfit = dots3DMP_fit_cgauss(fitInterp,mods,cohs,deltas,conftask,RTtask);
     
     exfig=0;
-
-    D = 1:length(deltas);
+    clear L h; 
 
 % % % %     clr{1} = {[1 0 0], [0 0 1]}; % red, blue
 % % % %     clr{1} = {[1 0 1], [0 1 1]}; % magenta, cyan (TMS)
 % % %     clr{1} = {[0 0 1], [1 0 0]}; % blue (baseline), red (TMS)
 % % %     clr{2} = clr{1};
 % % %     clr{3} = clr{1};
-
-    for d = D
+    
+    figure(108)
+    for d = 1:length(deltas)
         % choice
-        clear L h; figure(300+d); set(gcf,'Color',[1 1 1],'Position',[50 20 360 320],'PaperPositionMode','auto'); clf;
         lind = 1;
         for c = 1:length(cohs)
             beta = [gfit.choice.mu(3,c,d) gfit.choice.sigma(3,c,d)];
@@ -183,87 +183,85 @@ if fitgauss
     
 else
     
-D = 2;
-         %ves %vis %comb
-clr{1} = {'k-','m-','c-'};
-clr{2} = {'k-','r-','b-'};
-clr{3} = {'k-','y-','g-'};
-figure(101+D);
-for c = 1:length(cohs)
-    subplot(spRows,length(cohs),c);
-    for m = 1:length(mods)     % m c d h
-        h(m) = plot(hdgs, squeeze(fitInterp.pRight(m,c,D,:)), [clr{c}{m}]); hold on;
-        ylim([0 1]);
-        if length(mods)>1; title(['coh = ' num2str(cohs(c))]); end
-    end
-    legend(h,'vestib','visual','comb','Location','northwest');
-    xlabel('heading angle (deg)'); ylabel('P(Right)');
-
-    if conftask>0
-    subplot(spRows,length(cohs),c+length(cohs));
-    for m = 1:length(mods)
-        h(m) = plot(hdgs, squeeze(fitInterp.confMean(m,c,D,:)), [clr{c}{m}]);
-        ylim([0 1]); hold on;
-    end
-    xlabel('heading angle (deg)'); 
-    ylabel(confYL);
-    end
-    
-    if RTtask
-        subplot(spRows,length(cohs),c+length(cohs)*2);
-        for m = 1:length(mods)
-            h(m) = plot(hdgs, squeeze(fitInterp.RTmean(m,c,D,:)), [clr{c}{m}]); hold on;
+    %ves %vis %comb
+    clr{1} = {'k-','m-','c-'};
+    clr{2} = {'k-','r-','b-'};
+    clr{3} = {'k-','y-','g-'};
+    figure(101);
+    for c = 1:length(cohs)
+        subplot(spRows,length(cohs),c);
+        for m = 1:length(mods)     % m c d h
+            h(m) = plot(hdgs, squeeze(fitInterp.pRight(m,c,D,:)), [clr{c}{m}]); hold on;
+            ylim([0 1]);
+            if length(mods)>1; title(['coh = ' num2str(cohs(c))]); end
         end
-        xlabel('heading angle (deg)'); ylabel('RT (s)');
-    end
-    
-end
-
-
-% now separate by delta
-
-if length(deltas)>1
-
-clr{1} = {'b-','c-','g-'};
-clr{2} = {'b-','c-','g-'};
-clr{3} = {'b-','c-','g-'};
-
-clear L;
-figure(108);
-for c = 1:length(cohs)
-    subplot(spRows,length(cohs),c);
-    for d = 1:length(deltas)     % m c d h
-        h(d) = plot(hdgs, squeeze(fitInterp.pRight(3,c,d,:)), [clr{c}{d}]); hold on
-        L{d} = sprintf('\x0394=%d',deltas(d));
-    end
-    if length(mods)>1; title(['coh = ' num2str(cohs(c))]); end
-    ylim([0 1]);
-    
-    legend(h,L,'location','northwest');
-    xlabel('heading angle (deg)'); ylabel('P(Right)');
-    
-    if conftask>0
-        subplot(spRows,length(cohs),c+length(cohs));
-        for d = 1:length(deltas)
-            h(d) = plot(hdgs, squeeze(fitInterp.confMean(3,c,d,:)), [clr{c}{d}]);
-            hold on;
+        legend(h,'vestib','visual','comb','Location','northwest');
+        xlabel('heading angle (deg)'); ylabel('P(Right)');
+        
+        if conftask>0
+            subplot(spRows,length(cohs),c+length(cohs));
+            for m = 1:length(mods)
+                h(m) = plot(hdgs, squeeze(fitInterp.confMean(m,c,D,:)), [clr{c}{m}]);
+                ylim([0 1]); hold on;
+            end
+            xlabel('heading angle (deg)');
+            ylabel(confYL);
         end
-        xlabel('heading angle (deg)'); ylabel(confYL);
-        ylim([0 1]); 
-    end
-    
-    if RTtask
-        subplot(spRows,length(cohs),c+length(cohs)*(2-(conftask==0)));
-        for d = 1:length(deltas)
-            h(d) = plot(hdgs, squeeze(fitInterp.RTmean(3,c,d,:)), [clr{c}{d}]); hold on;
+        
+        if RTtask
+            subplot(spRows,length(cohs),c+length(cohs)*2);
+            for m = 1:length(mods)
+                h(m) = plot(hdgs, squeeze(fitInterp.RTmean(m,c,D,:)), [clr{c}{m}]); hold on;
+            end
+            xlabel('heading angle (deg)'); ylabel('RT (s)');
         end
-        xlabel('heading angle (deg)'); ylabel('RT (s)');
+        
     end
     
-end
-
-end
-
+    
+    % now separate by delta
+    
+    if length(deltas)>1
+        
+        clr{1} = {'b-','c-','g-'};
+        clr{2} = {'b-','c-','g-'};
+        clr{3} = {'b-','c-','g-'};
+        
+        clear L;
+        figure(108);
+        for c = 1:length(cohs)
+            subplot(spRows,length(cohs),c); hold on
+            for d = 1:length(deltas)     % m c d h
+                h(d) = plot(hdgs, squeeze(fitInterp.pRight(3,c,d,:)), [clr{c}{d}]); 
+                L{d} = sprintf('\x0394=%d',deltas(d));
+            end
+            if length(mods)>1; title(['coh = ' num2str(cohs(c))]); end
+            ylim([0 1]);
+            
+            legend(h,L,'location','northwest');
+            xlabel('heading angle (deg)'); ylabel('P(Right)');
+            
+            if conftask>0
+                subplot(spRows,length(cohs),c+length(cohs)); hold on
+                for d = 1:length(deltas)
+                    h(d) = plot(hdgs, squeeze(fitInterp.confMean(3,c,d,:)), [clr{c}{d}]);
+                end
+                xlabel('heading angle (deg)'); ylabel(confYL);
+                ylim([0 1]);
+            end
+            
+            if RTtask
+                subplot(spRows,length(cohs),c+length(cohs)*(2-(conftask==0))); hold on;
+                for d = 1:length(deltas)
+                    h(d) = plot(hdgs, squeeze(fitInterp.RTmean(3,c,d,:)), [clr{c}{d}]);
+                end
+                xlabel('heading angle (deg)'); ylabel('RT (s)');
+            end
+            
+        end
+        
+    end
+    
 end
 
 

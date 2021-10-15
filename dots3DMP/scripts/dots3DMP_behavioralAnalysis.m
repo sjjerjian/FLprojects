@@ -14,7 +14,7 @@ cd /Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data/dataStructs
 
 %% select subject, load the data
 
-subject = 'simul';
+subject = 'human';
 
 switch subject
     
@@ -58,7 +58,7 @@ gfit = dots3DMP_fit_cgauss(data,mods,cohs,deltas,conftask,RTtask);
 % dots3DMP_plots(parsedData,mods,cohs,deltas,hdgs,conftask,RTtask)
 
 % separate subplots for each coh, with all mods on same subplot
-dots3DMP_plots_cgauss_byCoh(gfit,parsedData,mods,cohs,deltas,hdgs,conftask,RTtask)
+dots3DMP_plots_cgauss_byCoh(gfit,parsedData,1,cohs,deltas,hdgs,conftask,RTtask)
 
 % or...separate subplots for each mod/delta, and all cohs on same subplot
 % this one needs tidying to look nice
@@ -67,14 +67,14 @@ dots3DMP_plots_cgauss_byCoh(gfit,parsedData,mods,cohs,deltas,hdgs,conftask,RTtas
 %% psychophysical cue weights
 % assume wvis always = 1-wves
 
-wves = dots3DMP_cueWeights(gfit,cohs,deltas,conftask,1);
+wves = dots3DMP_cueWeights(gfit,cohs,deltas,conftask);
 
 % bootstrapping for error bars
-nboots = 10;
-[gfitBoot,wvesBoot] = dots3DMP_cgauss_bootstrap_func(data,gfit,mods,cohs,deltas,nboots,conftask,RTtask);
+nboots = 100;
+[gfitBoot,wvesBoot] = dots3DMP_cgauss_bootstrap_func(data,[],mods,cohs,deltas,nboots,0,RTtask);
 
 % plot the weights
-dots3DMP_plotCueWeights(wves,wvesBoot,cohs)
+dots3DMP_plotCueWeights(wves,wvesBoot,cohs,0)
 
 %% Confidence as function of decision time (RT quantiles)
 
@@ -85,8 +85,8 @@ end
 % third argument specifies which trials to use 
 % -1: all, 0: error trials only, 1: correct trials only
 % -1 will also lead to plotting of p(correct) as function of RT quantiles
-% 0 will only use lower headings since there are few errors for easier
-% ones
+% 0 will only use weaker stimuli (set to bottom 3), since stronger stimuli
+% produce few errors 
 
 dots3DMP_RTquantiles(data,conftask,-1)
 

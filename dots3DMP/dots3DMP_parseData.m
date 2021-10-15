@@ -36,6 +36,8 @@ for d = 1:length(deltas)+1 % add extra column for all trials irrespective of del
         
         if RTtask
             RTmean(m,c,d,h) = nanmean(data.RT(J));
+%             RTmean(m,c,d,h) = nanmean(data.RT(J & data.correct));
+
             RTse(m,c,d,h) = nanstd(data.RT(J))/sqrt(n(m,c,d,h));
         else
             RTmean(m,c,d,h) = NaN;
