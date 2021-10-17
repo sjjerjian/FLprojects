@@ -8,15 +8,16 @@ global call_num
 % set parameters for this run based on guess and fixed params flag
 param = getParam(param, guess, fixed);
 
-if isfield(data,'PDW')
-    data.conf = data.PDW;
-end
-
 mods   = unique(data.modality)';
 cohs   = unique(data.coherence)'; 
 hdgs   = unique(data.heading)';
-% deltas = unique(data.delta)';
-deltas = 0;
+deltas = unique(data.delta)';
+
+% don't 'fit' deltas unless dummyRun is set (for predicted curves)
+if options.dummyRun==0
+%     mods = [1 2]; % don't fit combined condition at all!
+    deltas = 0; 
+end
 
 duration = 2000; % stimulus duration (ms)
 
@@ -28,13 +29,17 @@ BComb    = abs(param(6));
 muTnd    = param(7);
 ttc      = param(8);
 
-try theta = param(9); catch; end % only relevant for PDW
+% only relevant for PDW
+if options.conftask==2
+    data.conf = data.PDW;
+    theta = param(9); 
+end 
 
 paramNames = {'kves','kvisLo','kvisHi','BVes','BVis','BComb','muTnd','T2Conf','theta'};
+% paramNames = {'kves','kvisLo','kvisHi','B','muTnd','T2Conf','theta'};
 
 duration = duration + ttc;
-
-sdTnd = 60; % fixed SD
+% sdTnd = 60; % fixed SD
 
 % assume the mapping for confidence is based on an equal amount of experience with the 
 % *three* levels of reliability (ves, vis-low, vis-high) hence k is the
@@ -51,8 +56,6 @@ RVes.plotflag = 0; % 1 = plot, 2 = plot and export_fig
 PVesConf =  images_dtb_2d(RVes);
 VesLogOdds = PVesConf.logOddsCorrMap;
 
-PVes =  images_dtb_2d(RVes);
-
 RVis.t = 0.001:0.001:duration/1000;
 RVis.Bup = BVis;
 RVis.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
@@ -60,8 +63,6 @@ RVis.lose_flag = 1;
 RVis.plotflag = 0; % 1 = plot, 2 = plot and export_fig
 PVisConf =  images_dtb_2d(RVis);
 VisLogOdds = PVisConf.logOddsCorrMap;
-
-PVis =  images_dtb_2d(RVis);
 
 RComb.t = 0.001:0.001:duration/1000;
 RComb.Bup = BComb;
@@ -72,7 +73,6 @@ PCombConf =  images_dtb_2d(RComb);
 CombLogOdds = PCombConf.logOddsCorrMap;
 
 % now compute the P we need for model choices and RTs (modality-specific)
-
 RVes.t = 0.001:0.001:duration/1000;
 RVes.Bup = BVes;
 RVes.drift = kves * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
@@ -80,6 +80,7 @@ RVes.lose_flag = 1;
 RVes.plotflag = 0; % 1 = plot, 2 = plot and export_fig
 PVes =  images_dtb_2d(RVes);
 
+clear PComb
 for c = 1:length(cohs)
     RVis.t = 0.001:0.001:duration/1000;
     RVis.Bup = BVis;
@@ -88,17 +89,25 @@ for c = 1:length(cohs)
     RVis.plotflag = 0; % 1 = plot, 2 = plot and export_fig
     PVis{c} =  images_dtb_2d(RVis);
     
-    kcomb(c) = sqrt(kves.^2 + kvis(c).^2);
-    RComb.t = 0.001:0.001:duration/1000;
-    RComb.Bup = BComb;
-    RComb.drift = kcomb(c) * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
-    RComb.lose_flag = 1;
-    RComb.plotflag = 0; % 1 = plot, 2 = plot and export_fig
-    PComb{c} =  images_dtb_2d(RComb);
+    wVes = sqrt( kves^2 / (kves^2 + kvis(c)^2) );
+    wVis = sqrt( kvis(c)^2 / (kves^2 + kvis(c)^2) );
+    
+    for d = 1:length(deltas)
+        clear Rcomb
+        % positive delta defined as ves to the left, vis to the right
+        muVes = kves    * sind(hdgs(hdgs>=0)-deltas(d)/2);
+        muVis = kvis(c) * sind(hdgs(hdgs>=0)+deltas(d)/2);
+%         kcomb(c) = sqrt(kves^2 + kvis(c)^2);
+%         RComb.drift = kcomb(c) * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
+        RComb.drift = wVes.*muVes + wVis.*muVis;
+
+        RComb.t = 0.001:0.001:duration/1000;
+        RComb.Bup = BComb;
+        RComb.lose_flag = 1;
+        RComb.plotflag = 0; % 1 = plot, 2 = plot and export_fig
+        PComb{c}{d} =  images_dtb_2d(RComb);
+    end
 end
-
-
-PComb =  images_dtb_2d(RComb);
 
 %%
 
@@ -121,7 +130,6 @@ meanRT_fit = n;     meanRT_data = n;    sigmaRT = n;
 meanConf_fit = n;   meanConf_data = n;  sigmaConf = n;
 nCor = n;
 
-
 for m = 1:length(mods)
 for c = 1:length(cohs)
 for d = 1:length(deltas)
@@ -130,22 +138,24 @@ for d = 1:length(deltas)
         uh = abs(hdgs(h))==(hdgs(hdgs>=0));
         
         Jdata  = data.modality==mods(m) & data.coherence==cohs(c) & data.heading==hdgs(h) & data.delta==deltas(d);
+        
+        if sum(Jdata)==0, continue, end
+        
         n(m,c,d,h) = sum(Jdata);
 
         % pRight_model stores the predictions made by the model for the
-        % probability of a rightward choice on each trial condition in the
-        % data
+        % probability of a rightward choice on each trial condition
         % and then assigned to the actual data trials of each condition in pRight_model for
         % log likelihood calculation
         
         if m==1,     Ptemp = PVes;  logOddsMap = VesLogOdds; %k = kves; B = BVes;
         elseif m==2, Ptemp = PVis{c};  logOddsMap = VisLogOdds; %k = kvis(c); B = BVis;
-        elseif m==3, Ptemp = PComb{c}; logOddsMap = CombLogOdds; %k = kcomb(c); B = BComb;
+        elseif m==3, Ptemp = PComb{c}{d}; logOddsMap = CombLogOdds; %k = kcomb(c); B = BComb;
         end
         
         % SJ 10-11-2021 replaced redundant Monte Carlo simulation with computations
         % from method of images 
-        % for choices, P.up/lo.p contains probabilities of bound hit
+        % for choices, P.up.p/P.lo.p contains probabilities of bound hit
 
         
         if hdgs(h)<0
@@ -154,53 +164,45 @@ for d = 1:length(deltas)
         else
             pRight_model(Jdata) = Ptemp.up.p(uh);  
         end
+        pRight_fit(m,c,d,h) = mean(pRight_model(Jdata));
         
         % Palmer 2005 method
 %         pRight_model(Jdata) = 1 ./ (1 + exp(-2*k*B*sind(hdgs(h))));
+           
+        % density of losing DV for this condition 
+        Pxt = squeeze(Ptemp.up.distr_loser(uh,:,:))'; 
         
-        
-        % RT/Conf Mean and SE from data, Conf Mean from model
-        N = 10000;
-%         conf_distr = Ptemp.up.pdf_t(uh,:) .* squeeze(Ptemp.up.distr_loser(uh,:,:))';
-        conf_distr = Ptemp.up.pdf_t(uh,:) .* circshift(squeeze(Ptemp.up.distr_loser(uh,:,:))',-ttc,2); % shift distr_loser forward in time
-        conf_distr(conf_distr<0) = 0;
-        
-        % SJ 10/12/2021 can we just compare P(conf) to theta directly for P(High bet)? 
-        % for now doing randsample from logOdds Map according to p, then
-        % compare to theta below
-        try
-            confSamples = randsample(logOddsMap(:),N,true,conf_distr(:));
-        catch
-            keyboard
-        end
-
-        % use only correct trials + all zero heading trials (for RT and
-        % SEP)
-                
         nCor(m,c,d,h) = sum(Jdata & usetrs_data);
         
-        if options.RTtask            
-            meanRT_fit(m,c,d,h) = Ptemp.up.mean_t(uh)*1000+muTnd+randn.*sdTnd;
-            
-            meanRT_data(m,c,d,h) = mean(RTdata(Jdata & usetrs_data));
-            sigmaRT(m,c,d,h) = std(RTdata(Jdata & usetrs_data)) / sqrt(nCor(m,c,d,h));
-        end
-        
+        % CONF
         if options.conftask == 1 % sacc endpoint
-            meanConf_fit(m,c,d,h) = 2*mean(logistic(confSamples))-1;
+%             meanConf_fit(m,c,d,h) = mean(2*logistic(confSamples)-1);
+            meanConf_fit(m,c,d,h) = nansum(nansum(Pxt .* (2*logistic(logOddsMap)-1)));
             
             meanConf_data(m,c,d,h) = mean(confdata(Jdata & usetrs_data));
             sigmaConf(m,c,d,h) = std(confdata(Jdata & usetrs_data)) / sqrt(nCor(m,c,d,h));
             
         elseif options.conftask == 2 % PDW
-            pHigh_model(Jdata) = sum(confSamples > theta) / N;
+            pHigh = sum(Pxt(logOddsMap>theta)); % sum of density above theta [but still is a function of time!]   
+            pHigh_model(Jdata) = sum(pHigh);
+            
+            % store by condition for ease of plotting later
+            pHigh_fit(m,c,d,h) = mean(pHigh_model(Jdata)); 
         end
+        
+        % RT
+        if options.RTtask            
+            meanRT_fit(m,c,d,h) = Ptemp.up.mean_t(uh)*1000+muTnd;
+            
+            meanRT_data(m,c,d,h) = mean(RTdata(Jdata & usetrs_data));
+            sigmaRT(m,c,d,h) = std(RTdata(Jdata & usetrs_data)) / sqrt(nCor(m,c,d,h));
+        end
+        
     end
     
 end
 end
 end
-
 
 
 %% calculate log likelihoods
@@ -244,15 +246,27 @@ err = -(LL_choice + LL_conf + LL_RT); % negate for minimization
 % err = -LL_choice;
 
 
-fit.pRight_model = pRight_model;
+% assign same conditions for fit data, will be useful for plotting later!
+fit.heading = data.heading;
+fit.modality = data.modality;
+fit.coherence = data.coherence;
+fit.delta = data.delta;
+
+fit.pRight = pRight_fit;
 if options.conftask==1
-    fit.meanConf_fit = meanConf_fit;
+    fit.confMean = meanConf_fit;
 elseif options.conftask==2
-    fit.pHigh_model = pHigh_model;
+    fit.confMean = pHigh_fit;
 end
-fit.meanRT_fit = meanRT_fit;
+fit.RTmean = meanRT_fit/1000;
 
 
+% copy vestib-only data to all coherences, to aid plotting
+for c=1:length(cohs)
+    fit.pRight(1,c,:,:)   = fit.pRight(1,1,:,:);
+    fit.confMean(1,c,:,:) = fit.confMean(1,1,:,:);
+    fit.RTmean(1,c,:,:)   = fit.RTmean(1,1,:,:);
+end
 
 %% print progress report!
 fprintf('\n\n\n****************************************\n');

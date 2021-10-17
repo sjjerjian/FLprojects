@@ -1,6 +1,5 @@
-function wves = dots3DMP_cueWeights(gfit,cohs,deltas,conftask,ifplot)
+function wves = dots3DMP_cueWeights(gfit,cohs,deltas,conftask)
 
-if nargin<5, ifplot = 0; end
 if nargin<4, conftask = 0; end
 
 D = length(deltas)+1;
@@ -48,17 +47,3 @@ for c = 1:length(cohs)      % m c d
     end
     %}
 end
-
-% if ifplot
-%     % NEEDS TIDYING
-%     figure(501); hold on;
-%     
-%     plot(wves.choice.emp,'marker','o','color','r');
-%     plot(wves.choice.pred,'marker','o','color','k');
-%     
-%     if conftask
-%     plot(wves.conf.emp,'marker','o','color','r','linestyle','--');
-%     plot(wves.conf.pred,'marker','o','color','k','linestyle','--');
-%     end
-% end
-%     

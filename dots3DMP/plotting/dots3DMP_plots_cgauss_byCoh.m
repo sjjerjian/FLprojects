@@ -7,6 +7,8 @@ function dots3DMP_plots_cgauss_byCoh(gfit,parsedData,mods,cohs,deltas,hdgs,conft
 % D = find(deltas==0);
 D = gfit.D;
 
+spRows = 1 + double(conftask>0) + double(RTtask);
+
 % modlabels = {'Ves','Vis','Comb'};
 
          %ves %vis %comb
@@ -18,7 +20,7 @@ figure(101+D);
 set(gcf,'Color',[1 1 1],'Position',[300 1000 450+300*(length(cohs)-2) 400+150*(conftask>0)+150*RTtask],'PaperPositionMode','auto'); clf;
 for c = 1:length(cohs)
     % choice
-    subplot(1+double(conftask>0)+double(RTtask),length(cohs),c); box off; hold on;
+    subplot(spRows,length(cohs),c); box off; hold on;
     for m = 1:length(mods)     % m c d h
         beta = [gfit.choice.mu(m,c,D) gfit.choice.sigma(m,c,D)];
         h(m) = plot(parsedData.xVals, gfit.choice.func(beta,parsedData.xVals), [clr{c}{m}(1) '-'],'linewidth',1.5); hold on;
@@ -34,7 +36,7 @@ for c = 1:length(cohs)
     
         % conf
     if conftask
-        subplot(2+double(RTtask),length(cohs),c+length(cohs)); box off; hold on;
+        subplot(spRows,length(cohs),c+length(cohs)); box off; hold on;
         for m = 1:length(mods)
             beta = [gfit.conf.ampl(m,c,D) gfit.conf.mu(m,c,D) gfit.conf.sigma(m,c,D) gfit.conf.bsln(m,c,D)];
             h(m) = plot(parsedData.xVals, gfit.conf.func(beta,parsedData.xVals), [clr{c}{m}(1) '-'],'linewidth',1.5); hold on;
@@ -51,7 +53,7 @@ for c = 1:length(cohs)
     
     % RT
     if RTtask
-        subplot(2+double(conftask>0),length(cohs),c+length(cohs)*(2-(conftask==0))); box off; hold on;
+        subplot(spRows,length(cohs),c+length(cohs)*(2-(conftask==0))); box off; hold on;
         for m = 1:length(mods)        
             beta = [gfit.RT.ampl(m,c,D) gfit.RT.mu(m,c,D) gfit.RT.sigma(m,c,D) gfit.RT.bsln(m,c,D)];
             h(m) = plot(parsedData.xVals, gfit.RT.func(beta,parsedData.xVals), [clr{c}{m}(1) '-'],'linewidth',1.5); hold on;       
@@ -81,7 +83,7 @@ set(gcf,'Color',[1 1 1],'Position',[50 20 450+300*(length(cohs)-2) 200+150*(conf
 % set(gcf,'Color',[1 1 1],'Position',[900 600 600 800],'PaperPositionMode','auto'); clf;
 for c = 1:length(cohs)
     % choice
-    subplot(1+double(conftask>0)+double(RTtask),length(cohs),c); box off; hold on;
+    subplot(spRows,length(cohs),c); box off; hold on;
     for d = 1:length(deltas)     % m c d h
         beta = [gfit.choice.mu(3,c,d) gfit.choice.sigma(3,c,d)];
         h(d) = plot(parsedData.xVals, gfit.choice.func(beta,parsedData.xVals), [clr{c}{d}(1) '-'],'linewidth',1.5); hold on;
@@ -96,7 +98,7 @@ for c = 1:length(cohs)
 
     % conf
     if conftask
-        subplot(2+double(RTtask),length(cohs),c+length(cohs)); box off; hold on;
+        subplot(spRows,length(cohs),c+length(cohs)); box off; hold on;
         for d = 1:length(deltas)
             beta = [gfit.conf.ampl(3,c,d) gfit.conf.mu(3,c,d) gfit.conf.sigma(3,c,d) gfit.conf.bsln(3,c,d)];
             h(d) = plot(parsedData.xVals, gfit.conf.func(beta,parsedData.xVals), [clr{c}{d}(1) '-'],'linewidth',1.5); hold on;       
@@ -115,7 +117,7 @@ for c = 1:length(cohs)
 
     % RT
     if RTtask
-        subplot(2+double(conftask>0),length(cohs),c+length(cohs)*(2-(conftask==0))); box off; hold on;
+        subplot(spRows,length(cohs),c+length(cohs)*(2-(conftask==0))); box off; hold on;
         for d = 1:length(deltas)
             beta = [gfit.RT.ampl(3,c,d) gfit.RT.mu(3,c,d) gfit.RT.sigma(3,c,d) gfit.RT.bsln(3,c,d)];
             h(d) = plot(parsedData.xVals, gfit.RT.func(beta,parsedData.xVals), [clr{c}{d}(1) '-'],'linewidth',1.5); hold on;
