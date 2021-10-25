@@ -13,7 +13,7 @@ data.choice = []; % initialize this one field, you'll see why
 
 fieldExcludes = {'leftEarly','tooSlow','fixFP','FPHeld','eyeXYs','corrLoopActive','goodtrial', ...
                  'timeTargDisappears','probOfMemorySaccade','leftTargR','leftTargTheta', ...
-                 'rightTargR','rightTargTheta','audioFeedback','textFeedback','rewardDelay','reward'};
+                 'rightTargR','rightTargTheta','audioFeedback','textFeedback','rewardDelay'};
 
 % now search localDir again for matching files and extract the desired variables from PDS
 allFiles = dir(localDir);
@@ -23,7 +23,8 @@ for d = 1:length(dateRange)
     for f = 3:length(allFiles) % skip 1+2, they are are "." and ".."
         if contains(allFiles(f).name, subject) ... % check if the target file is in localDir
            && contains(allFiles(f).name, num2str(dateRange(d))) ...
-           && contains(allFiles(f).name, paradigm)
+           && contains(allFiles(f).name, paradigm) ...
+           && ~contains(allFiles(f).name, 'icloud')
        
             disp(['loading ' allFiles(f).name]);
             
@@ -70,20 +71,24 @@ for d = 1:length(dateRange)
                             % maybe don't need this, all reward analyses
                             % will have to be done within session first, so
                             % go to cleaned-up PDS files
-%                             if isfield(PDS.data{t},'reward')
-%                                 data.reward{T,1} = PDS.data{t}.reward;                               
-%                                 try data.reward.fixRewarded(T,1) = PDS.data{t}.reward.fixRewarded; 
-%                                 catch data.reward.fixRewarded(T,1) = NaN; end
-%                                 try data.reward.HighConfOffered(T,1) = PDS.data{t}.reward.amountRewardHighConfOffered; 
-%                                 catch data.reward.HighConfOffered(T,1) = NaN; end
-%                                 try data.reward.LowConfOffered(T,1) = PDS.data{t}.reward.amountRewardLowConfOffered; 
-%                                 catch data.reward.LowConfOffered(T,1) = NaN; end
-%                                 try data.reward.rewardGiven(T,1) = PDS.data{t}.reward.rewardGiven; 
-%                                 catch data.reward.rewardGiven(T,1) = NaN; end
-%                                 try data.reward.rewardDelay(T,1) = PDS.data{t}.reward.rewardDelay; 
-%                                 catch data.reward.rewardDelay(T,1) = NaN; end
-% 
-%                             end
+                            if isfield(PDS.data{t},'reward')
+                                fnames = fieldnames(PDS.data{t}.reward);
+                                fnames(ismember(fnames,fieldExcludes)) = [];
+                                for F = 1:length(fnames)
+                                    eval(['data.reward.' fnames{F} '(T,1) = PDS.data{t}.reward.' fnames{F} ';']);
+                                end
+                            end
+                            
+                            % SJ 10/2021 not true 'RT', need to replace
+                            % with time that eyes leave choice target
+                            if isfield(PDS.data{t},'postTarget')
+                                try
+                                    data.confRT(T,1) = PDS.data{t}.postTarget.timeConfTargEntered - PDS.data{t}.postTarget.timeToConfidence;
+                                catch
+                                    data.confRT(T,1) = NaN;
+%                                     data.confRT(T,1) = PDS.data{t}.postTarget.timeConfTargEntered - PDS.data{t}.postTarget.timeToConfidence;
+                                end
+                            end
                             
                             % dependent variables are stored in PDS.data.behavior
                             fnames = fieldnames(PDS.data{t}.behavior);

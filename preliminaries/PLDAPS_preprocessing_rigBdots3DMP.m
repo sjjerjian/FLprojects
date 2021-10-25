@@ -14,17 +14,16 @@ close all
 
 %% decide which files to load
 
-% subject = 'lucio';
-% paradigm = 'dots3DMP';
-% dateRange = 20210614:20210805; % RT
+paradigm = 'dots3DMP';
+today = str2double(datestr(now,'yyyymmdd'));
+
+subject = 'lucio';
+dateRange = 20210614:20210805; % RT
 % dateRange = 20210714;
 
-subject = 'human';
-paradigm = 'dots3DMP';
+% subject = 'human';
 % dateRange = 20190625:20191231; % non-RT
-
-today = str2double(datestr(now,'yyyymmdd'));
-dateRange = 20200213:today; % RT
+% dateRange = 20200213:today; % RT
 
 dateStr = num2str(dateRange(1));
 for d = 2:length(dateRange)
@@ -42,8 +41,8 @@ addNexonarDataToStruct = 0; % SJ 08-2021
 %% get PDS files from server -- DON'T FORGET VPN
 % will skip files that already exist locally, unless overwrite set to 1
 
-useVPN = 1;
-overwriteLocalFiles = 1; % set to 1 to always use the server copy
+useVPN = 0;
+overwriteLocalFiles = 0; % set to 1 to always use the server copy
 getDataFromServer % now also includes pdsCleanup to reduce file size and complexity
 
 %% get Nexonar files from server
