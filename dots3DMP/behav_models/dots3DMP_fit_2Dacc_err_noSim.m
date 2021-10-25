@@ -1,9 +1,9 @@
-function [err,fit] = dots3DMP_fit_2Dacc_err_sepbounds_noSim(param, guess, fixed, data, options)
+function [err,fit] = dots3DMP_fit_2Dacc_err_noSim(param, guess, fixed, data, options)
 
 % SJ 10-11-2021 no Monte Carlo simulation for fitting, it's redundant! just use model
 % predictions directly
 
-global call_num
+global call_num %paramVals errVals
 
 % set parameters for this run based on guess and fixed params flag
 param = getParam(param, guess, fixed);
@@ -26,60 +26,61 @@ end
 
 duration = 2000; % stimulus duration (ms)
 
-kves  = param(1);
-kvis  = param([2 3]);
-BVes     = abs(param(4)); % don't accept negative bound heights
-BVis     = abs(param(5)); % fixed across cohs
-BComb    = abs(param(6));
-muTnd    = param(7)*1000;
-ttc      = param(8);
+kves  = param(1)     .*100;
+kvis  = param([2 3]) .*100;
+% B     = abs(param(4)); % don't accept negative bound heights
+% Tnds  = param(5:7);
+% ttc      = param(8)  .*1000;
+% 
+% % only relevant for PDW
+% if options.conftask==2
+%     data.conf = data.PDW;
+%     theta  = param(9);
+%     confLapse = param(10:12);
+% else
+%     confLapse = [0 0 0];
+% end 
+
+B     = abs(param(4:6)); % don't accept negative bound heights
+Tnds  = param(7:9);
+ttc      = param(10)  .*1000;
 
 % only relevant for PDW
 if options.conftask==2
     data.conf = data.PDW;
-    theta  = param(9);
+    theta  = param(11);
+    confLapse = param(12);
+else
+    confLapse = 0;
 end 
 
-paramNames = {'kves','kvisLo','kvisHi','BVes','BVis','BComb','muTnd','T2Conf','theta'};
-% paramNames = {'kves','kvisLo','kvisHi','B','muTnd','T2Conf','theta'};
+paramNames = options.paramNames;
 
 duration = duration + ttc;
 % sdTnd = 60; % fixed SD
 
 % assume the mapping for confidence is based on an equal amount of experience with the 
 % *three* levels of reliability (ves, vis-low, vis-high) hence k is the
-% mean
-% still need separate logOddsMaps if bound heights are different
+% mean 
+% need separate logOddsMaps if bound heights are different
 
 k = mean([kves kvis]);
 
-RVes.t = 0.001:0.001:duration/1000;
-RVes.Bup = BVes;
-RVes.drift = k * sind(ushdgs); % takes only unsigned drift rates
-RVes.lose_flag = 1;
-RVes.plotflag = 0; % 1 = plot, 2 = plot and export_fig
-PVesConf =  images_dtb_2d(RVes);
-VesLogOdds = PVesConf.logOddsCorrMap;
-
-RVis.t = 0.001:0.001:duration/1000;
-RVis.Bup = BVis;
-RVis.drift = k * sind(ushdgs); % takes only unsigned drift rates
-RVis.lose_flag = 1;
-RVis.plotflag = 0; % 1 = plot, 2 = plot and export_fig
-PVisConf =  images_dtb_2d(RVis);
-VisLogOdds = PVisConf.logOddsCorrMap;
-
-RComb.t = 0.001:0.001:duration/1000;
-RComb.Bup = BComb;
-RComb.drift = k * sind(ushdgs); % takes only unsigned drift rates
-RComb.lose_flag = 1;
-RComb.plotflag = 0; % 1 = plot, 2 = plot and export_fig
-PCombConf =  images_dtb_2d(RComb);
-CombLogOdds = PCombConf.logOddsCorrMap;
+clear logOddsMap
+for b=1:length(B)
+    R.t = 0.001:0.001:duration/1000;
+    R.Bup = B(b);
+    R.drift = k * sind(ushdgs); % takes only unsigned drift rates
+    R.lose_flag = 1;
+    R.plotflag = 0; % 1 = plot, 2 = plot and export_fig
+    P =  images_dtb_2d(R);
+    logOddsMap_All(:,:,b) = P.logOddsCorrMap;
+end
 
 % now compute the P we need for model choices and RTs (modality-specific)
+
 RVes.t = 0.001:0.001:duration/1000;
-RVes.Bup = BVes;
+RVes.Bup = B(1);
 RVes.drift = kves * sind(hdgs); % takes only unsigned drift rates
 RVes.lose_flag = 1;
 RVes.plotflag = 0; % 1 = plot, 2 = plot and export_fig
@@ -88,7 +89,7 @@ PVes =  images_dtb_2d(RVes);
 clear PVis PComb
 for c = 1:length(cohs)
     RVis.t = 0.001:0.001:duration/1000;
-    RVis.Bup = BVis;
+    RVis.Bup = B(2);
     RVis.drift = kvis(c) * sind(hdgs); % takes only unsigned drift rates
     RVis.lose_flag = 1;
     RVis.plotflag = 0; % 1 = plot, 2 = plot and export_fig
@@ -104,21 +105,18 @@ for c = 1:length(cohs)
         muVis = kvis(c) * sind(hdgs+deltas(d)/2);
 %         kcomb(c) = sqrt(kves^2 + kvis(c)^2);
 %         RComb.drift = kcomb(c) * sind(ushdgs); % takes only unsigned drift rates
-        RComb.drift = wVes.*muVes + wVis.*muVis;
+        R.drift = wVes.*muVes + wVis.*muVis;
 
-        RComb.t = 0.001:0.001:duration/1000;
-        RComb.Bup = BComb;
-        RComb.lose_flag = 1;
-        RComb.plotflag = 0; % 1 = plot, 2 = plot and export_fig
-        PComb{c}{d} =  images_dtb_2d(RComb);
+        R.t = 0.001:0.001:duration/1000;
+        R.Bup = B(3);
+        R.lose_flag = 1;
+        R.plotflag = 0; % 1 = plot, 2 = plot and export_fig
+        PComb{c}{d} =  images_dtb_2d(R);
     end
 end
 
 %%
-
-% if length(deltas)>1,keyboard,end
-
-RTdata = data.RT*1000;
+RTdata = data.RT;
 confdata = data.conf;
 
 if options.conftask==1
@@ -142,6 +140,7 @@ nCor = n;
 % if options.dummyRun, keyboard, end
 
 for m = 1:length(mods)
+    
 for c = 1:length(cohs)
 for d = 1:length(deltas)
 
@@ -159,9 +158,9 @@ for d = 1:length(deltas)
         % and then assigned to the actual data trials of each condition in pRight_model for
         % log likelihood calculation
         
-        if m==1,     Ptemp = PVes;        logOddsMap = VesLogOdds; %k = kves; B = BVes;
-        elseif m==2, Ptemp = PVis{c};     logOddsMap = VisLogOdds; %k = kvis(c); B = BVis;
-        elseif m==3, Ptemp = PComb{c}{d}; logOddsMap = CombLogOdds; %k = kcomb(c); B = BComb;
+        if m==1,     Ptemp = PVes; muTnd = Tnds(m); logOddsMap = logOddsMap_All(:,:,m);
+        elseif m==2, Ptemp = PVis{c}; muTnd = Tnds(m); logOddsMap = logOddsMap_All(:,:,m);
+        elseif m==3, Ptemp = PComb{c}{d}; muTnd = Tnds(m); logOddsMap = logOddsMap_All(:,:,m);
         end
         
         % SJ 10-11-2021 replaced redundant Monte Carlo simulation with computations
@@ -193,8 +192,7 @@ for d = 1:length(deltas)
         % CONF
         if options.conftask == 1 % sacc endpoint
 %             meanConf_fit(m,c,d,h) = mean(2*logistic(confSamples)-1);
-            meanConf_fit(m,c,d,h) = nansum(nansum((Pxt + Pxt2).*(2*logistic(logOddsMap)-1)));
-            
+            meanConf_fit(m,c,d,h) = nansum(nansum(Pxt.*(2*logistic(logOddsMap)-1)));
 %             nansum(nansum(Pxt .* (2*logistic(logOddsMap)-1)) + ...
 %                 nansum(Pxt2 .* (2*logistic(logOddsMap)-1)));
             
@@ -203,10 +201,12 @@ for d = 1:length(deltas)
             
         elseif options.conftask == 2 % PDW
 %             pHigh = sum(Pxt.*(logOddsMap>theta)); % sum of density above theta [but still is a function of time!]   
-            pHigh    = sum(Pxt.*(logOddsMap>theta)) + sum(Pxt2.*(logOddsMap>theta));
-            
-            pHigh_model(Jdata) = sum(pHigh);    % marginalize over time
-            pHigh_fit(m,c,d,h) = sum(pHigh);     % store by condition for ease of plotting later
+            pHigh = sum(Pxt.*(logOddsMap>theta)) + sum(Pxt2.*(logOddsMap>theta));
+            pHigh = sum(pHigh);
+            pHigh = pHigh+confLapse*(1-pHigh);
+%             
+            pHigh_model(Jdata) = pHigh;    % marginalize over time
+            pHigh_fit(m,c,d,h) = pHigh;     % store by condition for ease of plotting later
         end
         
         % RT
@@ -214,7 +214,7 @@ for d = 1:length(deltas)
 %             cRT = Ptemp.up.mean_t(h);
             cRT = Ptemp.up.mean_t(h)*Ptemp.up.p(h) + Ptemp.lo.mean_t(h)*Ptemp.lo.p(h);
             
-            meanRT_fit(m,c,d,h) = cRT*1000+muTnd;
+            meanRT_fit(m,c,d,h) = cRT+muTnd;
             meanRT_data(m,c,d,h) = mean(RTdata(Jdata & usetrs_data));
 %             meanRT_data(m,c,d,h) =  mean(RTdata(Jdata));
 
@@ -228,13 +228,18 @@ end
 end
 
 
+
 %% calculate log likelihoods
+
+meanRT_fit = meanRT_fit * 1000;
+meanRT_data = meanRT_data * 1000;
+
 
 if options.dummyRun
    err = NaN;
    
 else
-    
+      
 % % likelihood of rightward choice on each trial, under binomial assumptions
 % based on Palmer et al. 2005 coh version, but this ignores mod/coh in 3DMPtask
 % Pr_model = 1 ./ (1 + exp(-2*k*B*sind(hdg)));
@@ -244,7 +249,7 @@ pRight_model(pRight_model==1) = 1-eps;
 
 % log likelihood of choice is summed log likelihood across all trials (log
 % probability of observing choice given model)
-LL_choice = (nansum(log(pRight_model(choiceD))) + nansum(log(1-pRight_model(~choiceD))));
+LL_choice = nansum(log(pRight_model(choiceD))) + nansum(log(1-pRight_model(~choiceD)));
 
 % log likelihood of mean RTs, under Gaussian approximation
 LL_RT = 0;
@@ -265,9 +270,12 @@ elseif options.conftask == 2 % PDW
     pHigh_model(pHigh_model==0) = eps; 
     pHigh_model(pHigh_model==1) = 1-eps;
     PDW = logical(data.conf);
-    LL_conf = (nansum(log(pHigh_model(PDW))) + nansum(log(1-pHigh_model(~PDW))));   
+    LL_conf = nansum(log(pHigh_model(PDW))) + nansum(log(1-pHigh_model(~PDW)));   
 end
 
+% LLs above are negative, and closer to 0 = higher log likelihood
+% so sum the negatives here, then flip sign to get error in positive, and
+% minimizing error
 if options.whichFit == 3 || ~isfield(options,'whichFit')
     err = -(LL_choice + LL_conf + LL_RT); % negate for minimization
 elseif options.whichFit == 2
@@ -315,15 +323,47 @@ for i=1:length(param)
 end
 fprintf('\n');
 
-fprintf('err: %f\n', err);
-fprintf('split errs: Choice: %.2f, Conf: %.2f, RT: %.2f\n',LL_choice,LL_conf,LL_RT)
+fprintf('err:\t%.4f\n', err);
+fprintf('choice:\t%.2f\nconf:\t%.2f\nRT:\t%.2f\n',LL_choice,LL_conf,LL_RT)
+
+
 if options.ploterr && contains(options.fitMethod,'fms')
-    figure(options.fh); hold on
+    figure(options.fh);
+    set(gcf,'color','white');
     if call_num==1,clf; end
-    plot(call_num, err, '.','MarkerSize',12,'color','k');
+    %subplot(311); 
+    hold on;
+    xlabel('run'); ylabel('total error'); title('Log Likelihood Error');
+    xlim([0 max(call_num,5)]);
+    plot(call_num, err, '.','MarkerSize',16,'color','k');
+    
+    %{
+    if call_num>1
+        paramVals(:,call_num) = param;
+        normX = norm(paramVals(:,call_num)-paramVals(:,call_num-1),Inf);
+        tolX  = 0.1 * (1+norm(paramVals(:,call_num-1),Inf));
+        
+        errVals(call_num) = err;
+        normF = norm(errVals(call_num)-errVals(call_num-1),Inf);
+        tolF  = 0.1 * (1+errVals(call_num-1));
+
+        subplot(312); hold on; xlabel('run'); ylabel('Xdiff'); 
+        plot(call_num, normX, '.','MarkerSize',16,'color','k');
+        plot(call_num, tolX, 'x','MarkerSize',16,'color','r');
+        xlim([0 max(call_num,5)]);
+
+        subplot(313); hold on; xlabel('run'); ylabel('Fdiff'); 
+        plot(call_num, normF, '.','MarkerSize',16,'color','k');
+        plot(call_num, tolF, 'x','MarkerSize',16,'color','r');
+
+        xlim([0 max(call_num,5)]);
+    end
+    %}
+    
     drawnow;
 end
 call_num = call_num + 1;
+
 
 end
 

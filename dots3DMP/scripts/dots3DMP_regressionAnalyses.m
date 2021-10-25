@@ -1,12 +1,11 @@
+% function dots3DMP_regressionAnalyses(data)
+
 % Regression models
 
 % SJ 06/2020 started
 % SJ 10/2021 modified significantly
 
 % Analysis of behavioral data
-
-% 
-
 
 % 1. improvement in accuracy when combined condition is presented
 % 2. effect of heading strength and RT on high bet probability/SEP
@@ -16,17 +15,34 @@
 tstatfun = @(beta,se) 1-tcdf(beta./se,length(beta)-1);
 
 
-% 1.
+mods = unique(data.modality);
+cohs = unique(data.coherence);
+deltas = unique(data.delta);
+
+%% 1. improvement in accuracy with combined condition
+
+J = data.delta==0;
+I = data.modality(J)==3;
+hdg = abs(data.heading(J));
+
+D = [ones(size(hdg)), I, hdg.*I hdg, data.correct(J)];
+% D = [ones(size(data.heading)), data.PDW, (data.heading).*data.PDW (data.heading), data.choice-1];
+[beta,llik,pred,se] = logistfit_se(D);
+p = tstatfun(beta,se);
 
 
-%% 2. effect of heading strength and RT on P(high bet) / saccEP
+%% 2. effect of heading strength on confidence
+
+J = true(size(data.heading));
+% J = data.modality==mods(2) & data.coherence==cohs(1);
 
 if conftask == 1
     
 elseif conftask == 2
     % P(High Bet) = [1 + exp(-b0 + b1*hdg + b2*RT) ] ^ -1
     
-    D = [ones(size(data.heading)), data.RT, abs(data.heading), data.PDW];
+    D = [ones(size(data.heading(J))), abs(data.heading(J)), data.PDW(J)];
+%     D = [ones(size(data.heading)), data.RT, abs(data.heading), data.PDW];
     [beta,llik,pred,se] = logistfit_se(D);
     
     p = tstatfun(beta,se);
@@ -36,11 +52,11 @@ end
 % p(3) is <<0.05, and coefficient is positive, i.e. stronger heading
 % increases probability of choosing high bet
 
-%% 3. effect of heading strength and RT on P(correct)
+%% 3. effect of heading strength on P(correct)
 
 % P(correct) = [1 + exp(-b0 + b1*hdg + b2*RT) ] ^ -1
     
-D = [ones(size(data.heading)), data.RT, abs(data.heading), data.correct];
+D = [ones(size(data.heading)), abs(data.heading), data.correct];
 [beta,llik,pred,se] = logistfit_se(D);
 p = tstatfun(beta,se);
 
@@ -48,18 +64,43 @@ p = tstatfun(beta,se);
 % result in increased p(correct) (on average), stronger heading increases
 % p(correct) as well
 
-%% 4. improvement in accuracy when high bet is chosen
+%% 3b. effect of confidence on P(correct)
 
-D = [ones(size(data.heading)), data.RT, data.PDW, abs(data.heading).*data.PDW abs(data.heading), data.correct];
+% is this valid given logistfit_se structure?? or must heading always be
+% the last indep variable in D
+
+D = [ones(size(data.heading)), abs(data.PDW), data.correct];
 [beta,llik,pred,se] = logistfit_se(D);
 p = tstatfun(beta,se);
 
-% p(3:5) all significant, indicating p(high bet) improves accuracy across
+%% 4. examine whether higher confidence is associated with increased accuracy
+
+D = [ones(size(data.heading)), data.PDW, abs(data.heading).*data.PDW abs(data.heading), data.correct];
+% D = [ones(size(data.heading)), data.PDW, (data.heading).*data.PDW (data.heading), data.choice-1];
+[beta,llik,pred,se] = logistfit_se(D);
+p = tstatfun(beta,se);
+
+% if we use 
+% p(2:4) all significant, indicating p(high bet) improves accuracy across
 % all headings
 
+%% 5.are confidence judgements associated with different reaction times
+
+% separately for each mod and coh!
 
 
+p = nan(length(mods),length(cohs),3);
+for m=1:length(mods)
+    for c=1:length(cohs)      
+        J = data.modality==mods(m) & data.coherence == cohs(c) & data.delta == 0;
+        
+        if sum(J)==0, continue, end
+        [p(m,c,:),t,stats,terms] = anovan(data.RT(J),[abs(data.heading(J)) data.PDW(J)],'model','interaction','display','off');
+    end
+end
 
+
+%%
 
 %{
 

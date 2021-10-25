@@ -1,14 +1,20 @@
 function [X, err_final, fit, fitInterp] = dots3DMP_fitDDM(data,options,guess,fixed)
 
 % parameter bounds for fitting
-LB = guess/4;
-UB = guess*4;
+% LB = guess/5;
+% UB = guess*5;
+
+LB = options.lowerbound;
+UB = options.upperbound;
 
 % also set the "plausible" lower/upper bounds used by BADS
 PLB = guess/2;
 PUB = guess*2;
 
 global call_num; call_num=1;
+
+global paramVals; paramVals = guess';
+global errVals; errVals = NaN;
 
 if all(fixed)
     X = guess;
@@ -17,11 +23,17 @@ else
 switch options.fitMethod
     case 'fms'
         fitOptions = optimset('Display', 'iter', 'MaxFunEvals', 100*sum(fixed==0), 'MaxIter', ... 
-            100*sum(fixed==0), 'TolX',1e-1,'TolFun',1e-1,'UseParallel', 'Always');
+            100*sum(fixed==0), 'TolX',1e-2,'TolFun',100,'UseParallel','Always');
         [X, fval, ~] = fminsearch(@(x) feval(options.errfun,x,guess,fixed,data,options), guess(fixed==0), fitOptions);
 %         [X, fval, exitflag] = fminunc(@(x) feval(options.errfun,x,guess,fixed,data,options), guess(fixed==0), fitOptions);
-        fprintf('fval: %f\n', fval);
+%         fprintf('fval: %f\n', fval);
 
+    case 'fmsbnd'
+        
+        fitOptions = optimset('Display', 'iter', 'MaxFunEvals', 100*sum(fixed==0), 'MaxIter', ... 
+            100*sum(fixed==0), 'TolX',1e-1,'TolFun',1e-1,'UseParallel','Always');
+        [X, fval, ~] = fminsearchbnd(@(x) feval(options.errfun,x,guess,fixed,data,options), guess(fixed==0), LB(fixed==0), UB(fixed==0), fitOptions);
+         
     case 'global'
         % GlobalSearch from Global Optimization Toolbox
         fitOptions = optimoptions(@fmincon,'Display','iter',...
@@ -40,12 +52,12 @@ switch options.fitMethod
         fitOptions = optimoptions(@fmincon,'Display','iter',...
             'Algorithm','interior-point',...
             'FinDiffType','central',...
-            'FinDiffRelStep',1e-4,...
+            'FinDiffRelStep',1e-1,...
             'UseParallel','always');
         problem = createOptimProblem('fmincon','x0',guess(fixed==0),'objective',...
             @(x) feval(options.errfun,x,guess,fixed,data,options),'lb',LB(fixed==0),...
             'ub',UB(fixed==0),'options',fitOptions);
-        ms = MultiStart('FunctionTolerance',2e-4,'XTolerance',5e-3,...
+        ms = MultiStart('FunctionTolerance',1e3,'XTolerance',1,...
             'StartPointsToRun','bounds-ineqs','UseParallel','always');
         [X,~,~,~,~] = run(ms,problem,200);    
     
@@ -170,6 +182,7 @@ else
 
 nsteps = 33; % should be odd so there's a zero
 hdgs = linspace(min(data.heading),max(data.heading),nsteps);
+% hdgs(hdgs==0) = [];
 % hdgs = unique(data.heading)'; % TEMP, see above comment
 %                                   ^ no longer an issue, we just fit the fits with (c)gauss
 
