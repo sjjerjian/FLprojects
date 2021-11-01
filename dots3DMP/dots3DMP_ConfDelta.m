@@ -32,6 +32,8 @@ for c=1:length(cohs)
             RTBias(n) = gfit.RT.mu(3,c,d) - RTBias_centered;
             RTBiasSE(n) = gfit.RT.muSE(3,c,d);
         end
+        
+        
         n = n+1;
     end
 end
@@ -44,15 +46,29 @@ cols = 'bcgbcg';
 mkrf = 'wwwbcg';
 for n=1:length(choiceBias)
     [hsym,hxe,hye] = errorbar2(choiceBias(n), confBias(n), choiceBiasSE(n), confBiasSE(n), 'o', 2); % plot conditions color-coded??
-    set(hsym,'MarkerSize',10,'MarkerFaceColor',mkrf(n),'Color',cols(n));
+    set(hsym,'MarkerSize',7,'MarkerFaceColor',mkrf(n),'Color',cols(n));
+    set(hxe,'linewidth',2,'color',cols(n));
+    set(hye,'linewidth',2,'color',cols(n));
 end
 plot([-2 2],[-2 2],'k--','LineWidth',2); axis square;
 xlim([-2 2]); ylim([-2 2]);
 set(gca,'Xtick',-2:1:2,'Ytick',-2:1:2); grid on;
 xlabel(sprintf('Choice shift (%s)',char(176))); ylabel(sprintf('Confidence shift (%s)',char(176)));
-changeAxesFontSize(gca,20,20); set(gca,'box','off')
+changeAxesFontSize(gca,16,16); tidyaxes; set(gca,'box','off')
 
-[B,Bint,R,rint,stats] = regress(confBias',[ones(size(choiceBias)); choiceBias]');
+text(0.5,-0.4,sprintf('\\Delta'),'horizo','center','fontsize',14,'fontweight','bold')
+text(1.1,-0.4,'Low','horizo','center','fontweight','bold','fontsize',14)
+text(1.7,-0.4,'High','horizo','center','fontweight','bold','fontsize',14);
+text(1.4,-0.1,'Coh','horizo','center','fontweight','bold','fontsize',14);
+for d=1:length(deltas)
+    scatter(1.1,-0.3-0.4*d,100,'markerfacecolor','w','markeredgecolor',cols(d),'linewidth',2);
+    scatter(1.7,-0.3-0.4*d,100,'markerfacecolor',cols(d),'markeredgecolor',cols(d),'linewidth',2);
+
+    text(0.5,-0.3-0.4*d,sprintf('%d',deltas(d)),'horizo','center','fontweight','bold','fontsize',16)
+end
+% [B,Bint,R,rint,stats] = regress(confBias',[ones(size(choiceBias)); choiceBias]');
+% rh=refline(B(1),B(2));
+% set(rh,'linewidth','2','color','k','linestyle','--');
 end
 
 %% 2. relationship bw conf and weights

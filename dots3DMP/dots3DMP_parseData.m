@@ -1,6 +1,7 @@
-function parsedData = dots3DMP_parseData(data,mods,cohs,deltas,hdgs,conftask,RTtask,useAbsHdg)
+function parsedData = dots3DMP_parseData(data,mods,cohs,deltas,hdgs,conftask,RTtask,useAbsHdg,correct_only)
 % SJ 07-2021 converted to function, for cleaner workspace
 
+if nargin < 9, correct_only = 0; end
 if nargin < 8, useAbsHdg = 0; end
 if nargin < 7, RTtask = 0; end
 if nargin < 6, conftask = 0; end
@@ -44,24 +45,42 @@ for d = 1:length(deltas)+1 % add extra column for all trials irrespective of del
         pCorrect(m,c,d,h) = nansum(J & data.correct) / n(m,c,d,h);
         
         if RTtask
-            RTmean(m,c,d,h) = nanmean(data.RT(J));
-%             RTmean(m,c,d,h) = nanmean(data.RT(J & data.correct));
-
-            RTse(m,c,d,h) = nanstd(data.RT(J))/sqrt(n(m,c,d,h));
+            if ~correct_only
+                RTmean(m,c,d,h) = nanmean(data.RT(J));
+                RTse(m,c,d,h) = nanstd(data.RT(J))/sqrt(n(m,c,d,h));
+            else
+                use_trs = data.correct | data.heading == 0;
+                RTmean(m,c,d,h) = nanmean(data.RT(J & use_trs));
+                RTse(m,c,d,h) = nanstd(data.RT(J & use_trs))/sqrt(sum(J & use_trs));
+            end
         else
             RTmean(m,c,d,h) = NaN;
             RTse(m,c,d,h) = NaN;
         end
         
         if conftask==1 % saccEndpoint
-            confMean(m,c,d,h) = nanmean(data.conf(J));
-            confSE(m,c,d,h) = nanstd(data.conf(J))/sqrt(n(m,c,d,h));
+            
+            if ~correct_only
+                confMean(m,c,d,h) = nanmean(data.conf(J));
+                confSE(m,c,d,h) = nanstd(data.conf(J))/sqrt(n(m,c,d,h));
+            else
+                use_trs = data.correct | data.heading == 0; 
+                confMean(m,c,d,h) = nanmean(data.conf(J & use_trs));
+                confSE(m,c,d,h) = nanstd(data.conf(J & use_trs))/sqrt(sum(J & use_trs));
+            end
+            
         elseif conftask==2 % PDW
             % ignore 1-target trials!! these are just for training purposes
             if isfield(data,'oneTargConf')
                 J = J & ~data.oneTargConf;
             end
-            confMean(m,c,d,h) = nansum(J & data.PDW==1) / sum(J); % 1 is high
+            
+            if ~correct_only
+                confMean(m,c,d,h) = nansum(J & data.PDW==1) / sum(J); % 1 is high
+            else
+                use_trs = data.correct | data.heading == 0;
+                confMean(m,c,d,h) = nansum(J & data.PDW==1 & use_trs) / sum(J & use_trs);
+            end
             % SE gets calculated below
         else % no conf at all
             confMean(m,c,d,h) = NaN;

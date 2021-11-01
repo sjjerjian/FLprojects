@@ -63,43 +63,51 @@ else
     confErrSE = zeros(size(confErr));
 end
 
-xRange = [min([RTCorr(:);RTErr(:)]) max([RTCorr(:);RTErr(:)])] .* [0.95 1.05];
+if RTtask
+    xRange = [min([RTCorr(:);RTErr(:)]) max([RTCorr(:);RTErr(:)])] .* [0.95 1.05];
+end
+
 
 figure('color','white','position',[300 300 400 400]);
 subplot(221); hold on
 for c = 1:nconds
-    errorbar(uhdg,confCorr(:,c),confCorrSE(:,c),'color',mcols(c,:),'linestyle','-.','linew',1.5,'marker','o');
+    errorbar(uhdg,confCorr(:,c),confCorrSE(:,c),'color',mcols(c,:),'linestyle','-','linew',1.5,'marker','o');
 end
 ylabel(yLab);
-ylim([0 1])
+axis([min(uhdg)-1 max(uhdg)+1 0 1])
 try changeAxesFontSize(gca,12,12); tidyaxes; catch; end
 box off;
+title('Correct')
 
 subplot(223); hold on
 for c = 1:nconds
-    errorbar(uhdg,confErr(:,c),confErrSE(:,c),'color',mcols(c,:),'linestyle','-','linew',1.5,'marker','o');
+    errorbar(uhdg(1:3),confErr(1:3,c),confErrSE(1:3,c),'color',mcols(c,:),'linestyle','-','linew',1.5,'marker','o');
 end
-xlabel('heading (deg)'); 
+xlabel(sprintf('heading angle (%s)',char(176))); 
 ylabel(yLab);
-ylim([0 1])
+axis([min(uhdg)-1 max(uhdg)+1 0 1])
 try changeAxesFontSize(gca,12,12); tidyaxes; catch; end
 box off;
+title('Error')
 
+if RTtask
 subplot(222); hold on
 for c = 1:nconds
     errorbar(RTCorr(:,c),confCorr(:,c),confCorrSE(:,c),'color',mcols(c,:),'linestyle','-','linew',1.5,'marker','o');
 end
 axis([xRange 0 1])
 try changeAxesFontSize(gca,12,12); tidyaxes; catch; end
+title('Correct')
 
 subplot(224); hold on
 for c = 1:nconds
-    errorbar(RTErr(:,c),confErr(:,c),confErrSE(:,c),'color',mcols(c,:),'linestyle','-','linew',1.5,'marker','o');
+    errorbar(RTErr(1:3,c),confErr(1:3,c),confErrSE(1:3,c),'color',mcols(c,:),'linestyle','-','linew',1.5,'marker','o');
 end
 xlabel('RT (s)')
 axis([xRange 0 1])
-try changeAxesFontSize(gca,12,12); offsetAxes; catch; end
-
+try changeAxesFontSize(gca,12,12); tidyaxes; catch; end
+end
+title('Error')
 
 
 

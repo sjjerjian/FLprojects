@@ -32,16 +32,19 @@ elseif conftask==2
     hiConf = data.PDW;
 end
 
-for m = 1:length(mods)
+for m = 1:length(mods)+1
 for c = 1:length(cohs)
 for d = 1:length(deltas)+1 % add extra column for all trials irrespective of delta
 
     for h = 1:length(hdgs)
-        if d==length(deltas)+1
+        if m==length(mods)+1
+            J = data.heading==hdgs(h);
+        elseif d==length(deltas)+1
             J = data.modality==mods(m) & data.coherence==cohs(c) & data.heading==hdgs(h); % all trials irrespective of delta
         else
             J = data.modality==mods(m) & data.coherence==cohs(c) & data.heading==hdgs(h) & data.delta==deltas(d);
         end
+
         Jhi = J & hiConf;
         Jlo = J & ~hiConf;
         
@@ -75,7 +78,9 @@ for d = 1:length(deltas)+1 % add extra column for all trials irrespective of del
     end
 
     % fit logistic regression
-    if d==length(deltas)+1
+    if m==length(mods)+1
+        K = true(size(data.modality));
+    elseif d==length(deltas)+1
         K = data.modality==mods(m) & data.coherence==cohs(c); % all trials irrespective of delta
     else
         K = data.modality==mods(m) & data.coherence==cohs(c) & data.delta==deltas(d);

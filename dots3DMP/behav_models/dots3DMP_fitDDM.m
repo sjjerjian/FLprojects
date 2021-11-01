@@ -22,16 +22,16 @@ else
    
 switch options.fitMethod
     case 'fms'
-        fitOptions = optimset('Display', 'iter', 'MaxFunEvals', 100*sum(fixed==0), 'MaxIter', ... 
-            100*sum(fixed==0), 'TolX',1e-2,'TolFun',100,'UseParallel','Always');
+        fitOptions = optimset('Display', 'iter', 'MaxFunEvals', 200*sum(fixed==0), 'MaxIter', ... 
+            200*sum(fixed==0), 'TolX',1e-3,'TolFun',1e-2,'UseParallel','Always');
         [X, fval, ~] = fminsearch(@(x) feval(options.errfun,x,guess,fixed,data,options), guess(fixed==0), fitOptions);
 %         [X, fval, exitflag] = fminunc(@(x) feval(options.errfun,x,guess,fixed,data,options), guess(fixed==0), fitOptions);
 %         fprintf('fval: %f\n', fval);
 
     case 'fmsbnd'
         
-        fitOptions = optimset('Display', 'iter', 'MaxFunEvals', 100*sum(fixed==0), 'MaxIter', ... 
-            100*sum(fixed==0), 'TolX',1e-1,'TolFun',1e-1,'UseParallel','Always');
+        fitOptions = optimset('Display', 'iter', 'MaxFunEvals', 200*sum(fixed==0), 'MaxIter', ... 
+            200*sum(fixed==0), 'TolX',1e-3,'TolFun',1e-1,'UseParallel','Always');
         [X, fval, ~] = fminsearchbnd(@(x) feval(options.errfun,x,guess,fixed,data,options), guess(fixed==0), LB(fixed==0), UB(fixed==0), fitOptions);
          
     case 'global'
@@ -57,9 +57,9 @@ switch options.fitMethod
         problem = createOptimProblem('fmincon','x0',guess(fixed==0),'objective',...
             @(x) feval(options.errfun,x,guess,fixed,data,options),'lb',LB(fixed==0),...
             'ub',UB(fixed==0),'options',fitOptions);
-        ms = MultiStart('FunctionTolerance',1e3,'XTolerance',1,...
-            'StartPointsToRun','bounds-ineqs','UseParallel','always');
-        [X,~,~,~,~] = run(ms,problem,200);    
+        ms = MultiStart('FunctionTolerance',0,'XTolerance',10,...
+            'StartPointsToRun','bounds-ineqs','UseParallel','always','PlotFcn',@gsplotbestf,'MaxTime',60*5);
+        [X,~,~,~,~] = run(ms,problem,10);    
     
     case 'pattern'
         % Pattern Search from Global Optimization Toolbox
@@ -193,7 +193,7 @@ mods = unique(data.modality);
 cohs = unique(data.coherence);
 deltas = unique(data.delta);
 
-nreps = 200;
+nreps = 2;
 [Dfit.heading, Dfit.modality, Dfit.coherence, Dfit.delta, ~] = dots3DMP_create_trial_list(hdgs,mods,cohs,deltas,nreps,0);
 
 % the observables are just placeholders because the err func still needs to

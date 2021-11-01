@@ -12,25 +12,43 @@ if nargin<3, conftask=1; end
 if nargin<4, RTtask = 0; end
 if nargin<5, fitgauss = 0; end
 
-%% actual data
+fsz = 14; % fontsize
 
 mods   = unique(rawData.modality);
 cohs   = unique(rawData.coherence);
 deltas = unique(rawData.delta);
 hdgs   = unique(rawData.heading);
 
+if all(mods==1), cohs=1; end
+
+xLab = sprintf('heading angle (%s)',char(176));
+modlabels = {'Ves','Vis','Comb'};
+
+if conftask==1 
+    yLab = 'SaccEP'; confYlims = [0.2 0.9]; 
+    if all(mods==1), RTylims = [0.9 1.5]; 
+    else,            RTylims = [0.9 1.9]; 
+    end
+    xt = -10:5:10;
+     if length(mods)>1, cohlabs = {'Low Coh','High Coh'}; end
+elseif conftask==2
+    yLab = 'P(High Bet)'; confYlims = [0.4 1.0]; 
+    if all(mods==1), RTylims = [0.5 0.72]; 
+    else,            RTylims = [0.5 0.9]; 
+    end
+    xt = -12:6:12;
+    if length(mods)>1, cohlabs = {['coh = ' num2str(cohs(1))],['coh = ' num2str(cohs(2))]}; end
+end 
+
+%% actual data
+% plot as individual points with error bars
+
 useAbsHdg = 0;
 parsedData = dots3DMP_parseData(rawData,mods,cohs,deltas,hdgs,conftask,RTtask,useAbsHdg); 
 
-if useAbsHdg
-    hdgs = unique(abs(hdgs));
-end
+if useAbsHdg, hdgs = unique(abs(hdgs)); end
 
 spRows = 1 + double(conftask>0) + double(RTtask);
-
-if conftask==1, confYL = 'Sacc EP';
-elseif conftask==2, confYL = 'P(High Bet)';
-end
 
 D = find(deltas==0);
 % first, for all trials irrespective of delta
@@ -43,34 +61,26 @@ clr{1} = {'ko','mo','co'};
 clr{2} = {'ko','ro','bo'};
 clr{3} = {'ko','yo','go'};
 figure(101);
-set(gcf,'Color',[1 1 1],'Position',[300 500 950+300*(length(cohs)-2) 800],'PaperPositionMode','auto'); clf;
+set(gcf,'Color',[1 1 1],'Position',[300 1000 230+300*(length(cohs)-1) 200+150*(conftask>0)+150*RTtask],'PaperPositionMode','auto'); clf;
 for c = 1:length(cohs)
     subplot(spRows,length(cohs),c); hold on;
     for m = 1:length(mods)     % m c d h
-        h(m) = errorbar(hdgs, squeeze(parsedData.pRight(m,c,D,:)), squeeze(parsedData.pRightSE(m,c,D,:)), [clr{c}{m}]); 
-%         h(m) = errorbar(hdgs, squeeze(parsedData.pCorrect(m,c,D,:)), squeeze(parsedData.pCorrectSE(m,c,D,:)), [clr{c}{m}]); 
-        if length(mods)>1; title(['coh = ' num2str(cohs(c))]); end
+        h(m) = errorbar(hdgs, squeeze(parsedData.pRight(m,c,D,:)), squeeze(parsedData.pRightSE(m,c,D,:)), [clr{c}{m}],'linewidth',1.5); 
     end
-    legend(h,'vestib','visual','comb','Location','northwest');
-    xlabel('heading angle (deg)'); ylabel('P(Right)');
-    ylim([0 1]);
-        
+    
     if conftask>0
         subplot(spRows,length(cohs),c+length(cohs)); hold on
         for m = 1:length(mods)
-            h(m) = errorbar(hdgs, squeeze(parsedData.confMean(m,c,D,:)), squeeze(parsedData.confSE(m,c,D,:)), [clr{c}{m}]);
+            h(m) = errorbar(hdgs, squeeze(parsedData.confMean(m,c,D,:)), squeeze(parsedData.confSE(m,c,D,:)), [clr{c}{m}],'linewidth',1.5);
         end
-        xlabel('heading angle (deg)');
-        ylabel(confYL);
-        ylim([0 1]); 
+
     end
     
     if RTtask
         subplot(spRows,length(cohs),c+length(cohs)*(2-(conftask==0))); hold on
         for m = 1:length(mods)
-            h(m) = errorbar(hdgs, squeeze(parsedData.RTmean(m,c,D,:)), squeeze(parsedData.RTse(m,c,D,:)), [clr{c}{m}]); 
+            h(m) = errorbar(hdgs, squeeze(parsedData.RTmean(m,c,D,:)), squeeze(parsedData.RTse(m,c,D,:)), [clr{c}{m}],'linewidth',1.5); 
         end
-        xlabel('heading angle (deg)'); ylabel('RT (s)');
     end
     
 end
@@ -84,35 +94,26 @@ clr{3} = {'bo','co','go'};
 
 clear L;
 figure(108);
-set(gcf,'Color',[1 1 1],'Position',[50 20 950+300*(length(cohs)-2) 800],'PaperPositionMode','auto'); clf;
+set(gcf,'Color',[1 1 1],'Position',[50 20 230+300*(length(cohs)-1) 200+150*(conftask>0)+150*RTtask],'PaperPositionMode','auto'); clf;
 for c = 1:length(cohs)
     subplot(spRows,length(cohs),c); hold on
     for d = 1:length(deltas)     % m c d h
-        h(d) = errorbar(hdgs, squeeze(parsedData.pRight(3,c,d,:)), squeeze(parsedData.pRightSE(3,c,d,:)), [clr{c}{d}]);
-%         h(d) = errorbar(hdgs, squeeze(parsedData.pCorrect(3,c,d,:)), squeeze(parsedData.pCorrectSE(3,c,d,:)), [clr{c}{d}]); 
-        L{d} = sprintf('\x0394=%d',deltas(d));
-        if length(mods)>1; title(['coh = ' num2str(cohs(c))]); end
+        h(d) = errorbar(hdgs, squeeze(parsedData.pRight(3,c,d,:)), squeeze(parsedData.pRightSE(3,c,d,:)), [clr{c}{d}],'linewidth',1.5);
+%         L{d} = sprintf('\x0394=%d',deltas(d));
     end
-    ylim([0 1]);
-    legend(h,L,'location','northwest');
-    xlabel('heading angle (deg)'); ylabel('proportion rightward choices');
-    
+
     if conftask>0
         subplot(spRows,length(cohs),c+length(cohs)); hold on
         for d = 1:length(deltas)
-            h(d) = errorbar(hdgs, squeeze(parsedData.confMean(3,c,d,:)), squeeze(parsedData.confSE(3,c,d,:)), [clr{c}{d}]);
+            h(d) = errorbar(hdgs, squeeze(parsedData.confMean(3,c,d,:)), squeeze(parsedData.confSE(3,c,d,:)), [clr{c}{d}],'linewidth',1.5);
         end
-        ylim([0 1]); 
-        xlabel('heading angle (deg)');
-        ylabel(confYL);
     end
     
     if RTtask
         subplot(spRows,length(cohs),c+length(cohs)*(2-(conftask==0))); hold on
         for d = 1:length(deltas)
-            h(d) = errorbar(hdgs, squeeze(parsedData.RTmean(3,c,d,:)), squeeze(parsedData.RTse(3,c,d,:)), [clr{c}{d}]); 
+            h(d) = errorbar(hdgs, squeeze(parsedData.RTmean(3,c,d,:)), squeeze(parsedData.RTse(3,c,d,:)), [clr{c}{d}],'linewidth',1.5); 
         end
-        xlabel('heading angle (deg)'); ylabel('RT (s)');
     end
     
 end
@@ -121,6 +122,7 @@ end
 
 
 %% fit
+% plot curve only, overlaid on actual data points
 
 % parsedData = dots3DMP_parseData(fitInterp,mods,cohs,deltas,hdgs,conftask,RTtask); 
 
@@ -156,8 +158,8 @@ if fitgauss
             changeAxesFontSize(gca,20,20); set(gca,'box','off')
             legend(h,L,'location','northwest'); legend('boxoff');
         end
-        if exfig; export_fig(['d=' num2str(deltas(d)) '_pmf'],'-eps'); end
-
+        if length(mods)>1; title(cohlabs{c}); end
+        
         % conf
         if conftask > 0
             figure(400+d); set(gcf,'Color',[1 1 1],'Position',[50 20 360 320],'PaperPositionMode','auto'); clf;
@@ -165,8 +167,8 @@ if fitgauss
                 beta = [gfit.conf.ampl(3,c,d) gfit.conf.mu(3,c,d) gfit.conf.sigma(3,c,d) gfit.conf.bsln(3,c,d)];
                 plot(parsedData.xVals, flippedGauss(beta,parsedData.xVals), '-', 'Color', clr{d}{c}, 'Linewidth', 3); hold on;
                 %             errorbar(hdgs, squeeze(confMean(3,c,d,:)), squeeze(confSE(3,c,d,:)), 'o', 'Color', clr{d}{c}, 'MarkerFaceColor', 'w', 'MarkerSize', 10, 'LineWidth', 2);
-                xlabel('Heading angle (deg)');
-                ylabel(confYL);
+                xlabel(xLab);
+                ylabel(yLab);
                 ylim([0 1]);
                 changeAxesFontSize(gca,20,20); set(gca,'box','off')
             end
@@ -196,31 +198,48 @@ else
     clr{3} = {'k-','y-','g-'};
     figure(101);
     for c = 1:length(cohs)
-        subplot(spRows,length(cohs),c);
+        subplot(spRows,length(cohs),c); hold on;
         for m = 1:length(mods)     % m c d h
-            h(m) = plot(hdgs, squeeze(fitInterp.pRight(m,c,D,:)), [clr{c}{m}]); hold on;
+            h(m) = plot(hdgs, squeeze(fitInterp.pRight(m,c,D,:)), [clr{c}{m}],'linew',1.5);
             ylim([0 1]);
-            if length(mods)>1; title(['coh = ' num2str(cohs(c))]); end
+            text(hdgs(1)+1,1.0-m*0.12,modlabels{m},'color',clr{c}{m}(1),'fontsize',fsz);
         end
-        legend(h,'vestib','visual','comb','Location','northwest');
-        xlabel('heading angle (deg)'); ylabel('P(Right)');
-        
-        if conftask>0
-            subplot(spRows,length(cohs),c+length(cohs));
+        if ~conftask && ~RTtask, xlabel(xLab); end
+        if c==1, ylabel('P(Right)'); end
+        if length(mods)>1; title(cohlabs{c}); end
+   
+        set(gca,'xtick',xt);
+        set(gca,'ytick',0:0.25:1,'yticklabel',{'0','','0.5','','1'});
+        try changeAxesFontSize(gca,fsz,fsz); tidyaxes(gca,fsz); catch; disp('plot clean up skipped'); end
+
+    
+        if conftask
+            subplot(spRows,length(cohs),c+length(cohs)); hold on;
             for m = 1:length(mods)
-                h(m) = plot(hdgs, squeeze(fitInterp.confMean(m,c,D,:)), [clr{c}{m}]);
-                ylim([0 1]); hold on;
+                h(m) = plot(hdgs, squeeze(fitInterp.confMean(m,c,D,:)), [clr{c}{m}],'linew',1.5);
+                ylim(confYlims); 
             end
-            xlabel('heading angle (deg)');
-            ylabel(confYL);
+            if ~RTtask, xlabel(xLab); end
+            if c==1, ylabel(yLab); end
+            
+            set(gca,'xtick',xt);
+            set(gca,'ytick',0:0.25:1,'yticklabel',{'0','0.25','0.5','0.75','1'});
+            try changeAxesFontSize(gca,fsz,fsz); tidyaxes(gca,fsz); catch; end
+
         end
         
         if RTtask
-            subplot(spRows,length(cohs),c+length(cohs)*2);
+            subplot(spRows,length(cohs),c+length(cohs)*2); hold on;
             for m = 1:length(mods)
-                h(m) = plot(hdgs, squeeze(fitInterp.RTmean(m,c,D,:)), [clr{c}{m}]); hold on;
+                h(m) = plot(hdgs, squeeze(fitInterp.RTmean(m,c,D,:)), [clr{c}{m}],'linew',1.5); 
             end
-            xlabel('heading angle (deg)'); ylabel('RT (s)');
+            xlabel(xLab); 
+            if c==1, ylabel('RT (s)'); end
+            ylim(RTylims);
+            
+            set(gca,'xtick',xt);
+            try changeAxesFontSize(gca,fsz,fsz); tidyaxes(gca,fsz); catch;  end
+
         end
         
     end
@@ -239,31 +258,46 @@ else
         for c = 1:length(cohs)
             subplot(spRows,length(cohs),c); hold on
             for d = 1:length(deltas)     % m c d h
-                h(d) = plot(hdgs, squeeze(fitInterp.pRight(3,c,d,:)), [clr{c}{d}]); 
+                h(d) = plot(hdgs, squeeze(fitInterp.pRight(3,c,d,:)), [clr{c}{d}],'linew',1.5); 
                 L{d} = sprintf('\x0394=%d',deltas(d));
+                text(hdgs(1)+1,1.0-d*0.16,L{d},'color',clr{c}{d}(1),'fontsize',fsz);
             end
-            if length(mods)>1; title(['coh = ' num2str(cohs(c))]); end
+            if length(mods)>1; title(cohlabs{c}); end
+%             xlabel(xLab); 
+            if c==1, ylabel('P(Right)'); end
             ylim([0 1]);
-            
-            legend(h,L,'location','northwest');
-            xlabel('heading angle (deg)'); ylabel('P(Right)');
-            
+            set(gca,'xtick',xt);
+            set(gca,'ytick',0:0.25:1,'yticklabel',{'0','','0.5','','1'});
+            try changeAxesFontSize(gca,fsz,fsz); tidyaxes(gca,fsz); catch; disp('plot clean up skipped'); end
+
+
             if conftask>0
                 subplot(spRows,length(cohs),c+length(cohs)); hold on
                 for d = 1:length(deltas)
-                    h(d) = plot(hdgs, squeeze(fitInterp.confMean(3,c,d,:)), [clr{c}{d}]);
+                    h(d) = plot(hdgs, squeeze(fitInterp.confMean(3,c,d,:)), [clr{c}{d}],'linew',1.5);
                 end
-                xlabel('heading angle (deg)'); ylabel(confYL);
-                ylim([0 1]);
+%                 xlabel(xLab); 
+                if c==1, ylabel(yLab); end
+                ylim(confYlims);
+                set(gca,'xtick',xt);
+                set(gca,'ytick',0:0.25:1,'yticklabel',{'0','0.25','0.5','0.75','1'});
+                try changeAxesFontSize(gca,fsz,fsz); tidyaxes(gca,fsz); catch; disp('plot clean up skipped'); end
+
             end
+            
             
             if RTtask
                 subplot(spRows,length(cohs),c+length(cohs)*(2-(conftask==0))); hold on;
                 for d = 1:length(deltas)
-                    h(d) = plot(hdgs, squeeze(fitInterp.RTmean(3,c,d,:)), [clr{c}{d}]);
+                    h(d) = plot(hdgs, squeeze(fitInterp.RTmean(3,c,d,:)), [clr{c}{d}],'linew',1.5);
                 end
-                xlabel('heading angle (deg)'); ylabel('RT (s)');
+                xlabel(xLab); 
+                if c==1, ylabel('RT (s)'); end
+                ylim(RTylims)
+                try changeAxesFontSize(gca,fsz,fsz); tidyaxes(gca,fsz); catch; disp('plot clean up skipped'); end
+
             end
+            
             
         end
         

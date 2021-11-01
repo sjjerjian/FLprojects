@@ -30,7 +30,7 @@ for d = 2:length(dateRange)
     dateStr = [dateStr newline num2str(dateRange(d))];
 end
 
-localDir = ['/Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data/' subject '/'];
+localDir = ['/Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data.nosync/' subject '/'];
 % localDir = ['/Users/chris/Documents/MATLAB/PLDAPS_data/' subject '/'];
 remoteDir = ['/var/services/homes/fetschlab/data/' subject '/'];
 
@@ -48,7 +48,7 @@ getDataFromServer % now also includes pdsCleanup to reduce file size and complex
 %% get Nexonar files from server
 
 if addNexonarDataToStruct
-    localDir = ['/Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data/' subject '/nexonar/'];
+    localDir = ['/Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data.nosync/' subject '/nexonar/'];
     remoteDir = ['/var/services/homes/fetschlab/data/' subject '/' subject '_nexonar/'];
     
     getDataFromServer % will skip pdsCleanup for nexonar data

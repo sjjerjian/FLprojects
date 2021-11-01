@@ -17,67 +17,85 @@ useVelAcc = 0;
 
 plotExampleTrials = 1;
 
-nreps = 1000; % number of repetitions of each unique trial type
+nreps = 50; % number of repetitions of each unique trial type
             % start small to verify it's working, then increase
             % (ntrials depends on num unique trial types)
 
 cohs = [0.4 0.8]; % visual coherence levels (these are really just labels, since k's are set manually)
 % hdgs = [-10 -5 -2.5 -1.25 0 1.25 2.5 5 10]; % heading angles
 % hdgs = [-10 -3.5 -1.25 1.25 3.5 10]; % heading angles
-hdgs = [-12 -6 -3 -1.5 -eps eps 1.5 3 6 12];
+hdgs = [-12 -6 -3 -1.5 0 1.5 3 6 12];
 deltas = [-3 0 3]; % conflict angle; positive means vis to the right
 mods = [1 2 3]; % stimulus modalities: ves, vis, comb
-duration = 6000; % stimulus duration (ms)
+duration = 2000; % stimulus duration (ms)
 
 lose_flag = 1;
-plot_flag = 0;
+plot_flag = 1;
 
 if conftask==2
     timeToConf = 0; % additional processing time for confidence
-    theta = 0.6; % threshold for high bet in logOdds, ignored if conftask==1
+    theta = 0.08; % threshold for high bet in logOdds, ignored if conftask==1
 else
     timeToConf = 0;
 end
 duration = duration + timeToConf;
 
-kmult = 30; % try to reduce number of params
-kvis  = kmult*cohs; % [20 40];
-kves  = mean(kvis); % for now, assume straddling
-% knoise = [0.07 0.07];
+% kmult = 30; % try to reduce number of params
+% kvis  = kmult*cohs; % [20 40];
+% kves  = mean(kvis); % for now, assume straddling
+% sigmaVes = 0.01;
+% sigmaVis = [0.01 0.01];
+% BVes     = 0.6;
+% BVis     = 1.2; % fixed across cohs
+% BComb    = 0.8;
+% muTnd    = 300; % fixed across mods SJ 10/11/2021 [unlike Drugo
+
+% simulate data using lucio fit parameters
+kves = 0.23;
+kvis = [0.15 0.32];
 sigmaVes = 0.01;
 sigmaVis = [0.01 0.01];
-BVes     = 0.6;
-BVis     = 1.2; % fixed across cohs
-BComb    = 0.8;
-muTnd    = 300; % fixed across mods SJ 10/11/2021 [unlike Drugo
+B = 1.3;%0.33;
+muTnd  = [0.49 0.69 0.56];
+sdTnd  = 0; % fixed SD
+confLapse = [0.07 0.38 0.09];
+theta = 0.07*10;
 
-sdTnd = 0; % fixed SD
+kves = kves.*100;
+kvis = kvis.*100;
 
 % assume the mapping is based on an equal amount of experience with the 
 % *three* levels of reliability (ves, vis-low, vis-high) hence k and sigma
 % are their averages, for the purpose of expected logOddsCorr
 k = mean([kves kvis]);
 
-RVes.t = 0.001:0.001:duration/1000;
-RVes.Bup = BVes;
-RVes.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
-RVes.lose_flag = lose_flag;
-RVes.plotflag = plot_flag; % 1 = plot, 2 = plot and export_fig
-PVes =  images_dtb_2d(RVes);
+R.t = 0.001:0.001:duration/1000;
+R.Bup = B;
+R.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
+R.lose_flag = lose_flag;
+R.plotflag = plot_flag; % 1 = plot, 2 = plot and export_fig
+P =  images_dtb_2d(R);
 
-RVis.t = 0.001:0.001:duration/1000;
-RVis.Bup = BVis;
-RVis.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
-RVis.lose_flag = lose_flag;
-RVis.plotflag = plot_flag; % 1 = plot, 2 = plot and export_fig
-PVis =  images_dtb_2d(RVis);
-
-RComb.t = 0.001:0.001:duration/1000;
-RComb.Bup = BComb;
-RComb.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
-RComb.lose_flag = lose_flag;
-RComb.plotflag = plot_flag; % 1 = plot, 2 = plot and export_fig
-PComb =  images_dtb_2d(RComb);
+% RVes.t = 0.001:0.001:duration/1000;
+% RVes.Bup = Bs(1);
+% RVes.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
+% RVes.lose_flag = lose_flag;
+% RVes.plotflag = plot_flag; % 1 = plot, 2 = plot and export_fig
+% PVes =  images_dtb_2d(RVes);
+% 
+% RVis.t = 0.001:0.001:duration/1000;
+% RVis.Bup = Bs(2);
+% RVis.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
+% RVis.lose_flag = lose_flag;
+% RVis.plotflag = plot_flag; % 1 = plot, 2 = plot and export_fig
+% PVis =  images_dtb_2d(RVis);
+% 
+% RComb.t = 0.001:0.001:duration/1000;
+% RComb.Bup = Bs(3);
+% RComb.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
+% RComb.lose_flag = lose_flag;
+% RComb.plotflag = plot_flag; % 1 = plot, 2 = plot and export_fig
+% PComb =  images_dtb_2d(RComb);
 
 % create acceleration and velocity profiles (arbitrary for now)
 % SJ 04/2020
@@ -104,13 +122,13 @@ end
 
 origParams.kves = kves;
 origParams.kvis = kvis;
-origParams.kmult = kmult;
+% origParams.kmult = kmult;
 origParams.sigmaVes = sigmaVes;
 origParams.sigmaVis = sigmaVis;
-origParams.BVes = BVes;
-origParams.BVis = BVis;
-origParams.BComb = BComb;
+origParams.B = B;
 origParams.muTnd = muTnd;
+origParams.confLapse = confLapse;
+
 origParams.ttc   = timeToConf;
 
 if conftask==2
@@ -128,14 +146,14 @@ end
     % process (Kiani et al. 2008)
 dur = ones(ntrials,1) * duration;
 
-Tnds = muTnd + randn(ntrials,1).*sdTnd;
+% Tnds = muTnd + randn(ntrials,1).*sdTnd;
 
 %% bounded evidence accumulation
 
 % assume momentary evidence is proportional to sin(heading),
 % as in drugowitsch et al 2014
 
-% dv_all = cell(ntrials,1); % shouldn't need to store every trial's DV, but if you want to, it's here
+dv_all = cell(ntrials,1); % shouldn't need to store every trial's DV, but if you want to, it's here
 
 choice = nan(ntrials,1);
 RT = nan(ntrials,1);
@@ -158,20 +176,22 @@ S = [1 -1/sqrt(2) ; -1/sqrt(2) 1];
 
 tic
 for n = 1:ntrials
-    Tnd = Tnds(n) / 1000; % Tnd for nth trial in seconds
+%     Tnd = Tnds(n) / 1000; % Tnd for nth trial in seconds
+    Tnd = (muTnd(modality(n)) + randn.*sdTnd);
 
     switch modality(n)
+        
         case 1
-            B = BVes; P = PVes; R = RVes;
+            %B = Bs(1); P = PVes; R = RVes;
             mu = acc .* kves * sind(hdg(n)) / 1000; % mean of momentary evidence
                 % (I'm guessing drift rate in images_dtb is per second, hence div by 1000)
             s = [sigmaVes sigmaVes]; % standard deviaton vector (see below)
         case 2
-            B = BVis; P = PVis; R = RVis;
+            %B = Bs(2); P = PVis; R = RVis;
             mu = vel .* kvis(cohs==coh(n)) * sind(hdg(n)) / 1000;
             s = [sigmaVis(cohs==coh(n)) sigmaVis(cohs==coh(n))];
         case 3
-            B = BComb; P = PComb; R = RComb;
+            %B = Bs(3); P = PComb; R = RComb;
             % positive delta defined as ves to the left, vis to the right
             muVes = acc .* kves               * sind(hdg(n)-delta(n)/2) / 1000;
             muVis = vel .* kvis(cohs==coh(n)) * sind(hdg(n)+delta(n)/2) / 1000;
@@ -187,11 +207,6 @@ for n = 1:ntrials
 
             mu = wVes.*muVes + wVis.*muVis;
             
-            % clearly brain does not have access to optimal weights at
-            % outset of trial, but must come up with some heuristic version
-            % of these based on inferred reliability from accumulated
-            % evidence? 
-
             % the DV is a sample from a dist with mean = weighted sum of
             % means. thus the variance is the weighted sum of variances
             % (error propagation formula):
@@ -210,7 +225,7 @@ for n = 1:ntrials
     % dv(:,1) corresponds to evidence favoring rightward, not evidence
     % favoring the correct decision (as in Kiani eqn. 3 and images_dtb)
 
-%     dv_all{n} = dv;
+    dv_all{n} = dv;
     % decision outcome
     cRT1 = find(dv(1:dur(n)-timeToConf,1)>=B, 1);
     cRT2 = find(dv(1:dur(n)-timeToConf,2)>=B, 1);
@@ -283,7 +298,11 @@ for n = 1:ntrials
                 conf(n) = RT(n) < theta;
             end
     end
-                  
+    
+    if rand<confLapse(modality(n)) && conftask==2
+        conf(n) = true;
+    end
+                         
     if isnan(conf(n)), conf(n)=0; end % if dvs are almost overlapping, force conf to zero as it can sometimes come out as NaN
     RT(n) = RT(n) + Tnd; % add NDT
 
@@ -381,7 +400,7 @@ end
 subject = 'simul';
 
 cd('/Users/stevenjerjian/Desktop/FetschLab/Analysis')
-save(sprintf('2DAccSim_conftask%d_%dtrs.mat',conftask,ntrials),'data','cohs','deltas','hdgs','mods','origParams','RTtask','conftask','subject')
+save(sprintf('2DAccSim_lucioParams.mat',conftask,ntrials),'data','cohs','deltas','hdgs','mods','origParams','RTtask','conftask','subject')
 
 %% plots
 if 0

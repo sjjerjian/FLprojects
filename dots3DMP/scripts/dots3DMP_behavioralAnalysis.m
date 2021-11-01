@@ -10,7 +10,7 @@
 % simulated data, different models
 
 clear; clc; close all
-cd /Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data/dataStructs
+cd /Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data.nosync/dataStructs
 
 %% select subject, load the data
 
@@ -28,7 +28,7 @@ switch subject
     case 'human'
 
         conftask = 1;
-        RTtask   = 1; % change this to select RT or non-RT dataset
+        RTtask   = 0; % change this to select RT or non-RT dataset
        
         if ~RTtask
             load('human_20190625-20191231_nonRT_clean.mat');% human non-RT, SfN 2021
@@ -54,14 +54,20 @@ if RTtask
     end
 end
 
+if strcmp(subject,'human') && RTtask
+    % not enough good data, so let's just remove for now
+    removethese = data.heading==0;
+    fnames = fieldnames(data);
+    for f=1:length(fnames)
+        data.(fnames{f})(removethese) = [];
+    end
+end
+
 mods   = unique(data.modality); 
 cohs   = unique(data.coherence); 
-deltas = unique(data.delta);
+% deltas = unique(data.delta);
+deltas = [-3 3];
 hdgs   = unique(data.heading);
-
-if strcmp(subject,'human') && RTtask
-    hdgs(hdgs==0) = []; % not enough good data, so let's just remove for now
-end
 
 %% basic parsing and summary plots of data
 
@@ -75,7 +81,7 @@ gfit = dots3DMP_fit_cgauss(data,mods,cohs,deltas,conftask,RTtask);
 % dots3DMP_plots(parsedData,mods,cohs,deltas,hdgs,conftask,RTtask)
 
 % separate subplots for each coh, with all mods on same subplot
-dots3DMP_plots_cgauss_byCoh(gfit,parsedData,1,cohs,deltas,hdgs,conftask,RTtask)
+dots3DMP_plots_cgauss_byCoh(gfit,parsedData,mods,cohs,deltas,hdgs,conftask,RTtask)
 
 % or...separate subplots for each mod/delta, and all cohs on same subplot
 % n.b. - this one needs tidying to look nice
@@ -88,11 +94,11 @@ wves = dots3DMP_cueWeights(gfit,cohs,deltas,conftask);
 
 % bootstrapping for error bars
 rng(28); % for reproducibility
-nboots = 5;
+nboots = 100;
 [gfitBoot,wvesBoot] = dots3DMP_cgauss_bootstrap_func(data,gfit,mods,cohs,deltas,nboots,conftask,RTtask);
 
 % plot the weights
-dots3DMP_plotCueWeights(wves,wvesBoot,cohs,conftask,gfit)
+dots3DMP_plotCueWeights(wves,wvesBoot,cohs,conftask)
 
 %% Confidence as function of decision time (RT quantiles)
 
@@ -107,9 +113,13 @@ end
 % produce few errors 
 
 
-% TODO new version which simplifies plotting of correct or error, high or
-% low bet
 % dots3DMP_RTquantiles(data,conftask,-1)
+
+% newer version, SJJ late October 2021
+% plotOption == 0 - plot errors/low bet only
+% plotOption == 1 - plot correct/high bet only
+% plotOption == 2 - plot correct/error or high/low bet separately
+% plotOption == -1 - plot all trials
 dots3DMP_RTquantiles2(data,conftask,1)
 
 %% PDW and RT for correct vs incorrect trials
@@ -145,16 +155,17 @@ dots3DMP_plots_cgauss_byConf(gfit_byConf,parsedData_byConf,mods,cohs,deltas,hdgs
 % 2. piecewise comparison of PRight for fixed absolute heading, different conflicts as function of coh
 % 3. average confidence in conflict vs no conflict (low headings only)
 
-dots3DMP_ConfDelta(data,gfit,cohs,deltas,hdgs,conftask,RTtask,3)
+dots3DMP_ConfDelta(data,gfit,cohs,deltas,hdgs,conftask,RTtask,1)
 
 
 %% MODELLING
 
 % options.errfun = 'dots3DMP_fit_2Dacc_err_sepbounds_noSim';
 options.errfun = 'dots3DMP_fit_2Dacc_err_noSim';
-options.fitMethod = 'multi'; %'fms','fmsbnd','global','multi','pattern','bads'
+options.fitMethod = 'fms'; %'fms','fmsbnd','global','multi','pattern','bads'
 options.whichFit = 3; % 0 - choice only, 1 - choice + RT, 2 - choice + conf, 3 - ALL
-options.paramNames = {'kves','kvisLo','kvisHi','BVes','BVis','BComb','TndVe','TndVi','TndCo','T-Conf','theta','cLapse'};
+% options.paramNames = {'kves','kvisLo','kvisHi','BVes','BVis','BComb','TndVe','TndVi','TndCo','T-Conf','theta','cLVes','cLVis','cLComb'};
+options.sepbounds = 0;
 
 fixAll = 0;
 
@@ -167,30 +178,70 @@ fixAll = 0;
 % Tnd     = [0.4 0.5 0.4];
 % Ttc     = 0; % time to confidence, ignored for now...
 
-kves = 0.2;
-kvis = [0.1 0.3];
-B    = [0.3 0.3 0.3];
-Tnd  = [0.5 0.65 0.55];
+% hand-tuning 10/25/2021 196 runs
+% kves = 0.237;
+% kvis = [0.103 0.33];
+% B    = [0.330 0.383671 0.342];
+% Tnd  = [0.48 0.62 0.55];
+% Ttc  = 0;
+% cL   = [0.07 0.22 0.085]; % confLapse rate, lapse rate of high bets
+% fixed = [0 0 0 0 0 0 0 0 0 1];
+% options.paramNames = {'kves','kvisLo','kvisHi','BVes','BVis','BComb','TndVe','TndVi','TndCo','T-Conf','theta','cLVes','cLVis','cLComb'};
+
+% one bound, lucio RT
+% kves = 0.2213;
+% kvis = [0.1504 0.33];
+% B    = 0.33;
+% Tnd  = [0.48 0.68 0.56];
+% Ttc  = 0;
+% cL   = [0.07 0.38 0.09]; % confLapse rate, lapse rate of high bets/high conf
+% fixed = [0 0 0 0 0 0 0 1];
+% options.paramNames = {'kves','kvisLo','kvisHi','B','TndVe','TndVi','TndCo','T-Conf','theta','cLVes','cLVis','cLComb'};
+
+% one bound, human (RT)
+% kves = 0.15;
+% kvis = [0.05 0.2];
+% B    = 1.2;
+% Tnd  = [0.75 0.75 0.75];
+% Ttc  = 0;
+% cL   = [0.25 0.25 0.25]; % confLapse rate, lapse rate of high bets, or in human case, random
+
+% lucio
+kves = 0.23;
+kvis = [0.15 0.32];
+
+B = 0.33;
+Tnd  = [0.49 0.69 0.56];
 Ttc  = 0;
-cL   = [0.1]; % confLapse rate, lapse rate of high bets
+cL = [0.07 0.38 0.09];
+theta = 0.07;
+
+
+
+%%
+% options.paramNames = {'kves','kvisLo','kvisHi','B','TndVe','TndVi','TndCo','T-Conf','cLVes','cLVis','cLComb'};
+options.paramNames = {'kves','kvisLo','kvisHi','B','TndVe','TndVi','TndCo','T-Conf','theta','cLVes','cLVis','cLComb'};
 
 guess   = [kves kvis B Tnd Ttc];
 
-fixed = [0 0 0 0 0 0 0 0 0 1];
+if RTtask
+    fixed = [0 0 0 0 0 0 0 1]; % RT
+else
+    fixed = [0 0 0 0 1 1 1 1]; % non-RT
+end
 
 
-if conftask==2 % PDW
-    theta = 0.08;
+if conftask==1
+    guess = [guess cL];
+    fixed = [fixed 0 0 0];
+elseif conftask==2 % PDW
+    theta = 0.07;
     guess = [guess theta cL];
-    fixed = [fixed 0 0];
+    fixed = [fixed 0 0 0 0];
 end
 
-if options.whichFit == 0
-    fixed = [0 0 0 0 0 0 1 1 1 1 1 1];
-end
-
-options.lowerbound = guess/2;
-options.upperbound = guess*2;
+options.lowerbound = [0.05 0.05 0.2 0.2 0.2 0.2 0.2 0 0.1 0.1 0.1];
+options.upperbound = [2 2 2 2 1 1 1 1 0.3 0.3 0.3];
 
 
 % ************************************
@@ -209,4 +260,5 @@ if options.ploterr, options.fh = 400; end
 options.runInterpFit = 1;
 [X, err_final, fit, fitInterp] = dots3DMP_fitDDM(data,options,guess,fixed);
 dots3DMP_plots_fit_byCoh(data,fitInterp,conftask,RTtask,0);
-    
+
+
