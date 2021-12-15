@@ -26,7 +26,9 @@ paradigm = 'dots3DMP';
 RTtask = 1;
 
 if ~RTtask,  dateRange = 20190625:20191231; % non-RT
-else,        dateRange = 20200213:20210922; % RT
+% else,        dateRange = 20200213:20210922; % RT
+else,        dateRange = 20200213:20211020; % RT
+
 end
 
 folder = '/Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data/dataStructs/';
@@ -49,11 +51,14 @@ if ~RTtask
     excludes_subj = {'XRJ'}; % remaining subjs should be AAW, CXD, EMF, IWT, LLV
     subjs = {'AAW','LLV','IWT','CXD','EMF'}; % non-RT
 else
-    excludes_filename = {'humanVZC20200229dots3DMP1239'};
+    excludes_filename = {'humanVZC20200229dots3DMP1239','KVU202109281702','DCJ202110061444','DCJ202110061450'}; % KVU 09/28 first block, DCJ 10/06 first block
     excludes_subjDate = {'FRK20200216','FRK20200223','VZC20200222','DRF20210824','DRF20210826',...
-        'ABF20210819','ABF20210826'};
+        'ABF20210819','ABF20210826','DCJ20211001','KVU20210921','KVU20210924','SBG20210929','SBG20211001','SBG20211006'};
     excludes_subj = {'NEX', 'NKT', 'TST'};
-    subjs = {'DRH','SJJ','LLV','IPQ','FRK','DRF','ABF'}; % RT
+%     subjs = {'DRH','SJJ','LLV','IPQ','FRK','VZC','DRF','ABF','DCJ','KVU','SBG'}; % RT
+    subjs = {'DRH','SJJ','LLV','DRF','ABF','DCJ','KVU','SBG'}; % RT
+%     subjs = {'DRH','SJJ','LLV','IPQ','FRK','DRF','KVU','SBG'}; % RT
+
 end
 % subjs = {'AAW' 'LLV' 'CXD' 'DRH' 'IPQ' 'SJJ' 'VZC'}; % all 'good' data (pre and post RT)
 
@@ -143,23 +148,18 @@ end
 % simple for now, just group by hand...
 
 data.heading(abs(data.heading)<0.01) = 0;
-% data.heading(data.heading<-0.5 & data.heading>=-2) = -1;
-% data.heading(data.heading>0.5 & data.heading<=2) = 1;
-% 
-% data.heading(data.heading<-2 & data.heading>-6) = -2;
-% data.heading(data.heading>2 & data.heading<6) = 2;
-% 
-% data.heading(data.heading<-6 & data.heading>=-12) = -3;
-% data.heading(data.heading>6 & data.heading<=12) = 3;
 
-data.heading(data.heading<-0.5 & data.heading>=-2) = -2;
-data.heading(data.heading>0.5 & data.heading<=2) = 2;
+hdgVals = [1 2 3];
+hdgVals = [2 5 10];
 
-data.heading(data.heading<-2 & data.heading>-6) = -5;
-data.heading(data.heading>2 & data.heading<6) = 5;
+data.heading(data.heading<-0.5 & data.heading>=-2) = -hdgVals(1);
+data.heading(data.heading>0.5 & data.heading<=2) = hdgVals(1);
 
-data.heading(data.heading<-6 & data.heading>=-12) = -10;
-data.heading(data.heading>6 & data.heading<=12) = 10;
+data.heading(data.heading<-2 & data.heading>-6) = -hdgVals(2);
+data.heading(data.heading>2 & data.heading<6) = hdgVals(2);
+
+data.heading(data.heading<-6 & data.heading>=-12) = -hdgVals(3);
+data.heading(data.heading>6 & data.heading<=12) = hdgVals(3);
 
 %% cull data
 
@@ -217,7 +217,7 @@ for s = 1:length(usubj)
     % SEPARATELY FOR LEFT AND RIGHT CHOICES 
     
     % ah, but what if subjects are genuinely more confident on one side
-    % that the other (this would be lost...)
+    % that the other (this would be forcibly removed from the dataset...)
     
     Lconf = data.conf(data.choice==1);
     Rconf = data.conf(data.choice==2);

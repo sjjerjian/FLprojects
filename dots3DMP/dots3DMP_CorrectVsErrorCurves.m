@@ -1,10 +1,12 @@
 function dots3DMP_CorrectVsErrorCurves(data,conftask,RTtask,useAbsHdg)
 % look at PDW and RT separately for correct and incorrect trials
 
-if useAbsHdg
-    uhdg = unique(abs(data.heading));
-else
-    uhdg = unique(data.heading);
+if useAbsHdg, uhdg = unique(abs(data.heading));
+else,         uhdg = unique(data.heading);
+end
+
+if conftask==1, yLab = 'SaccEP';
+elseif conftask==2, yLab = 'P(high bet)';
 end
 
 ucoh = unique(data.coherence);
@@ -14,7 +16,7 @@ mcols = [0 0 0 ; 1 0 1 ; 1 0 0; 0 1 1; 0 0 1; .5 0 .5];
 % nconds = size(ucond,1)+1; % include 'all conds' trace
 nconds = size(ucond,1);
 
-for c = 1:nconds % the extra one is for all conditions pooled
+for c = 1:nconds+1 % the extra one is for all conditions pooled
     
     for h = 1:length(uhdg)
         if c==size(ucond,1)+1
@@ -56,7 +58,7 @@ if conftask==2
     confCorrSE = sqrt( (confCorr.*(1-confCorr)) ./ nCorr );
     confErrSE = sqrt( (confErr.*(1-confErr)) ./ nErr );
 else
-    fprintf('not showing errors')
+    disp('not showing errors')
     confCorrSE = zeros(size(confCorr));
     confErrSE = zeros(size(confErr));
 end
@@ -68,27 +70,27 @@ subplot(221); hold on
 for c = 1:nconds
     errorbar(uhdg,confCorr(:,c),confCorrSE(:,c),'color',mcols(c,:),'linestyle','-.','linew',1.5,'marker','o');
 end
-xtickangle(45); ylabel('P(High Bet)');
-set(gca,'xtick',uhdg,'tickdir','out');
+ylabel(yLab);
 ylim([0 1])
-try changeAxesFontSize(gca,12,12); offsetAxes; catch; end
+try changeAxesFontSize(gca,12,12); tidyaxes; catch; end
 box off;
 
 subplot(223); hold on
 for c = 1:nconds
     errorbar(uhdg,confErr(:,c),confErrSE(:,c),'color',mcols(c,:),'linestyle','-','linew',1.5,'marker','o');
 end
-xlabel('heading (deg)'); xtickangle(45); ylabel('P(High Bet)');
-set(gca,'xtick',uhdg,'tickdir','out');
+xlabel('heading (deg)'); 
+ylabel(yLab);
 ylim([0 1])
-try changeAxesFontSize(gca,12,12); offsetAxes; catch; end
+try changeAxesFontSize(gca,12,12); tidyaxes; catch; end
+box off;
 
 subplot(222); hold on
 for c = 1:nconds
     errorbar(RTCorr(:,c),confCorr(:,c),confCorrSE(:,c),'color',mcols(c,:),'linestyle','-','linew',1.5,'marker','o');
 end
 axis([xRange 0 1])
-try changeAxesFontSize(gca,12,12); offsetAxes; catch; end
+try changeAxesFontSize(gca,12,12); tidyaxes; catch; end
 
 subplot(224); hold on
 for c = 1:nconds

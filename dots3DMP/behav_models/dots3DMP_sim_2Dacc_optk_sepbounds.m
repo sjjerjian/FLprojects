@@ -13,40 +13,42 @@ close all
 RTtask = 1;
 conftask = 2; % 1 - sacc endpoint, 2 - PDW
 confModel = 'evidence+time'; % 'evidence+time','evidence_only','time_only'
-useVelAcc = 1;
+useVelAcc = 0;
 
-plotExampleTrials = 0;
+plotExampleTrials = 1;
 
-nreps = 2000; % number of repetitions of each unique trial type
+nreps = 1000; % number of repetitions of each unique trial type
             % start small to verify it's working, then increase
             % (ntrials depends on num unique trial types)
 
 cohs = [0.4 0.8]; % visual coherence levels (these are really just labels, since k's are set manually)
 % hdgs = [-10 -5 -2.5 -1.25 0 1.25 2.5 5 10]; % heading angles
 % hdgs = [-10 -3.5 -1.25 1.25 3.5 10]; % heading angles
-hdgs = [-12 -6 -3 -1.5 0 1.5 3 6 12];
-deltas = [-4 0 4]; % conflict angle; positive means vis to the right
+hdgs = [-12 -6 -3 -1.5 -eps eps 1.5 3 6 12];
+deltas = [-3 0 3]; % conflict angle; positive means vis to the right
 mods = [1 2 3]; % stimulus modalities: ves, vis, comb
-duration = 2000; % stimulus duration (ms)
+duration = 6000; % stimulus duration (ms)
 
-theta = 0.5; % threshold for high bet in logOdds, ignored if conftask==1
+lose_flag = 1;
+plot_flag = 0;
 
 if conftask==2
     timeToConf = 0; % additional processing time for confidence
+    theta = 0.6; % threshold for high bet in logOdds, ignored if conftask==1
 else
     timeToConf = 0;
 end
 duration = duration + timeToConf;
 
-kmult = 50; % try to reduce number of params
+kmult = 30; % try to reduce number of params
 kvis  = kmult*cohs; % [20 40];
 kves  = mean(kvis); % for now, assume straddling
 % knoise = [0.07 0.07];
-sigmaVes = 0.03;
-sigmaVis = [0.03 0.03];
-BVes     = 0.9;
-BVis     = 1.5; % fixed across cohs
-BComb    = 1.1;
+sigmaVes = 0.01;
+sigmaVis = [0.01 0.01];
+BVes     = 0.6;
+BVis     = 1.2; % fixed across cohs
+BComb    = 0.8;
 muTnd    = 300; % fixed across mods SJ 10/11/2021 [unlike Drugo
 
 sdTnd = 0; % fixed SD
@@ -56,28 +58,26 @@ sdTnd = 0; % fixed SD
 % are their averages, for the purpose of expected logOddsCorr
 k = mean([kves kvis]);
 
+RVes.t = 0.001:0.001:duration/1000;
+RVes.Bup = BVes;
+RVes.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
+RVes.lose_flag = lose_flag;
+RVes.plotflag = plot_flag; % 1 = plot, 2 = plot and export_fig
+PVes =  images_dtb_2d(RVes);
 
-% RVes.t = 0.001:0.001:duration/1000;
-% RVes.Bup = BVes;
-% RVes.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
-% RVes.lose_flag = 1;
-% RVes.plotflag = 0; % 1 = plot, 2 = plot and export_fig
-% PVes =  images_dtb_2d(RVes);
-% 
-% RVis.t = 0.001:0.001:duration/1000;
-% RVis.Bup = BVis;
-% RVis.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
-% RVis.lose_flag = 1;
-% RVis.plotflag = 0; % 1 = plot, 2 = plot and export_fig
-% PVis =  images_dtb_2d(RVis);
-% 
-% RComb.t = 0.001:0.001:duration/1000;
-% RComb.Bup = BComb;
-% RComb.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
-% RComb.lose_flag = 1;
-% RComb.plotflag = 0; % 1 = plot, 2 = plot and export_fig
-% PComb =  images_dtb_2d(RComb);
+RVis.t = 0.001:0.001:duration/1000;
+RVis.Bup = BVis;
+RVis.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
+RVis.lose_flag = lose_flag;
+RVis.plotflag = plot_flag; % 1 = plot, 2 = plot and export_fig
+PVis =  images_dtb_2d(RVis);
 
+RComb.t = 0.001:0.001:duration/1000;
+RComb.Bup = BComb;
+RComb.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
+RComb.lose_flag = lose_flag;
+RComb.plotflag = plot_flag; % 1 = plot, 2 = plot and export_fig
+PComb =  images_dtb_2d(RComb);
 
 % try a single conf map
 R.t = 0.001:0.001:duration/1000;
@@ -108,10 +108,10 @@ acc = abs(acc)/mean(abs(acc));
 % acc = abs(acc)/max(abs(acc));
 
 if useVelAcc==0
-    vel = ones(size(vel))*mean(vel);
+%     vel = ones(size(vel))*mean(vel);
+    vel = ones(size(vel));
     acc = vel;
 end
-
 
 origParams.kves = kves;
 origParams.kvis = kvis;
@@ -229,6 +229,7 @@ for n = 1:ntrials
     % decision outcome
     cRT1 = find(dv(1:dur(n)-timeToConf,1)>=B, 1);
     cRT2 = find(dv(1:dur(n)-timeToConf,2)>=B, 1);
+    
     % the options are:
     % (1) only right accumulator hits bound,
     if ~isempty(cRT1) && isempty(cRT2)
@@ -394,28 +395,26 @@ if conftask==2
 end
 subject = 'simul';
 
-% cd('/Users/stevenjerjian/Desktop/FetschLab/Analysis')
+cd('/Users/stevenjerjian/Desktop/FetschLab/Analysis')
 save(sprintf('2DAccSim_conftask%d_%dtrs.mat',conftask,ntrials),'data','cohs','deltas','hdgs','mods','origParams','RTtask','conftask','subject')
 
 %% plots
-% if 0
-    %{
-mods   = unique(data.modality); 
-cohs   = unique(data.coherence); 
-deltas = unique(data.delta);
-hdgs   = unique(data.heading);
-
-% means per condition, logistic fits
-parsedData = dots3DMP_parseData(data,mods,cohs,deltas,hdgs,conftask,RTtask); 
-
-% gaussian fits
-gfit = dots3DMP_fit_cgauss(data,mods,cohs,deltas,conftask,RTtask); 
-
-% plot it
-dots3DMP_plots(parsedData,mods,cohs,deltas,hdgs,conftask,RTtask)
-% dots3DMP_plots_cgauss_byCoh(gfit,parsedData,mods,cohs,deltas,hdgs,conftask,RTtask)
-
-%}
+if 0
+    mods   = unique(data.modality);
+    cohs   = unique(data.coherence);
+    deltas = unique(data.delta);
+    hdgs   = unique(data.heading);
+    
+    % means per condition, logistic fits
+    parsedData = dots3DMP_parseData(data,mods,cohs,deltas,hdgs,conftask,RTtask);
+    
+    % gaussian fits
+    gfit = dots3DMP_fit_cgauss(data,mods,cohs,deltas,conftask,RTtask);
+    
+    % plot it
+%     dots3DMP_plots(parsedData,mods,cohs,deltas,hdgs,conftask,RTtask)
+    dots3DMP_plots_cgauss_byCoh(gfit,parsedData,mods,cohs,deltas,hdgs,conftask,RTtask)
+    
 
 
 %% now try fitting the fake data to recover the generative parameters
@@ -443,28 +442,20 @@ options.fitMethod = 'fms'; %'fms','global','multi','pattern','bads'
 % options.fitMethod = 'bads';
 
 % initial guess (or hand-tuned params)
-kves    = 25;
-kmult   = 50;
-kvis    = kmult.*cohs;
-BVes    = 0.9;
-BVis    = 1.5;
-BComb   = 1.1;
+kmult   = 30;
+kvis    = kmult.*cohs';
+kves    = mean(kvis);
+BVes    = 0.6;
+BVis    = 1.2;
+BComb   = 0.8;
 Tnd     = 300;
-Ttc     = 300; % time to confidence!
-
-% initial guess (or hand-tuned params)
-% kves    = 10;
-% kvis    = [10 10];
-% BVes    = 1;
-% BVis    = 1;
-% BComb   = 1;
-% Tnd     = 500;
+Ttc     = 0; % time to confidence!
 
 fixed   = [0 1 1 1 1 1 1 1];
 guess   = [kves kvis(1:2) BVes BVis BComb Tnd Ttc];
 
 if conftask==2 % PDW
-    theta = 0.9;
+    theta = 0.6;
 
     fixed   = [0 1 1 1 1 1 1 1 1];
 
@@ -484,7 +475,17 @@ options.conftask = conftask; % 1 - sacc endpoint, 2 - PDW
 
 if options.ploterr, options.fh = 400; end
 
+% remove 
+% removethese = data.RT == max(data.RT);
+% fnames = fieldnames(data);
+% 
+% for f=1:length(fnames)
+%     data.(fnames{f})(removethese) = [];
+% end
+
 [X, err_final, fit, fitInterp] = dots3DMP_fitDDM(data,options,guess,fixed);
 
 % plot it!
-dots3DMP_plots_fit_byCoh(data,fitInterp,conftask,RTtask,0) % NEEDS CLEANUP
+dots3DMP_plots_fit_byCoh(data,fitInterp,conftask,RTtask,0)
+
+end

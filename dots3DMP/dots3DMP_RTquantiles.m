@@ -1,7 +1,7 @@
 function dots3DMP_RTquantiles(data,conftask,correct)
 
-% correct - use correct trials only (1), incorrect only (0), or all (-1)
-
+% correct - use correct trials only (1), incorrect only (0), all without
+% splitting (-1), all with split (-2)
 if nargin < 3, correct = -1; end % use all
   
 
@@ -17,7 +17,12 @@ uhdg  = unique(abs(data.heading));
 
 mcols = {'Greys','Reds','Reds','Blues','Blues','Purples'};
 
-xRange = prctile(data.RT,[5 95]);
+for f=1:length(fnames)
+    data.(fnames{f})(removethese) = [];
+end
+
+xRange = prctile(data.RT,[0.5 99.5]);
+% xRange = [min(data.RT) max(data.RT)];
 
 for c = 1:size(ucond,1)+1 % the extra one is for all conditions pooled
     
@@ -30,6 +35,8 @@ for c = 1:size(ucond,1)+1 % the extra one is for all conditions pooled
         else
             I = abs(data.heading)==uhdg(h) & data.modality==ucond(c,1) & data.coherence==ucond(c,2);%& data.corr==0;
         end
+        
+        
         if correct>=0 % select only correct/incorrect trials (and all heading==0)
             I = I & (data.correct==correct | data.heading==0); 
         else
@@ -40,14 +47,18 @@ for c = 1:size(ucond,1)+1 % the extra one is for all conditions pooled
         
         if conftask==1
             theseConf = data.conf(I);
+            confSplit = theseConf < median(data.conf);
         elseif conftask==2
             theseConf = data.PDW(I);
+            confSplit = theseConf;
         end
         
         rtQ = [0 quantile(theseRT,nbins-1) inf]; % or quintiles
         for q = 1:length(rtQ)-1
             J = theseRT>=rtQ(q) & theseRT<rtQ(q+1);
             X(c,h,q) = mean(theseRT(J));
+            
+            if correct==-2
             Y(c,h,q) = mean(theseConf(J));
             
             if conftask==1
@@ -59,6 +70,10 @@ for c = 1:size(ucond,1)+1 % the extra one is for all conditions pooled
             if correct<0
                 Yc(c,h,q) = mean(theseCorr(J));
                 Yce(c,h,q) = sqrt( (Yc(c,h,q).*(1-Yc(c,h,q))) ./ sum(theseCorr(J)) );
+                
+                YcH(c,h,q) = mean(theseCorr(J) & confSplit(J)==1);
+                YcL(c,h,q) = mean(theseCorr(J) & confSplit(J)==0);
+
             end
         end
     end
@@ -105,9 +120,18 @@ for c = 1:size(ucond,1)+1 % the extra one is for all conditions pooled
         clear g L
         % (loop over h to allow animating figures one heading at a time)
         for h = 1:length(uhdg)
-            g(h) = errorbar(squeeze(X(c,h,:)),squeeze(Yc(c,h,:)),squeeze(Yce(c,h,:)),'color',cmap(h,:),'LineWidth', 2); hold on;
             
-            set(g(h),'MarkerSize',10,'MarkerFaceColor',cmap(h,:));
+            if splitByVar == 0
+                g(h) = errorbar(squeeze(X(c,h,:)),squeeze(Yc(c,h,:)),squeeze(Yce(c,h,:)),'color',cmap(h,:),'marker','o','LineWidth', 2); hold on;
+                set(g(h),'MarkerSize',10,'MarkerFaceColor',cmap(h,:));
+            else
+                j(h) = plot(squeeze(X(c,h,:)),squeeze(YcH(c,h,:)),'color',cmap(h,:),'marker','o','LineWidth', 2); hold on;
+                k(h) = plot(squeeze(X(c,h,:)),squeeze(YcL(c,h,:)),'color',cmap(h,:),'marker','o','LineWidth', 2); hold on;
+            end
+            
+            set(j(h),'MarkerSize',6,'MarkerFaceColor',cmap(h,:));
+            set(k(h),'MarkerSize',6,'MarkerFaceColor','w');
+
             xlim(xRange);
             ylim([0 1])
             

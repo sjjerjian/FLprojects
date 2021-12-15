@@ -1,4 +1,4 @@
-function dots3DMP_ConfDelta(data,gfit,cohs,deltas,hdgs,conftask)
+function dots3DMP_ConfDelta(data,gfit,cohs,deltas,hdgs,conftask,RTtask,whichPlots)
 
 % 3 analyses
 
@@ -6,33 +6,58 @@ function dots3DMP_ConfDelta(data,gfit,cohs,deltas,hdgs,conftask)
 % 2. piecewise comparison of PRight for fixed absolute heading, different conflicts as function of coh
 % 3. average confidence in conflict vs no conflict (low headings only)
 
-%% compare shifts
+%% 1. compare shifts
+
+if ismember(whichPlots,1)
 n = 1;
 for c=1:length(cohs)
+%     
+%     choiceBias_centered = gfit.choice.mu(3,c,deltas==0);
+%     confBias_centered = gfit.conf.mu(3,c,deltas==0);
+%     
+%     if RTtask, RTBias_centered = gfit.RT.mu(3,c,deltas==0); end
+    choiceBias_centered = 0;
+    confBias_centered = 0;
+
+    if RTtask, RTBias_centered = 0; end
+    
     for d = 1:length(deltas)
-        choiceBias(n) = gfit.choice.mu(3,c,d);
+        choiceBias(n) = gfit.choice.mu(3,c,d) - choiceBias_centered;
         choiceBiasSE(n) = gfit.choice.muSE(3,c,d);
         
-        confBias(n) = gfit.conf.mu(3,c,d);
+        confBias(n) = gfit.conf.mu(3,c,d)  - confBias_centered;
         confBiasSE(n) = gfit.conf.muSE(3,c,d);
         
-        RTBias(n) = gfit.RT.mu(3,c,d);
-        RTBiasSE(n) = gfit.RT.muSE(3,c,d);
+        if RTtask
+            RTBias(n) = gfit.RT.mu(3,c,d) - RTBias_centered;
+            RTBiasSE(n) = gfit.RT.muSE(3,c,d);
+        end
         n = n+1;
     end
 end
+
 figure(20); set(gcf,'Color',[1 1 1],'Position',[500 300 360 320],'PaperPositionMode','auto'); clf;
-[hsym,hxe,hye] = errorbar2(choiceBias, confBias, choiceBiasSE, confBiasSE, 'o', 2); % plot conditions color-coded??
-set(hsym,'MarkerSize',10,'MarkerFaceColor','w','Color','k');
-hold on; plot([-2 2],[-2 2],'k--','LineWidth',2); axis square;
+% [hsym,hxe,hye] = errorbar2(choiceBias, confBias, choiceBiasSE, confBiasSE, 'o', 2); % plot conditions color-coded??
+% set(hsym,'MarkerSize',10,'MarkerFaceColor','w','Color','k');
+hold on;
+cols = 'bcgbcg';
+mkrf = 'wwwbcg';
+for n=1:length(choiceBias)
+    [hsym,hxe,hye] = errorbar2(choiceBias(n), confBias(n), choiceBiasSE(n), confBiasSE(n), 'o', 2); % plot conditions color-coded??
+    set(hsym,'MarkerSize',10,'MarkerFaceColor',mkrf(n),'Color',cols(n));
+end
+plot([-2 2],[-2 2],'k--','LineWidth',2); axis square;
 xlim([-2 2]); ylim([-2 2]);
-set(gca,'Xtick',-2:1:2,'Ytick',-2:1:2);
-xlabel('Choice shift (deg)'); ylabel('Confidence shift (deg)');
+set(gca,'Xtick',-2:1:2,'Ytick',-2:1:2); grid on;
+xlabel(sprintf('Choice shift (%s)',char(176))); ylabel(sprintf('Confidence shift (%s)',char(176)));
 changeAxesFontSize(gca,20,20); set(gca,'box','off')
 
-[B,Bint,R,rint] = regress(confBias',[ones(size(choiceBias)); choiceBias]');
+[B,Bint,R,rint,stats] = regress(confBias',[ones(size(choiceBias)); choiceBias]');
+end
 
-%% 1. relationship bw conf and weights
+%% 2. relationship bw conf and weights
+
+if ismember(whichPlots,2)
 
 hdgInd = 1;
 
@@ -143,10 +168,12 @@ legend(L,'location','east');
 set(gca,'xticklabel',{'Low','High'})
 xlabel('Confidence')
 
-
+end
 
 %% 3. does conflict affect confidence?
 
+if ismember(whichPlots,3)
+    
 clear *Dzero* *Dnonzero* 
 uhdg = unique(abs(data.heading));
 
@@ -219,7 +246,12 @@ for c=1:length(cohs)
     if conftask==1, ylabel('Mean SEP');
     else, ylabel('Mean P(High Bet)')
     end
-    axis([uhdg(1) uhdg(end) 0.5 0.8])
+    xlim([uhdg(1) uhdg(end)]);
+    if conftask==2
+        ylim([0.5 0.8]);
+    else
+        ylim([0.1 0.8]);
+    end
     changeAxesFontSize(gca,20,20); set(gca,'box','off'); offsetAxes;
 
 end
@@ -230,6 +262,8 @@ else
 end
 text(7,0.65,'\Delta = 0','color','k','fontweight','bold','fontsize',16);
 text(7,0.6,'\Delta \neq 0','color','r','fontweight','bold','fontsize',16);
+
+end
 %%
 
 %{

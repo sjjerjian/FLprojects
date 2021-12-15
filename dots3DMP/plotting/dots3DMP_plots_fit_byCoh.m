@@ -19,7 +19,12 @@ cohs   = unique(rawData.coherence);
 deltas = unique(rawData.delta);
 hdgs   = unique(rawData.heading);
 
-parsedData = dots3DMP_parseData(rawData,mods,cohs,deltas,hdgs,conftask,RTtask); 
+useAbsHdg = 0;
+parsedData = dots3DMP_parseData(rawData,mods,cohs,deltas,hdgs,conftask,RTtask,useAbsHdg); 
+
+if useAbsHdg
+    hdgs = unique(abs(hdgs));
+end
 
 spRows = 1 + double(conftask>0) + double(RTtask);
 
@@ -43,6 +48,7 @@ for c = 1:length(cohs)
     subplot(spRows,length(cohs),c); hold on;
     for m = 1:length(mods)     % m c d h
         h(m) = errorbar(hdgs, squeeze(parsedData.pRight(m,c,D,:)), squeeze(parsedData.pRightSE(m,c,D,:)), [clr{c}{m}]); 
+%         h(m) = errorbar(hdgs, squeeze(parsedData.pCorrect(m,c,D,:)), squeeze(parsedData.pCorrectSE(m,c,D,:)), [clr{c}{m}]); 
         if length(mods)>1; title(['coh = ' num2str(cohs(c))]); end
     end
     legend(h,'vestib','visual','comb','Location','northwest');
@@ -82,7 +88,8 @@ set(gcf,'Color',[1 1 1],'Position',[50 20 950+300*(length(cohs)-2) 800],'PaperPo
 for c = 1:length(cohs)
     subplot(spRows,length(cohs),c); hold on
     for d = 1:length(deltas)     % m c d h
-        h(d) = errorbar(hdgs, squeeze(parsedData.pRight(3,c,d,:)), squeeze(parsedData.pRightSE(3,c,d,:)), [clr{c}{d}]); 
+        h(d) = errorbar(hdgs, squeeze(parsedData.pRight(3,c,d,:)), squeeze(parsedData.pRightSE(3,c,d,:)), [clr{c}{d}]);
+%         h(d) = errorbar(hdgs, squeeze(parsedData.pCorrect(3,c,d,:)), squeeze(parsedData.pCorrectSE(3,c,d,:)), [clr{c}{d}]); 
         L{d} = sprintf('\x0394=%d',deltas(d));
         if length(mods)>1; title(['coh = ' num2str(cohs(c))]); end
     end
@@ -142,7 +149,7 @@ if fitgauss
         lind = 1;
         for c = 1:length(cohs)
             beta = [gfit.choice.mu(3,c,d) gfit.choice.sigma(3,c,d)];
-            h(lind) = plot(parsedData.xVals, cgauss(beta,parsedData.xVals), '-', 'Color', clr{d}{c}, 'Linewidth', 3); hold on;
+            h(lind) = plot(parsedData.xVals, cgauss(beta,parsedData.xVals), '-o', 'Color', clr{d}{c}, 'Linewidth', 3); hold on;
 %             errorbar(hdgs, squeeze(pRight(3,c,d,:)), squeeze(pRightSE(3,c,d,:)), 'o', 'Color', clr{d}{c}, 'MarkerFaceColor', 'w', 'MarkerSize', 10, 'LineWidth', 2);
             L{lind} = sprintf('Coh=%0.1f',cohs(c)); lind = lind+1;
             xlabel('Heading angle (deg)'); ylabel('Proportion rightward choices'); ylim([0 1]);
