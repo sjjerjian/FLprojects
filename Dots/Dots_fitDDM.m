@@ -1,6 +1,6 @@
-function [X, LL_final, data, fit] = Dots_fitDDM_wrapper(guess,fixed,data,options)
+function [X, LL_final, data, fit] = Dots_fitDDM(guess,fixed,data,options)
 
-% generalized wrapper function for Dots DDM fitting (3DMP remains separate)
+% master function for Dots DDM fitting (3DMP remains separate)
 %   data:  data struct, requires at minimum a variable for choice and one for signed coherence
 %   options: options struct; includes the objective (error) function, i.e. which model to fit
 %   guess: initial guess of params
@@ -69,7 +69,7 @@ else
 %             PLB = guess/2;
 %             PUB = guess*2;
 
-            error('BADS not ready');
+            error('BADS code not ready');
     end
 
 
