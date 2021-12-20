@@ -3,7 +3,7 @@
 
 % for SfN2021 poster, using:
 % human_20190626-20191231: non-RT data, n=5 (_nonRT_clean)
-% human_20200203-2021xxxx: RT data, n = tbd (RT_clean)
+% human_20200203-20210922: RT data, n =  (RT_clean)
 
 % processing steps
 % 1. remove sessions/subjects (e.g. training sessions) to consolidate data
@@ -26,14 +26,16 @@ paradigm = 'dots3DMP';
 RTtask = 1;
 
 if ~RTtask,  dateRange = 20190625:20191231; % non-RT
-% else,        dateRange = 20200213:20210922; % RT
-else,        dateRange = 20200213:20211020; % RT
+else,        dateRange = 20200213:20211117; % RT
+% else,        dateRange = 20200213:20211020; % RT
 
 end
 
-folder = '/Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data/dataStructs/';
+folder = '/Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data.nosync/dataStructs/';
 file = [subject '_' num2str(dateRange(1)) '-' num2str(dateRange(end)) '.mat'];
 load([folder file], 'data');
+
+data = rmfield(data,'reward');
 
 %%
 % some new useful vars
@@ -259,7 +261,7 @@ end
 if ~RTtask
     save([folder file(1:end-4) '_nonRT_clean.mat'],'data')
 else
-    save([folder file(1:end-4) '_RT_clean.mat'],'data')
+    save([folder file(1:end-4) '_RT_clean_Nov2021.mat'],'data')
 end
 % save([file(1:end-4) '_clean.mat'],'data')
 fprintf('done.\n')

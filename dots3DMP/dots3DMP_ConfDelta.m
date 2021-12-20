@@ -193,7 +193,7 @@ if ismember(whichPlots,3)
 clear *Dzero* *Dnonzero* 
 uhdg = unique(abs(data.heading));
 
-isHdgCumul = 1;
+isHdgCumul = 0;
 
 for h = 1:length(uhdg)
 for c = 1:length(cohs)
@@ -253,7 +253,7 @@ end
 % errlow = [confDzeroSE ; confDnonzeroSE]';
 % errhigh = errlow;
 
-figure(809); set(gcf,'Color',[1 1 1],'Position',[1000 300 300 450],'PaperPositionMode','auto'); clf;
+figure(810); set(gcf,'Color',[1 1 1],'Position',[1000 300 300 450],'PaperPositionMode','auto'); clf;
 for c=1:length(cohs)
     subplot(length(cohs),1,c); hold on; title(sprintf('Coh = %.1f',cohs(c)));
     errorbar(uhdg,confDzero(c,:),confDzeroSE(c,:),'color','k','linew',1.5);
@@ -264,9 +264,9 @@ for c=1:length(cohs)
     end
     xlim([uhdg(1) uhdg(end)]);
     if conftask==2
-        ylim([0.5 0.8]);
+        ylim([0.5 1]);
     else
-        ylim([0.1 0.8]);
+        ylim([0.1 1]);
     end
     changeAxesFontSize(gca,20,20); set(gca,'box','off'); offsetAxes;
 
@@ -277,7 +277,8 @@ else
     xlabel('heading (deg)');
 end
 text(7,0.65,'\Delta = 0','color','k','fontweight','bold','fontsize',16);
-text(7,0.6,'\Delta \neq 0','color','r','fontweight','bold','fontsize',16);
+% text(7,0.6,'\Delta \neq 0','color','r','fontweight','bold','fontsize',16);
+text(7,0.6,'\Delta = 3','color','r','fontweight','bold','fontsize',16);
 
 end
 %%

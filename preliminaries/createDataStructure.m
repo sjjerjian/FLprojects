@@ -13,7 +13,7 @@ data.choice = []; % initialize this one field, you'll see why
 
 fieldExcludes = {'leftEarly','tooSlow','fixFP','FPHeld','eyeXYs','corrLoopActive','goodtrial', ...
                  'timeTargDisappears','probOfMemorySaccade','leftTargR','leftTargTheta', ...
-                 'rightTargR','rightTargTheta','audioFeedback','textFeedback','rewardDelay'};
+                 'rightTargR','rightTargTheta','audioFeedback','textFeedback','rewardDelay','reward'};
 
 % now search localDir again for matching files and extract the desired variables from PDS
 allFiles = dir(localDir);

@@ -65,8 +65,8 @@ end
 
 mods   = unique(data.modality); 
 cohs   = unique(data.coherence); 
-% deltas = unique(data.delta);
-deltas = [-3 3];
+deltas = unique(data.delta);
+% deltas = [-3 3];
 hdgs   = unique(data.heading);
 
 %% basic parsing and summary plots of data
@@ -155,7 +155,7 @@ dots3DMP_plots_cgauss_byConf(gfit_byConf,parsedData_byConf,mods,cohs,deltas,hdgs
 % 2. piecewise comparison of PRight for fixed absolute heading, different conflicts as function of coh
 % 3. average confidence in conflict vs no conflict (low headings only)
 
-dots3DMP_ConfDelta(data,gfit,cohs,deltas,hdgs,conftask,RTtask,1)
+dots3DMP_ConfDelta(data,gfit,cohs,deltas,hdgs,conftask,RTtask,3)
 
 
 %% MODELLING

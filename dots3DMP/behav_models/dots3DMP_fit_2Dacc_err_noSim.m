@@ -199,10 +199,10 @@ for d = 1:length(deltas)
 %         pRight_model(Jdata) = 1 ./ (1 + exp(-2*k*B*sind(hdgs(h))));
            
         % density of losing DV for this condition 
-%         Pxt = squeeze(Ptemp.up.distr_loser(h,:,:))' .* Ptemp.up.p(h);
-%         Pxt2= squeeze(Ptemp.lo.distr_loser(h,:,:))' .* Ptemp.lo.p(h);
-        Pxt = squeeze(Ptemp.up.distr_loser(h,:,:))';
-        Pxt2= squeeze(Ptemp.lo.distr_loser(h,:,:))';
+        Pxt = squeeze(Ptemp.up.distr_loser(h,:,:))' .* Ptemp.up.p(h);
+        Pxt2= squeeze(Ptemp.lo.distr_loser(h,:,:))' .* Ptemp.lo.p(h);
+%         Pxt = squeeze(Ptemp.up.distr_loser(h,:,:))';
+%         Pxt2= squeeze(Ptemp.lo.distr_loser(h,:,:))';
         
         nCor(m,c,d,h) = sum(Jdata & usetrs_data);
         
@@ -212,12 +212,10 @@ for d = 1:length(deltas)
             meanConf_fit(m,c,d,h) = (nansum(nansum(Pxt .* (2*logistic(logOddsMap)-1)) + ...
                 nansum(Pxt2 .* (2*logistic(logOddsMap)-1))));
             
-            % confidence lapse rate - random confidence report
-            meanConf_fit(m,c,d,h) = (1-confLapse)*meanConf_fit(m,c,d,h) + confLapse*1/2;
+            % confidence lapse
+            meanConf_fit(m,c,d,h) = (1-confLapse)*meanConf_fit(m,c,d,h) + confLapse*1/2; % random report
+%             meanConf_fit(m,c,d,h) = meanConf_fit(m,c,d,h)+confLapse*(1-meanConf_fit(m,c,d,h)); % 'lapse' high conf
             
-            % lapse rate - shift conf up
-%             meanConf_fit(m,c,d,h) = meanConf_fit(m,c,d,h)+confLapse*(1-meanConf_fit(m,c,d,h)); % 'lapse' high bet
-
             meanConf_data(m,c,d,h) = mean(confdata(Jdata & usetrs_data));
             sigmaConf(m,c,d,h) = std(confdata(Jdata & usetrs_data)) / sqrt(nCor(m,c,d,h));
             
@@ -234,13 +232,16 @@ for d = 1:length(deltas)
         % RT
         if options.RTtask           
 %             cRT = Ptemp.up.mean_t(h);
-            cRT = Ptemp.up.mean_t(h)*Ptemp.up.p(h) + Ptemp.lo.mean_t(h)*Ptemp.lo.p(h);
-            
+            cRT = Ptemp.up.mean_t(h)*Ptemp.up.p(h) + Ptemp.lo.mean_t(h)*Ptemp.lo.p(h); % is this correct? 
             meanRT_fit(m,c,d,h) = cRT+muTnd;
+            
             meanRT_data(m,c,d,h) = mean(RTdata(Jdata & usetrs_data));
-%             meanRT_data(m,c,d,h) =  mean(RTdata(Jdata));
-
             sigmaRT(m,c,d,h) = std(RTdata(Jdata & usetrs_data)) / sqrt(nCor(m,c,d,h));
+            
+%             meanRT_data(m,c,d,h) =  mean(RTdata(Jdata));
+%             sigmaRT(m,c,d,h) = std(RTdata(Jdata)) / sqrt(n(m,c,d,h));
+
+
         end
         
     end

@@ -104,10 +104,10 @@ clr{3} = {'bo','co','go'};
 clr{4} = {'bd','cd','gd'};
 
 
-clr{1} = {'bs','gs'};
-clr{2} = {'b^','g^'};
-clr{3} = {'bo','go'};
-clr{4} = {'bd','gd'};
+% clr{1} = {'bs','gs'};
+% clr{2} = {'b^','g^'};
+% clr{3} = {'bo','go'};
+% clr{4} = {'bd','gd'};
 
 
 clear L;

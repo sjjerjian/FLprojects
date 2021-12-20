@@ -17,13 +17,13 @@ close all
 paradigm = 'dots3DMP';
 today = str2double(datestr(now,'yyyymmdd'));
 
-subject = 'lucio';
-dateRange = 20210614:20210805; % RT
+% subject = 'lucio';
+% dateRange = 20210614:20210805; % RT
 % dateRange = 20210714;
 
-% subject = 'human';
+subject = 'human';
 % dateRange = 20190625:20191231; % non-RT
-% dateRange = 20200213:today; % RT
+dateRange = 20200213:today; % RT
 
 dateStr = num2str(dateRange(1));
 for d = 2:length(dateRange)
