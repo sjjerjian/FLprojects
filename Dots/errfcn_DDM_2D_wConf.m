@@ -123,7 +123,7 @@ for n = 1:ntrials
 end
 
 % output var 'fit' gets the same values as data for the conditions, but the
-% simulated trial outcomes for the observables!
+% simulated trial outcomes for the observables:
 fit = data;
 fit.choice = choice;
 fit.correct = (choice==1 & data.scoh>0) | (choice==0 & data.scoh<0);
@@ -133,9 +133,11 @@ fit.PDW = PDW;
 
 %% Next, until we have bads/ibs_basic working, calculate error using binomial/gaussian assumptions
 
-% convert to logicals
-choice = logical(choice);
-PDW = logical(PDW);
+% convert data vars to logicals
+    % (previously the LL calc below simply used choice and PDW from the
+    % monte carlo sim! that couldn't be correct.. should be the data :)
+choice = logical(data.choice);
+PDW = logical(data.PDW);
 
 cohs = unique(data.scoh);
 n = nan(length(cohs),1);
@@ -144,8 +146,8 @@ pHigh_model = n;
 RTmean_fit = n; RTmean_data = n; sigmaRT = n;
 nCor = n;
 
-pRight_trialwise = nan(ntrials,1);
-pHigh_trialwise = nan(ntrials,1);
+pRight_model_trialwise = nan(ntrials,1);
+pHigh_model_trialwise = nan(ntrials,1);
 
 for c = 1:length(cohs)
     J = data.scoh==cohs(c);
@@ -154,27 +156,41 @@ for c = 1:length(cohs)
     nCor(c) = sum(J & data.correct); % use only correct trials for RT
 
     pRight_model(c) = sum(J & fit.choice==1) / n(c); % 1 is right
-    pRight_trialwise(J) = pRight_model(c);
+    pRight_model_trialwise(J) = pRight_model(c);
 
     pHigh_model(c) = sum(J & fit.PDW==1) / n(c); % 1 is high
-    pHigh_trialwise(J) = pHigh_model(c);
+    pHigh_model_trialwise(J) = pHigh_model(c);
     
     RTmean_fit(c) = mean(fit.RT(J & data.correct));
     RTmean_data(c) = mean(data.RT(J & data.correct));
     sigmaRT(c) = std(data.RT(J & data.correct))/sqrt(nCor(c));
 end
-    
+
+% adjust the probabilities for the base rate of low-conf bets
+pHigh_model_trialwise = pHigh_model_trialwise - alpha;
+
+% 1D ver does it this way (don't remember why!):
+%     % adjust the probabilities for the base rate of low-conf bets:
+%     % the idea is that Phigh and Plow each get adjusted down/up in
+%     % proportion to how close they are to 1 or 0, respectively
+%     Phigh = PrightHigh + PleftHigh;
+%     Plow = PrightLow + PleftLow;
+%     Phigh2 = Phigh - alpha*Phigh;
+%     Plow2 = Plow + alpha*(1-Plow);
+
 % kluge to avoid log(0) issues
 % Pr_model(Pr_model==0) = min(Pr_model(Pr_model~=0)); 
 % Pr_model(Pr_model==1) = max(Pr_model(Pr_model~=1));
-pRight_trialwise(pRight_trialwise==0) = eps; 
-pRight_trialwise(pRight_trialwise==1) = 1-eps;
+pRight_model_trialwise(pRight_model_trialwise==0) = eps; 
+pRight_model_trialwise(pRight_model_trialwise==1) = 1-eps;
+pHigh_model_trialwise(pHigh_model_trialwise<=0) = eps; 
+pHigh_model_trialwise(pHigh_model_trialwise>=1) = 1-eps;
 
 % log likelihood of rightward choice on each trial, under binomial assumptions:
-LL_choice = sum(log(pRight_trialwise(choice))) + sum(log(1-pRight_trialwise(~choice)));
+LL_choice = sum(log(pRight_model_trialwise(choice))) + sum(log(1-pRight_model_trialwise(~choice)));
 
 % log likelihood of high bet on each trial, under binomial assumptions:
-LL_conf = sum(log(pHigh_trialwise(PDW))) + sum(log(1-pHigh_trialwise(~PDW)));
+LL_conf = sum(log(pHigh_model_trialwise(PDW))) + sum(log(1-pHigh_model_trialwise(~PDW)));
 
 % likelihood of mean RTs for each condition, under Gaussian approximation
 L_RT = 1./(sigmaRT*sqrt(2*pi)) .* exp(-(RTmean_fit - RTmean_data).^2 ./ (2*sigmaRT.^2));

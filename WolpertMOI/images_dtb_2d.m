@@ -36,9 +36,6 @@ if ~isfield(R,'plotflag')
 end
 P=R; % copy inputs to outputs
 
-% % %noise correlation
-% % rho= -(2^-(1/2)); %-0.7071
-    % rho is not needed here, must be baked into the flux_img file
 
 ndrift=length(R.drift); %number of drifts
 nt=length(R.t); %number of time points to simulate
@@ -91,7 +88,6 @@ try
 catch
     P.up.mean_t = P.up.pdf_t * R.t'  ./P.up.p;
     P.lo.mean_t = P.lo.pdf_t * R.t'  ./P.lo.p;
-    
 end
 
 P.y=g;
@@ -131,10 +127,9 @@ if R.plotflag
     caxis([0 1]); % because we log transformed such that 10^-q is 0 and 1 is 1
     colorbar('YTick',0:.2:1,'YTickLabel',{['10^-^{' num2str(q) '}']; ['10^-^{' num2str(q*.8) '}']; ['10^-^{' num2str(q*.6) '}']; ['10^-^{' num2str(q*.4) '}']; ['10^-^{' num2str(q*.2) '}']; '1'}); 
         % manually, for now:
-%     colorbar('YTick',0:.2:1,'YTickLabel',{'10^-^5^0'; '10^-^4^0';
-%     '10^-^3^0'; '10^-^2^0'; '10^-^1^0'; '1'});
-    set(gca,'XLim',[0 R.t(end)],'XTick',0:R.t(end)/5:R.t(end),...
-    'YTick',-2*R.Bup:R.Bup/2:0,'YTickLabel',num2cell(-R.Bup:R.Bup/2:R.Bup),'TickDir','out');
+    colorbar('YTick',0:.2:1,'YTickLabel',{'10^-^5^0'; '10^-^4^0'; '10^-^3^0'; '10^-^2^0'; '10^-^1^0'; '1'}); 
+    set(gca,'XLim',[0 R.t(end)],'XTick',0:0.5:floor(R.t(end)*2)/2,...
+    'YTick',-2*R.Bup:R.Bup/2:0, 'YTickLabel',num2cell(-R.Bup:R.Bup/2:R.Bup), 'TickDir','out');
     set(h,'LineColor','none');
     xlabel('Time (s)'); ylabel('Accumulated evidence of losing accumulator');
     title('Probability density of losing accumulator');
@@ -155,8 +150,8 @@ if R.plotflag
     [~,h] = contourf(R.t,P.y,P.logOddsCorrMap,n); colormap(parula);
     caxis([0 3]);
     colorbar('YTick',0:0.5:3); 
-    set(gca,'XLim',[0 R.t(end)],'XTick',0:R.t(end)/5:R.t(end),...
-    'YTick',-2*R.Bup:R.Bup/2:0,'YTickLabel',num2cell(-R.Bup:R.Bup/2:R.Bup),'TickDir','out');
+    set(gca,'XLim',[0 R.t(end)],'XTick',0:0.5:floor(R.t(end)*2)/2,...
+    'YTick',-2*R.Bup:R.Bup/2:0,'YTickLabel',num2cell(-R.Bup:R.Bup/2:R.Bup), 'TickDir','out');
     set(h,'LineColor','none');
     xlabel('Time (s)'); ylabel('Accumulated evidence of losing accumulator');
     title('Log odds correct vs. state of losing accumulator');

@@ -97,6 +97,22 @@ P =  images_dtb_2d(R);
 % RComb.plotflag = plot_flag; % 1 = plot, 2 = plot and export_fig
 % PComb =  images_dtb_2d(RComb);
 
+RComb.t = 0.001:0.001:duration/1000;
+RComb.Bup = BComb;
+RComb.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
+RComb.lose_flag = lose_flag;
+RComb.plotflag = plot_flag; % 1 = plot, 2 = plot and export_fig
+PComb =  images_dtb_2d(RComb);
+
+% try a single conf map
+R.t = 0.001:0.001:duration/1000;
+R.Bup = B;
+R.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
+R.lose_flag = 1;
+R.plotflag = 0; % 1 = plot, 2 = plot and export_fig
+P =  images_dtb_2d(R);
+
+
 % create acceleration and velocity profiles (arbitrary for now)
 % SJ 04/2020
 % Hou et al. 2019, peak vel = 0.37m/s, SD = 210ms
@@ -110,9 +126,11 @@ acc = gradient(vel);
 % vel = 0.37*vel./max(vel);
 % acc = gradient(vel)*1000; % multiply by 1000 to get from m/s/ms to m/s/s
 
-% normalize
+% normalize (by max or by mean?) and take abs of acc 
 vel = vel/mean(vel);
-acc = abs(acc)/mean(abs(acc)); % (and abs)
+acc = abs(acc)/mean(abs(acc));
+% vel = vel/max(vel);
+% acc = abs(acc)/max(abs(acc));
 
 if useVelAcc==0
 %     vel = ones(size(vel))*mean(vel);
@@ -147,6 +165,9 @@ end
 dur = ones(ntrials,1) * duration;
 
 % Tnds = muTnd + randn(ntrials,1).*sdTnd;
+% OR
+Tnds = [0.1 0.5 0.3]; % ves, vis, comb
+
 
 %% bounded evidence accumulation
 
@@ -177,7 +198,7 @@ S = [1 -1/sqrt(2) ; -1/sqrt(2) 1];
 tic
 for n = 1:ntrials
 %     Tnd = Tnds(n) / 1000; % Tnd for nth trial in seconds
-    Tnd = (muTnd(modality(n)) + randn.*sdTnd);
+    Tnd = Tnds(modality(n));
 
     switch modality(n)
         
@@ -187,11 +208,11 @@ for n = 1:ntrials
                 % (I'm guessing drift rate in images_dtb is per second, hence div by 1000)
             s = [sigmaVes sigmaVes]; % standard deviaton vector (see below)
         case 2
-            %B = Bs(2); P = PVis; R = RVis;
+%             B = BVis; P = PVis; R = RVis;
             mu = vel .* kvis(cohs==coh(n)) * sind(hdg(n)) / 1000;
             s = [sigmaVis(cohs==coh(n)) sigmaVis(cohs==coh(n))];
         case 3
-            %B = Bs(3); P = PComb; R = RComb;
+%             B = BComb; P = PComb; R = RComb;
             % positive delta defined as ves to the left, vis to the right
             muVes = acc .* kves               * sind(hdg(n)-delta(n)/2) / 1000;
             muVis = vel .* kvis(cohs==coh(n)) * sind(hdg(n)+delta(n)/2) / 1000;
@@ -304,7 +325,7 @@ for n = 1:ntrials
     end
                          
     if isnan(conf(n)), conf(n)=0; end % if dvs are almost overlapping, force conf to zero as it can sometimes come out as NaN
-    RT(n) = RT(n) + Tnd; % add NDT
+    RT(n) = RT(n) + Tnd;
 
     if plotExampleTrials
 
