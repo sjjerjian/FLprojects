@@ -7,10 +7,12 @@ D = find(deltas==0);
 
          %ves %vis %comb
 clr{1} = {'ko','mo','co'};
-clr{2} = {'ko','ro','bo'};
-clr{3} = {'ko','yo','go'};
+clr{2} = {'ko','mo','co'};
+% clr{2} = {'ko','ro','bo'};
+% clr{3} = {'ko','yo','go'};
 figure(101+D);
-set(gcf,'Color',[1 1 1],'Position',[300 1000 450+300*(length(cohs)-2) 200+150*(conftask>0)+150*RTtask],'PaperPositionMode','auto'); clf;
+% set(gcf,'Color',[1 1 1],'Position',[300 1000 450+300*(length(cohs)-2) 200+150*(conftask>0)+150*RTtask],'PaperPositionMode','auto'); clf;
+set(gcf,'Color',[1 1 1],'Position',[200 80 700 900],'PaperPositionMode','auto'); clf;
 for c = 1:length(cohs)
     
     % CHOICE
@@ -67,7 +69,8 @@ clr{3} = {'bo','co','go'};
 
 clear L;
 figure(108);
-set(gcf,'Color',[1 1 1],'Position',[50 20 450+300*(length(cohs)-2) 200+150*(conftask>0)+150*RTtask],'PaperPositionMode','auto'); clf;
+% set(gcf,'Color',[1 1 1],'Position',[50 20 450+300*(length(cohs)-2) 200+150*(conftask>0)+150*RTtask],'PaperPositionMode','auto'); clf;
+set(gcf,'Color',[1 1 1],'Position',[900 80 700 900],'PaperPositionMode','auto'); clf;
 for c = 1:length(cohs)
     subplot(1+double(conftask>0)+RTtask,length(cohs),c); box off; hold on;
     for d = 1:length(deltas)     % m c d h
