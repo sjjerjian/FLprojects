@@ -2,7 +2,8 @@
 
 clear
 close all
-load 2DAccSim_conftask2_90000trs.mat
+load 2DAccSim_conftask2_90000trs_sigma05.mat
+% load 2DAccSim_conftask2_180000trs_sigma04.mat
 
 % convert to 0:1
 if max(data.choice(~isnan(data.choice)))==2
@@ -54,7 +55,9 @@ if options.ploterr, options.fh = 400; end
 dots3DMP_plots_fit_byCoh(data,fitInterp,conftask,RTtask);
 
 
-%%
+
+
+%% in progress
 
 % check for fit-then-predict (missing values for +/- delta, etc)
 

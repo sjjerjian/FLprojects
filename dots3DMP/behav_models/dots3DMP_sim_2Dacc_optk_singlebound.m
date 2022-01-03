@@ -17,7 +17,7 @@ useVelAcc = 0;
 
 plotExampleTrials = 0;
 
-nreps = 1000; % number of repetitions of each unique trial type
+nreps = 2000; % number of repetitions of each unique trial type
             % start small to verify it's working, then increase
             % (ntrials depends on num unique trial types)
 
@@ -36,7 +36,7 @@ kmult = 30; % try to reduce number of params
 kvis  = kmult*cohs; % [20 40];
 kves  = mean(kvis); % for now, assume straddling
 % knoise = [0.07 0.07];
-sigmaVes = 0.05;
+sigmaVes = 0.04;
 sigmaVis = [sigmaVes sigmaVes];
 B = 1.5; % single bound
 Tnds = [0.1 0.5 0.3]; % ves, vis, comb
@@ -371,19 +371,19 @@ if 1
     % means per condition, logistic fits
     parsedData = dots3DMP_parseData(data,mods,cohs,deltas,hdgs,conftask,RTtask);
     
-    % gaussian fits
-    gfit = dots3DMP_fit_cgauss(data,mods,cohs,deltas,conftask,RTtask);
-    
     % plot it
     dots3DMP_plots(parsedData,mods,cohs,deltas,hdgs,conftask,RTtask)
-    dots3DMP_plots_cgauss_byCoh(gfit,parsedData,mods,cohs,deltas,hdgs,conftask,RTtask)
+
+    % gaussian fits
+%     gfit = dots3DMP_fit_cgauss(data,mods,cohs,deltas,conftask,RTtask);
+%     dots3DMP_plots_cgauss_byCoh(gfit,parsedData,mods,cohs,deltas,hdgs,conftask,RTtask)
 end
 
 
 
 %% save it
-% cd('/Users/chris/Documents/MATLAB')
-cd('/Users/stevenjerjian/Desktop/FetschLab/Analysis')
+cd('/Users/chris/Documents/MATLAB')
+% cd('/Users/stevenjerjian/Desktop/FetschLab/Analysis')
 save(sprintf('2DAccSim_conftask%d_%dtrs.mat',conftask,ntrials),'data','cohs','deltas','hdgs','mods','origParams','RTtask','conftask','subject')
 
 

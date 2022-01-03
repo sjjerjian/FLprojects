@@ -34,7 +34,8 @@ end
 
 
          %ves %vis %comb
-clr{1} = {'ko','mo','co'};
+% clr{1} = {'ko','mo','co'};
+clr{1} = {'ko','ro','bo'};
 clr{2} = {'ko','ro','bo'};
 clr{3} = {'ko','yo','go'};
 clr{4} = clr{1};
@@ -71,7 +72,7 @@ for c = 1:length(cohs)
         set(gca,'xtick',xt);
         set(gca,'ytick',0:0.25:1,'yticklabel',{'0','.25','.5','.75','1'});
 
-        ylim(confYlims);
+%         ylim(confYlims);
 %         xlabel(xLab); 
         if c==1, ylabel(yLab); end
 
@@ -87,8 +88,8 @@ for c = 1:length(cohs)
             errorbar(hdgs, squeeze(parsedData.RTmean(m,c,D,:)), squeeze(parsedData.RTse(m,c,D,:)), clr{c}{m},'linewidth',1.5);
         end
 %         if length(mods)>1; title(cohlabs{1}); end
-        set(gca,'xtick',xt,'ytick',0:.1:2);
-        ylim(RTylims)
+%         set(gca,'xtick',xt,'ytick',0:.1:2);
+%         ylim(RTylims)
         xlabel(xLab); 
         if c==1, ylabel('RT (s)'); end
         try changeAxesFontSize(gca,fsz,fsz); tidyaxes(gca,fsz); catch; disp('plot clean up skipped'); end
@@ -139,7 +140,7 @@ for c = 1:length(cohs)
         end
 %         if length(mods)>1; title(cohlabs{c}); end
         set(gca,'xtick',xt);
-        ylim(confYlims);
+%         ylim(confYlims);
     %     legend(h,L,'location','northwest');
 %         xlabel(xLab); 
         if c==1, ylabel(yLab); end
@@ -157,10 +158,10 @@ for c = 1:length(cohs)
             L{d} = sprintf('?=%d',deltas(d));
         end
 %         if length(mods)>1; title(cohlabs{c}); end
-        set(gca,'xtick',xt,'ytick',0:.1:2);
+%         set(gca,'xtick',xt,'ytick',0:.1:2);
         xlabel(xLab); 
         if c==1, ylabel('RT (s)'); end
-        ylim(RTylims);
+%         ylim(RTylims);
         try changeAxesFontSize(gca,fsz,fsz); tidyaxes(gca,fsz);catch; end
     end    
 
