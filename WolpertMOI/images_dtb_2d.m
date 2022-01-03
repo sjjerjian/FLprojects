@@ -94,20 +94,30 @@ P.y=g;
 P.dy=dg;
 
 % CF: log posterior odds of a correct response (Eq. 3 in Kiani et al. 2014)
-odds = (squeeze(sum(P.up.distr_loser,1)) / length(R.drift)) ./ ...
-       (squeeze(sum(P.lo.distr_loser,1)) / length(R.drift));
-% fix some stray negatives/zeros (what about infs?)
-odds(odds<1) = 1;
-
+I = R.drift>=0; % In case drift is signed, calculate only for positives,
+                % then the kluge with separate marginals (Pxt's) can be done elsewhere
+odds = (squeeze(sum(P.up.distr_loser(I,:,:),1)) / length(R.drift(I))) ./ ...
+       (squeeze(sum(P.lo.distr_loser(I,:,:),1)) / length(R.drift(I)));
+odds(odds<1) = 1; % fix some stray negatives/zeros (what about infs?)
 P.logOddsCorrMap = log(odds);
 P.logOddsCorrMap = P.logOddsCorrMap';
+
+
+% % % % from 1D:
+% % % I = xmesh>0;
+% % % logPosteriorOddsRight = log(Pxt_marginal(I,:,1)./Pxt_marginal(I,:,2));
+% % % bet_high_xt(I,:) = logPosteriorOddsRight > theta;
+% % % I = xmesh<0;
+% % % logPosteriorOddsLeft = log(Pxt_marginal(I,:,2)./Pxt_marginal(I,:,1));
+% % % bet_high_xt(I,:) = logPosteriorOddsLeft > theta2;
+
 
 
 if R.plotflag
 
     % (1) plot choice and RT
     figure(111); set(gcf,'Color',[1 1 1],'Position',[600 600 450 700],'PaperPositionMode','auto'); clf;
-    subplot(3,1,1); plot(R.drift,P.up.p,'o-'); title('Prob correct bound crossed before tmax')
+    subplot(3,1,1); plot(R.drift,P.up.p,'o-'); title('Prob correct bound crossed before tmax') % meaningless w signed drift
     subplot(3,1,2); plot(R.drift,P.up.p./(P.up.p+P.lo.p),'o-'); title('Relative prob of corr vs. incorr bound crossed (Pcorr)');
     subplot(3,1,3); plot(R.drift,P.up.mean_t,'o-'); title('mean RT'); xlabel('drift rate');
 
@@ -115,7 +125,7 @@ if R.plotflag
     n = 200; % set n to 100+ for smooth plots, lower for faster plotting
     
     % (2) first an example PDF
-    c = round(length(R.drift)/2) - 1; % pick an intermediate drift rate, or make a loop to see all of them
+    c = round(length(R.drift(I))/2) - 1 + sum(I==0); % pick an intermediate drift rate, or make a loop to see all of them
     q = 50; % exponent for log cutoff (redefine zero as 10^-q, for better plots)
     Pmap = squeeze(P.up.distr_loser(c,:,:))';
     Pmap(Pmap<10^-q) = 10^-q;
@@ -155,7 +165,8 @@ if R.plotflag
     set(h,'LineColor','none');
     xlabel('Time (s)'); ylabel('Accumulated evidence of losing accumulator');
     title('Log odds correct vs. state of losing accumulator');
-    changeAxesFontSize(gca,14,14); try tidyaxes; end
+    changeAxesFontSize(gca,12,12);
+    
     if R.plotflag==2
         ylim([-2.5 0])
         xlabel([]);ylabel([]);title([]);

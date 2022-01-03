@@ -1,23 +1,21 @@
-function dots3DMP_plots_fit_byCoh(rawData,fitInterp,conftask,RTtask,fitgauss)
+function dots3DMP_plots_fit_byCoh(data,fit,conftask,RTtask)
 
 % somewhat unwieldy amalgam of parseData and dots3DMP_plots, to show model 
 % fits versus data in dots3DMP experiment
 
-% calls parseData separately on fit and data, then plots the curves for
-% the former and just the data points for the latter
-% if fitgauss == 1, fit curves will be gaussian fits, otherwise they will
-% just be interpolated between headings
+% calls parseData on struct data and plots just the data points, then does
+% the analogous step for struct fit, and plots the result as lines (interp)
+%   [CF removed fitGauss as it should be obsolete with non-MC]
 
 if nargin<3, conftask=1; end
 if nargin<4, RTtask = 0; end
-if nargin<5, fitgauss = 0; end
 
 fsz = 14; % fontsize
 
-mods   = unique(rawData.modality);
-cohs   = unique(rawData.coherence);
-deltas = unique(rawData.delta);
-hdgs   = unique(rawData.heading);
+mods   = unique(data.modality);
+cohs   = unique(data.coherence);
+deltas = unique(data.delta);
+hdgs   = unique(data.heading);
 
 if all(mods==1), cohs=1; end
 
@@ -44,20 +42,25 @@ end
 % plot as individual points with error bars
 
 useAbsHdg = 0;
-parsedData = dots3DMP_parseData(rawData,mods,cohs,deltas,hdgs,conftask,RTtask,useAbsHdg); 
+RTCorrOnly = 1; % when fitting correct RTs only, only compare to those in the data
 
-if useAbsHdg, hdgs = unique(abs(hdgs)); end
+parsedData = dots3DMP_parseData(data,mods,cohs,deltas,hdgs,conftask,RTtask,useAbsHdg,RTCorrOnly); 
+
+if useAbsHdg
+    hdgs = unique(abs(hdgs));
+end
 
 spRows = 1 + double(conftask>0) + double(RTtask);
 
-D = find(deltas==0);
-% first, for all trials irrespective of delta
-% D = length(deltas)+1; % (the extra column we made for pooling across deltas)
-    % OR omit the zero delta, for some plots
-%     D = find(deltas~=0)';
+if conftask==1, confYL = 'Sacc EP';
+elseif conftask==2, confYL = 'P(High Bet)';
+end
 
+% first, single-cues + zero-delta comb
+D = find(deltas==0);
          %ves %vis %comb
-clr{1} = {'ko','mo','co'};
+% clr{1} = {'ko','mo','co'};
+clr{1} = {'ko','ro','bo'};
 clr{2} = {'ko','ro','bo'};
 clr{3} = {'ko','yo','go'};
 figure(101);
@@ -85,7 +88,7 @@ for c = 1:length(cohs)
     
 end
 
-% now separate by delta
+% now comb separated by delta
 if length(deltas)>1
 
 clr{1} = {'bs','cs','gs'};
@@ -124,185 +127,131 @@ end
 %% fit
 % plot curve only, overlaid on actual data points
 
-% parsedData = dots3DMP_parseData(fitInterp,mods,cohs,deltas,hdgs,conftask,RTtask); 
-
-mods   = unique(fitInterp.modality);
-cohs   = unique(fitInterp.coherence);
-deltas = unique(fitInterp.delta);
-hdgs   = unique(fitInterp.heading);
+mods   = unique(fit.modality);
+cohs   = unique(fit.coherence);
+deltas = unique(fit.delta);
+hdgs   = unique(fit.heading);
 D = find(deltas==0);
 
-if fitgauss
-    
-%     gfit = dots3DMP_fit_cgauss(fitInterp,mods,cohs,deltas,conftask,RTtask);
-    
-    exfig=0;
-    clear L h; 
-
-% % % %     clr{1} = {[1 0 0], [0 0 1]}; % red, blue
-% % % %     clr{1} = {[1 0 1], [0 1 1]}; % magenta, cyan (TMS)
-% % %     clr{1} = {[0 0 1], [1 0 0]}; % blue (baseline), red (TMS)
-% % %     clr{2} = clr{1};
-% % %     clr{3} = clr{1};
-    
-    figure(108)
-    for d = 1:length(deltas)
-        % choice
-        lind = 1;
-        for c = 1:length(cohs)
-            beta = [gfit.choice.mu(3,c,d) gfit.choice.sigma(3,c,d)];
-            h(lind) = plot(parsedData.xVals, cgauss(beta,parsedData.xVals), '-o', 'Color', clr{d}{c}, 'Linewidth', 3); hold on;
-%             errorbar(hdgs, squeeze(pRight(3,c,d,:)), squeeze(pRightSE(3,c,d,:)), 'o', 'Color', clr{d}{c}, 'MarkerFaceColor', 'w', 'MarkerSize', 10, 'LineWidth', 2);
-            L{lind} = sprintf('Coh=%0.1f',cohs(c)); lind = lind+1;
-            xlabel('Heading angle (deg)'); ylabel('Proportion rightward choices'); ylim([0 1]);
-            changeAxesFontSize(gca,20,20); set(gca,'box','off')
-            legend(h,L,'location','northwest'); legend('boxoff');
-        end
-        if length(mods)>1; title(cohlabs{c}); end
-        
-        % conf
-        if conftask > 0
-            figure(400+d); set(gcf,'Color',[1 1 1],'Position',[50 20 360 320],'PaperPositionMode','auto'); clf;
-            for c = 1:length(cohs)
-                beta = [gfit.conf.ampl(3,c,d) gfit.conf.mu(3,c,d) gfit.conf.sigma(3,c,d) gfit.conf.bsln(3,c,d)];
-                plot(parsedData.xVals, flippedGauss(beta,parsedData.xVals), '-', 'Color', clr{d}{c}, 'Linewidth', 3); hold on;
-                %             errorbar(hdgs, squeeze(confMean(3,c,d,:)), squeeze(confSE(3,c,d,:)), 'o', 'Color', clr{d}{c}, 'MarkerFaceColor', 'w', 'MarkerSize', 10, 'LineWidth', 2);
-                xlabel(xLab);
-                ylabel(yLab);
-                ylim([0 1]);
-                changeAxesFontSize(gca,20,20); set(gca,'box','off')
-            end
-            if exfig; export_fig(['d=' num2str(deltas(d)) '_conf'],'-eps'); end
-        end
-        
-        % RT
+%%% parsedData = dots3DMP_parseData(fit,mods,cohs,deltas,hdgs,conftask,RTtask); 
+% ^ because fit may have continuous pRight/pHigh instead of binary
+% choice/PDW, use this abridged version of parseData instead:
+n = nan(length(mods),length(cohs),length(deltas),length(hdgs));
+pRight = n;
+pRightSE = n;
+RTmean = n; RTse = n;
+confMean = n; confSE = n;
+for m = 1:length(mods)
+for c = 1:length(cohs)
+for d = 1:length(deltas)     
+    for h = 1:length(hdgs)
+        J = fit.modality==mods(m) & fit.coherence==cohs(c) & fit.heading==hdgs(h) & fit.delta==deltas(d);
+        n(m,c,d,h) = nansum(J);
+        pRight(m,c,d,h) = nanmean(fit.pRight(J));
+        pRightSE(m,c,d,h) = nanstd(fit.pRight(J))/sqrt(n(m,c,d,h));
         if RTtask
-            figure(500+d); set(gcf,'Color',[1 1 1],'Position',[50 20 360 320],'PaperPositionMode','auto'); clf;
-            for c = 1:length(cohs)
-                beta = [gfit.RT.ampl(3,c,d) gfit.RT.mu(3,c,d) gfit.RT.sigma(3,c,d) gfit.RT.bsln(3,c,d)];
-                plot(parsedData.xVals, gauss(beta,parsedData.xVals), '-', 'Color', clr{d}{c}, 'Linewidth', 3); hold on;
-                %                 errorbar(hdgs, squeeze(RTmean(3,c,d,:)), squeeze(RTse(3,c,d,:)), 'o', 'Color', clr{d}{c}, 'MarkerFaceColor', 'w', 'MarkerSize', 10, 'LineWidth', 2);
-                xlabel('Heading angle (deg)'); ylabel('RT (s)');
-                changeAxesFontSize(gca,20,20); set(gca,'box','off')
-            end
-            if exfig; export_fig(['d=' num2str(deltas(d)) '_rt'],'-eps'); end
-        end
-    end
-
-    
-else
-    
-    %ves %vis %comb
-    clr{1} = {'k-','m-','c-'};
-    clr{2} = {'k-','r-','b-'};
-    clr{3} = {'k-','y-','g-'};
-    figure(101);
-    for c = 1:length(cohs)
-        subplot(spRows,length(cohs),c); hold on;
-        for m = 1:length(mods)     % m c d h
-            h(m) = plot(hdgs, squeeze(fitInterp.pRight(m,c,D,:)), [clr{c}{m}],'linew',1.5);
-            ylim([0 1]);
-            text(hdgs(1)+1,1.0-m*0.12,modlabels{m},'color',clr{c}{m}(1),'fontsize',fsz);
-        end
-        if ~conftask && ~RTtask, xlabel(xLab); end
-        if c==1, ylabel('P(Right)'); end
-        if length(mods)>1; title(cohlabs{c}); end
-   
-        set(gca,'xtick',xt);
-        set(gca,'ytick',0:0.25:1,'yticklabel',{'0','','0.5','','1'});
-        try changeAxesFontSize(gca,fsz,fsz); tidyaxes(gca,fsz); catch; disp('plot clean up skipped'); end
-
-    
+            RTmean(m,c,d,h) = nanmean(fit.RT(J));
+            RTse(m,c,d,h) = nanstd(fit.RT(J))/sqrt(n(m,c,d,h));
+        else
+            RTmean(m,c,d,h) = NaN;
+            RTse(m,c,d,h) = NaN;
+        end        
         if conftask
-            subplot(spRows,length(cohs),c+length(cohs)); hold on;
-            for m = 1:length(mods)
-                h(m) = plot(hdgs, squeeze(fitInterp.confMean(m,c,D,:)), [clr{c}{m}],'linew',1.5);
-                ylim(confYlims); 
-            end
-            if ~RTtask, xlabel(xLab); end
-            if c==1, ylabel(yLab); end
-            
-            set(gca,'xtick',xt);
-            set(gca,'ytick',0:0.25:1,'yticklabel',{'0','0.25','0.5','0.75','1'});
-            try changeAxesFontSize(gca,fsz,fsz); tidyaxes(gca,fsz); catch; end
-
+            confMean(m,c,d,h) = nanmean(fit.conf(J));
+            confSE(m,c,d,h) = nanstd(fit.conf(J))/sqrt(n(m,c,d,h));        
+        else
+            confMean(m,c,d,h) = NaN;
+            confSE(m,c,d,h) = NaN;
         end
-        
+    end
+end
+end
+end
+
+% copy vestib-only data to all coherences, to aid plotting
+for c=1:length(cohs)
+    n(1,c,:,:) = n(1,1,:,:);
+    pRight(1,c,:,:) = pRight(1,1,:,:);
+    pRightSE(1,c,:,:) = pRightSE(1,1,:,:);
+    confMean(1,c,:,:) = confMean(1,1,:,:);
+    confSE(1,c,:,:) = confSE(1,1,:,:);
+    RTmean(1,c,:,:) = RTmean(1,1,:,:);
+    RTse(1,c,:,:) = RTse(1,1,:,:);
+end
+
+parsedFit = struct();
+parsedFit.n = n;
+parsedFit.pRight = pRight;
+parsedFit.pRightSE = pRightSE;
+if conftask
+    parsedFit.confMean = confMean;
+    parsedFit.confSE = confSE;
+end
+if RTtask
+    parsedFit.RTmean = RTmean;
+    parsedFit.RTse = RTse;
+end
+
+% plot it!
+
+% first, single-cues + zero-delta comb
+
+%ves %vis %comb
+% clr{1} = {'k-','m-','c-'};
+clr{1} = {'k-','r-','b-'};
+clr{2} = {'k-','r-','b-'};
+clr{3} = {'k-','y-','g-'};
+
+figure(101);
+for c = 1:length(cohs)
+    subplot(spRows,length(cohs),c);
+    for m = 1:length(mods)     % m c d h
+        h(m) = plot(hdgs, squeeze(parsedFit.pRight(m,c,D,:)), [clr{c}{m}]); hold on;
+        ylim([0 1]);
+    end
+    if conftask
+        subplot(spRows,length(cohs),c+length(cohs));
+        for m = 1:length(mods)
+            h(m) = plot(hdgs, squeeze(parsedFit.confMean(m,c,D,:)), [clr{c}{m}]);
+            ylim([0 1]); hold on;
+        end
+    end
+    if RTtask
+        subplot(spRows,length(cohs),c+length(cohs)*2);
+        for m = 1:length(mods)
+            h(m) = plot(hdgs, squeeze(parsedFit.RTmean(m,c,D,:)), [clr{c}{m}]); hold on;
+        end
+    end
+end
+
+% now comb separated by delta
+
+clr{1} = {'b-','c-','g-'};
+clr{2} = {'b-','c-','g-'};
+clr{3} = {'b-','c-','g-'};
+
+if length(deltas)>1
+    figure(108);
+    for c = 1:length(cohs)
+        subplot(spRows,length(cohs),c); hold on
+        for d = 1:length(deltas)     % m c d h
+            h(d) = plot(hdgs, squeeze(parsedFit.pRight(3,c,d,:)), [clr{c}{d}]); 
+        end
+        if length(mods)>1; title(['coh = ' num2str(cohs(c))]); end
+        ylim([0 1]);
+        if conftask>0
+            subplot(spRows,length(cohs),c+length(cohs)); hold on
+            for d = 1:length(deltas)
+                h(d) = plot(hdgs, squeeze(parsedFit.confMean(3,c,d,:)), [clr{c}{d}]);
+            end
+        end
         if RTtask
-            subplot(spRows,length(cohs),c+length(cohs)*2); hold on;
-            for m = 1:length(mods)
-                h(m) = plot(hdgs, squeeze(fitInterp.RTmean(m,c,D,:)), [clr{c}{m}],'linew',1.5); 
+            subplot(spRows,length(cohs),c+length(cohs)*(2-(conftask==0))); hold on;
+            for d = 1:length(deltas)
+                h(d) = plot(hdgs, squeeze(parsedFit.RTmean(3,c,d,:)), [clr{c}{d}]);
             end
-            xlabel(xLab); 
-            if c==1, ylabel('RT (s)'); end
-            ylim(RTylims);
-            
-            set(gca,'xtick',xt);
-            try changeAxesFontSize(gca,fsz,fsz); tidyaxes(gca,fsz); catch;  end
-
         end
-        
-    end
-    
-    
-    % now separate by delta
-    
-    if length(deltas)>1
-        
-        clr{1} = {'b-','c-','g-'};
-        clr{2} = {'b-','c-','g-'};
-        clr{3} = {'b-','c-','g-'};
-        
-        clear L;
-        figure(108);
-        for c = 1:length(cohs)
-            subplot(spRows,length(cohs),c); hold on
-            for d = 1:length(deltas)     % m c d h
-                h(d) = plot(hdgs, squeeze(fitInterp.pRight(3,c,d,:)), [clr{c}{d}],'linew',1.5); 
-                L{d} = sprintf('\x0394=%d',deltas(d));
-                text(hdgs(1)+1,1.0-d*0.16,L{d},'color',clr{c}{d}(1),'fontsize',fsz);
-            end
-            if length(mods)>1; title(cohlabs{c}); end
-%             xlabel(xLab); 
-            if c==1, ylabel('P(Right)'); end
-            ylim([0 1]);
-            set(gca,'xtick',xt);
-            set(gca,'ytick',0:0.25:1,'yticklabel',{'0','','0.5','','1'});
-            try changeAxesFontSize(gca,fsz,fsz); tidyaxes(gca,fsz); catch; disp('plot clean up skipped'); end
-
-
-            if conftask>0
-                subplot(spRows,length(cohs),c+length(cohs)); hold on
-                for d = 1:length(deltas)
-                    h(d) = plot(hdgs, squeeze(fitInterp.confMean(3,c,d,:)), [clr{c}{d}],'linew',1.5);
-                end
-%                 xlabel(xLab); 
-                if c==1, ylabel(yLab); end
-                ylim(confYlims);
-                set(gca,'xtick',xt);
-                set(gca,'ytick',0:0.25:1,'yticklabel',{'0','0.25','0.5','0.75','1'});
-                try changeAxesFontSize(gca,fsz,fsz); tidyaxes(gca,fsz); catch; disp('plot clean up skipped'); end
-
-            end
-            
-            
-            if RTtask
-                subplot(spRows,length(cohs),c+length(cohs)*(2-(conftask==0))); hold on;
-                for d = 1:length(deltas)
-                    h(d) = plot(hdgs, squeeze(fitInterp.RTmean(3,c,d,:)), [clr{c}{d}],'linew',1.5);
-                end
-                xlabel(xLab); 
-                if c==1, ylabel('RT (s)'); end
-                ylim(RTylims)
-                try changeAxesFontSize(gca,fsz,fsz); tidyaxes(gca,fsz); catch; disp('plot clean up skipped'); end
-
-            end
-            
-            
-        end
-        
-    end
-    
+    end        
 end
 
 

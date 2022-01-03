@@ -33,12 +33,14 @@ end
 
 
          %ves %vis %comb
-clr{1} = {'ko','mo','co'};
+% clr{1} = {'ko','mo','co'};
+clr{1} = {'ko','ro','bo'};
 clr{2} = {'ko','ro','bo'};
 clr{3} = {'ko','yo','go'};
 clr{4} = clr{1};
 figure(101+D);
-set(gcf,'Color',[1 1 1],'Position',[300 1000 230+300*(length(cohs)-1) 200+150*(conftask>0)+150*RTtask],'PaperPositionMode','auto'); clf;
+% set(gcf,'Color',[1 1 1],'Position',[300 1000 230+300*(length(cohs)-1) 200+150*(conftask>0)+150*RTtask],'PaperPositionMode','auto'); clf;
+set(gcf,'Color',[1 1 1],'Position',[200 80 700 900],'PaperPositionMode','auto'); clf;
 for c = 1:length(cohs)
     % choice
     subplot(spRows,length(cohs),c); box off; hold on;
@@ -69,8 +71,8 @@ for c = 1:length(cohs)
         set(gca,'xtick',xt);
         set(gca,'ytick',0:0.25:1,'yticklabel',{'0','.25','.5','.75','1'});
 
-        ylim(confYlims);
-        if ~RTtask, xlabel(xLab); end
+%         ylim(confYlims);
+%         xlabel(xLab); 
         if c==1, ylabel(yLab); end
 
         try changeAxesFontSize(gca,fsz,fsz); tidyaxes(gca,fsz); catch; disp('plot clean up skipped'); end
@@ -85,8 +87,8 @@ for c = 1:length(cohs)
             errorbar(hdgs, squeeze(parsedData.RTmean(m,c,D,:)), squeeze(parsedData.RTse(m,c,D,:)), clr{c}{m},'linewidth',1.5);
         end
 %         if length(mods)>1; title(cohlabs{1}); end
-        set(gca,'xtick',xt,'ytick',RTyt);
-        ylim(RTylims)
+%         set(gca,'xtick',xt,'ytick',0:.1:2);
+%         ylim(RTylims)
         xlabel(xLab); 
         if c==1, ylabel('RT (s)'); end
         try changeAxesFontSize(gca,fsz,fsz); tidyaxes(gca,fsz); catch; disp('plot clean up skipped'); end
@@ -112,8 +114,8 @@ clr{4} = {'bd','cd','gd'};
 
 clear L;
 figure(208);
-set(gcf,'Color',[1 1 1],'Position',[50 20 230+300*(length(cohs)-1) 200+150*(conftask>0)+150*RTtask],'PaperPositionMode','auto'); clf;
-% set(gcf,'Color',[1 1 1],'Position',[900 600 600 800],'PaperPositionMode','auto'); clf;
+% set(gcf,'Color',[1 1 1],'Position',[50 20 230+300*(length(cohs)-1) 200+150*(conftask>0)+150*RTtask],'PaperPositionMode','auto'); clf;
+set(gcf,'Color',[1 1 1],'Position',[900 80 700 900],'PaperPositionMode','auto'); clf;
 for c = 1:length(cohs)
     % choice
     subplot(spRows,length(cohs),c); box off; hold on;
@@ -144,7 +146,7 @@ for c = 1:length(cohs)
         end
 %         if length(mods)>1; title(cohlabs{c}); end
         set(gca,'xtick',xt);
-        ylim(confYlims);
+%         ylim(confYlims);
     %     legend(h,L,'location','northwest');
 %         xlabel(xLab); 
         if c==1, ylabel(yLab); end
@@ -162,10 +164,10 @@ for c = 1:length(cohs)
             L{d} = sprintf('?=%d',deltas(d));
         end
 %         if length(mods)>1; title(cohlabs{c}); end
-        set(gca,'xtick',xt,'ytick',RTyt);
+%         set(gca,'xtick',xt,'ytick',0:.1:2);
         xlabel(xLab); 
         if c==1, ylabel('RT (s)'); end
-        ylim(RTylims);
+%         ylim(RTylims);
         try changeAxesFontSize(gca,fsz,fsz); tidyaxes(gca,fsz);catch; end
     end    
 

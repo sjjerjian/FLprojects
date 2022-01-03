@@ -13,13 +13,13 @@ close all
 RTtask = 1;
 conftask = 2; % 1 - sacc endpoint, 2 - PDW
 confModel = 'evidence+time'; % 'evidence+time','evidence_only','time_only'
-useVelAcc = 0; % toggle time-varying )vel/acc) vs. constant drift rate
+useVelAcc = 0;
 
 plotExampleTrials = 0;
 
-nreps = 1000; % number of repetitions of each unique trial type
-              % start small to verify it's working, then increase
-              % (ntrials depends on num unique trial types)
+nreps = 2000; % number of repetitions of each unique trial type
+            % start small to verify it's working, then increase
+            % (ntrials depends on num unique trial types)
 
 cohs = [0.4 0.8]; % visual coherence levels (these are really just labels, since k's are set manually)
 hdgs = [-12 -6 -3 -1.5 -eps eps 1.5 3 6 12];
@@ -28,22 +28,19 @@ mods = [1 2 3]; % stimulus modalities: ves, vis, comb
 duration = 3000; % stimulus duration (ms)
 
 lose_flag = 1;
-plot_flag = 1;
+plot_flag = 0;
 
 %% PARAMS
 
 kmult = 30; % try to reduce number of params
 kvis  = kmult*cohs; % [20 40];
 kves  = mean(kvis); % for now, assume straddling
-% knoise = [0.07 0.07]; %??
-sigmaVes = 0.05;
+% knoise = [0.07 0.07];
+sigmaVes = 0.04;
 sigmaVis = [sigmaVes sigmaVes];
-BVes     = 0.6;
-BVis     = 1.2; % fixed across cohs
-BComb    = 0.8;
-muTnd    = 300; % fixed across mods SJ 10/11/2021 [unlike Drugo]
-sdTnd = 0; % fixed SD
-
+B = 1.5; % single bound
+Tnds = [0.1 0.5 0.3]; % ves, vis, comb
+    % ^ with single bound, Tnds must differ across mods to account for data
 if conftask==2
     timeToConf = 0; % additional processing time for confidence
     theta = 2; % threshold for high bet in logOdds, ignored if conftask==1
@@ -57,16 +54,14 @@ origParams.kvis = kvis;
 origParams.kves = kves;
 origParams.sigmaVes = sigmaVes;
 origParams.sigmaVis = sigmaVis;
-origParams.BVes = BVes;
-origParams.BVis = BVis;
-origParams.BComb = BComb;
-origParams.muTnd = muTnd;
-origParams.sdTnd = sdTnd;
-origParams.ttc   = timeToConf;
+origParams.B = B;
+origParams.Tnds = Tnds;
+origParams.ttc  = timeToConf;
 if conftask==2
     origParams.theta = theta; % PDW only
+else
+    origParams.theta = nan; 
 end
-
 
 %% calculate log odds corr maps using Wolpert MoI method
 
@@ -78,48 +73,12 @@ k = mean([kves kvis]);
 R.t = 0.001:0.001:duration/1000;
 R.Bup = B;
 R.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
-R.lose_flag = lose_flag;
-R.plotflag = plot_flag; % 1 = plot, 2 = plot and export_fig
-P =  images_dtb_2d(R);
-
-% RVes.t = 0.001:0.001:duration/1000;
-% RVes.Bup = Bs(1);
-% RVes.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
-% RVes.lose_flag = lose_flag;
-% RVes.plotflag = plot_flag; % 1 = plot, 2 = plot and export_fig
-% PVes =  images_dtb_2d(RVes);
-% 
-% RVis.t = 0.001:0.001:duration/1000;
-% RVis.Bup = Bs(2);
-% RVis.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
-% RVis.lose_flag = lose_flag;
-% RVis.plotflag = plot_flag; % 1 = plot, 2 = plot and export_fig
-% PVis =  images_dtb_2d(RVis);
-% 
-% RComb.t = 0.001:0.001:duration/1000;
-% RComb.Bup = Bs(3);
-% RComb.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
-% RComb.lose_flag = lose_flag;
-% RComb.plotflag = plot_flag; % 1 = plot, 2 = plot and export_fig
-% PComb =  images_dtb_2d(RComb);
-
-RComb.t = 0.001:0.001:duration/1000;
-RComb.Bup = BComb;
-RComb.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
-RComb.lose_flag = lose_flag;
-RComb.plotflag = plot_flag; % 1 = plot, 2 = plot and export_fig
-PComb =  images_dtb_2d(RComb);
-
-% try a single conf map
-R.t = 0.001:0.001:duration/1000;
-R.Bup = B;
-R.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
 R.lose_flag = 1;
 R.plotflag = 0; % 1 = plot, 2 = plot and export_fig
 P =  images_dtb_2d(R);
 
 
-%% create acceleration and velocity profiles (arbitrary for now)
+% create acceleration and velocity profiles (arbitrary for now)
 % SJ 04/2020
 % Hou et al. 2019, peak vel = 0.37m/s, SD = 210ms
 % 07/2020 lab settings...160cm in 1.3s, sigma=0.14
@@ -140,17 +99,16 @@ if useVelAcc==0
     acc = vel;
 end
 
-
 %% build trial list
 
 [hdg, modality, coh, delta, ntrials] = dots3DMP_create_trial_list(hdgs,mods,cohs,deltas,nreps,0); % don't shuffle
 
-% make constant dur, assuming RT task, or (equivalently, as far as
+% use constant dur, assuming RT task, or (equivalently, as far as
 % the simulation is concerned) fixed duration with internal bounded
 % process (Kiani et al. 2008)
 dur = ones(ntrials,1) * duration;
 
-Tnds = muTnd + randn(ntrials,1).*sdTnd; % obs
+% Tnds = muTnd + randn(ntrials,1).*sdTnd; % obs
 
 
 %% bounded evidence accumulation
@@ -158,7 +116,7 @@ Tnds = muTnd + randn(ntrials,1).*sdTnd; % obs
 % assume momentary evidence is proportional to sin(heading),
 % as in drugowitsch et al 2014
 
-dv_all = cell(ntrials,1); % shouldn't need to store every trial's DV, but if you want to, it's here
+% dv_all = cell(ntrials,1); % shouldn't need to store every trial's DV, but if you want to, it's here
 
 choice = nan(ntrials,1);
 RT = nan(ntrials,1);
@@ -182,21 +140,18 @@ S = [1 -1/sqrt(2) ; -1/sqrt(2) 1];
 tic
 for n = 1:ntrials
     
-    Tnd = Tnds(n) / 1000; % Tnd for nth trial in seconds
+%     Tnd = Tnds(n) / 1000; % Tnd for nth trial in seconds
+    Tnd = Tnds(modality(n));
 
     switch modality(n)
-        
         case 1
-            %B = Bs(1); P = PVes; R = RVes;
             mu = acc .* kves * sind(hdg(n)) / 1000; % mean of momentary evidence
                 % (I'm guessing drift rate in images_dtb is per second, hence div by 1000)
             s = [sigmaVes sigmaVes]; % standard deviaton vector (see below)
         case 2
-%             B = BVis; P = PVis; R = RVis;
             mu = vel .* kvis(cohs==coh(n)) * sind(hdg(n)) / 1000;
             s = [sigmaVis(cohs==coh(n)) sigmaVis(cohs==coh(n))];
         case 3
-%             B = BComb; P = PComb; R = RComb;
             % positive delta defined as ves to the left, vis to the right
             muVes = acc .* kves               * sind(hdg(n)-delta(n)/2) / 1000;
             muVis = vel .* kvis(cohs==coh(n)) * sind(hdg(n)+delta(n)/2) / 1000;
@@ -212,6 +167,11 @@ for n = 1:ntrials
 
             mu = wVes.*muVes + wVis.*muVis;
             
+            % clearly brain does not have access to optimal weights at
+            % outset of trial, but must come up with some heuristic version
+            % of these based on inferred reliability from accumulated
+            % evidence? 
+
             % the DV is a sample from a dist with mean = weighted sum of
             % means. thus the variance is the weighted sum of variances
             % (error propagation formula):
@@ -230,7 +190,7 @@ for n = 1:ntrials
     % dv(:,1) corresponds to evidence favoring rightward, not evidence
     % favoring the correct decision (as in Kiani eqn. 3 and images_dtb)
 
-    dv_all{n} = dv;
+%     dv_all{n} = dv;
     % decision outcome
     cRT1 = find(dv(1:dur(n)-timeToConf,1)>=B, 1);
     cRT2 = find(dv(1:dur(n)-timeToConf,2)>=B, 1);
@@ -303,11 +263,7 @@ for n = 1:ntrials
                 conf(n) = RT(n) < theta;
             end
     end
-    
-    if rand<confLapse(modality(n)) && conftask==2
-        conf(n) = true;
-    end
-                         
+                  
     if isnan(conf(n)), conf(n)=0; end % if dvs are almost overlapping, force conf to zero as it can sometimes come out as NaN
     RT(n) = RT(n) + Tnd;
 
@@ -405,13 +361,6 @@ end
 subject = 'simul';
 
 
-%% save it
-% cd('/Users/chris/Documents/MATLAB')
-% cd('/Users/stevenjerjian/Desktop/FetschLab/Analysis')
-save(sprintf('2DAccSim_conftask%d_%dtrs.mat',conftask,ntrials),'data','cohs','deltas','hdgs','mods','origParams','RTtask','conftask','subject')
-
-
-
 %% plots
 if 1
     mods   = unique(data.modality);
@@ -422,12 +371,20 @@ if 1
     % means per condition, logistic fits
     parsedData = dots3DMP_parseData(data,mods,cohs,deltas,hdgs,conftask,RTtask);
     
-    % gaussian fits
-    gfit = dots3DMP_fit_cgauss(data,mods,cohs,deltas,conftask,RTtask);
-    
     % plot it
     dots3DMP_plots(parsedData,mods,cohs,deltas,hdgs,conftask,RTtask)
+
+    % gaussian fits
+%     gfit = dots3DMP_fit_cgauss(data,mods,cohs,deltas,conftask,RTtask);
 %     dots3DMP_plots_cgauss_byCoh(gfit,parsedData,mods,cohs,deltas,hdgs,conftask,RTtask)
-    
 end
+
+
+
+%% save it
+cd('/Users/chris/Documents/MATLAB')
+% cd('/Users/stevenjerjian/Desktop/FetschLab/Analysis')
+save(sprintf('2DAccSim_conftask%d_%dtrs.mat',conftask,ntrials),'data','cohs','deltas','hdgs','mods','origParams','RTtask','conftask','subject')
+
+
 

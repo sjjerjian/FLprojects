@@ -1,13 +1,18 @@
-function parsedData = dots3DMP_parseData(data,mods,cohs,deltas,hdgs,conftask,RTtask,useAbsHdg,correct_only)
+function parsedData = dots3DMP_parseData(data,mods,cohs,deltas,hdgs,conftask,RTtask,useAbsHdg,RTCorrOnly)
 % SJ 07-2021 converted to function, for cleaner workspace
 
-if nargin < 9, correct_only = 0; end
+if nargin < 9, RTCorrOnly = 0; end
 if nargin < 8, useAbsHdg = 0; end
 if nargin < 7, RTtask = 0; end
 if nargin < 6, conftask = 0; end
 
 %% parse data
 % create and use matrices of summary data indexed by variables of interest
+
+% switch back to 1:2 if 0:1 (e.g. from fitting code)
+if max(data.choice)==1
+    data.choice = data.choice+1;
+end
 
 if useAbsHdg
     hdgs = unique(abs(hdgs));
@@ -40,18 +45,16 @@ for d = 1:length(deltas)+1 % add extra column for all trials irrespective of del
         end
         
         n(m,c,d,h) = nansum(J);
-        pRight(m,c,d,h) = nansum(J & data.choice==2) / n(m,c,d,h); % 2 is rightward!!
-        
+        pRight(m,c,d,h) = nansum(J & data.choice==2) / n(m,c,d,h); % 2 is rightward!!        
         pCorrect(m,c,d,h) = nansum(J & data.correct) / n(m,c,d,h);
         
         if RTtask
-            if ~correct_only
+            if RTCorrOnly
+                RTmean(m,c,d,h) = nanmean(data.RT(J & data.correct));
+                RTse(m,c,d,h) = nanstd(data.RT(J))/sqrt(nansum(J & data.correct));
+            else
                 RTmean(m,c,d,h) = nanmean(data.RT(J));
                 RTse(m,c,d,h) = nanstd(data.RT(J))/sqrt(n(m,c,d,h));
-            else
-                use_trs = data.correct | data.heading == 0;
-                RTmean(m,c,d,h) = nanmean(data.RT(J & use_trs));
-                RTse(m,c,d,h) = nanstd(data.RT(J & use_trs))/sqrt(sum(J & use_trs));
             end
         else
             RTmean(m,c,d,h) = NaN;
@@ -103,7 +106,6 @@ for d = 1:length(deltas)+1 % add extra column for all trials irrespective of del
     else
         plotLogistic(m,c,d) = 0;
     end
-    
 
 end
 end

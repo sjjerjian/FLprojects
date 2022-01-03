@@ -1,4 +1,4 @@
-function [err,fit] = dots3DMP_fit_2Dacc_err_sepbounds_noSim_CFtemp(param, guess, fixed, data, options)
+function [err,fit] = dots3DMP_fit_2Dacc_err_sepbounds_noMC(param, guess, fixed, data, options)
 
 % SJ 10-11-2021 no Monte Carlo simulation for fitting, it's redundant! just use model
 % predictions directly
@@ -8,7 +8,7 @@ global call_num
     % set parameters for this run based on guess and fixed params flag
 param = getParam(param, guess, fixed);
 
-if isfield(data,'PDW')
+if isfield(data,'PDW') % probably obsolete
     data.conf = data.PDW;
 end
 
@@ -16,59 +16,52 @@ mods   = unique(data.modality)';
 cohs   = unique(data.coherence)'; 
 hdgs   = unique(data.heading)';
 % deltas = unique(data.delta)';
-deltas = 0; % only fit 0 delta!
+    deltas = 0; % only fit 0 delta!
 
 duration = 2; % stimulus duration (s)
 
 kves  = param(1);
 kvis  = param([2 3]);
-% BVes     = abs(param(4)); % don't accept negative bound heights
-% BVis     = abs(param(5)); % fixed across cohs
-% BComb    = abs(param(6));
-% muTnd    = param(7);
-B = param(4);
-BVes = B; BVis = B; BComb = B; % CF: attempting fixed bound approach
-Tnds = param(5:7);
+BVes     = abs(param(4)); % don't accept negative bound heights
+BVis     = abs(param(5)); % fixed across cohs
+BComb    = abs(param(6));
+muTnd    = param(7);
+sdTnd = 60; % fixed SD
 ttc  = param(8);
-
 try theta = param(9); catch; end % only relevant for PDW
 
-% paramNames = {'kves','kvisLo','kvisHi','BVes','BVis','BComb','muTnd','T2Conf','theta'};
-paramNames = {'kves','kvisLo','kvisHi','B','TndVes','TndVis','TndComb','T2Conf','theta'};
+paramNames = {'kves','kvisLo','kvisHi','BVes','BVis','BComb','muTnd','T2Conf','theta'};
 
 duration = duration + ttc;
 
-% % % sdTnd = 60; % fixed SD
-
 % assume the mapping for confidence is based on an equal amount of experience with the 
-% *three* levels of reliability (ves, vis-low, vis-high) hence k is the
-% mean
+% *three* levels of reliability (ves, vis-low, vis-high) hence k is the mean
 k = mean([kves kvis]);
 
-% % still need separate logOddsMaps if bound heights are different:
-% RVes.t = 0.001:0.001:duration/1000;
-% RVes.Bup = BVes;
-% RVes.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
-% RVes.lose_flag = 1;
-% RVes.plotflag = 0; % 1 = plot, 2 = plot and export_fig
-% PVesConf =  images_dtb_2d(RVes);
-% VesLogOdds = PVesConf.logOddsCorrMap;
-% 
-% RVis.t = 0.001:0.001:duration/1000;
-% RVis.Bup = BVis;
-% RVis.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
-% RVis.lose_flag = 1;
-% RVis.plotflag = 0; % 1 = plot, 2 = plot and export_fig
-% PVisConf =  images_dtb_2d(RVis);
-% VisLogOdds = PVisConf.logOddsCorrMap;
-% 
-% RComb.t = 0.001:0.001:duration/1000;
-% RComb.Bup = BComb;
-% RComb.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
-% RComb.lose_flag = 1;
-% RComb.plotflag = 0; % 1 = plot, 2 = plot and export_fig
-% PCombConf =  images_dtb_2d(RComb);
-% CombLogOdds = PCombConf.logOddsCorrMap;
+% still need separate logOddsMaps if bound heights are different:
+RVes.t = 0.001:0.001:duration/1000;
+RVes.Bup = BVes;
+RVes.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
+RVes.lose_flag = 1;
+RVes.plotflag = 0; % 1 = plot, 2 = plot and export_fig
+PVesConf =  images_dtb_2d(RVes);
+VesLogOdds = PVesConf.logOddsCorrMap;
+
+RVis.t = 0.001:0.001:duration/1000;
+RVis.Bup = BVis;
+RVis.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
+RVis.lose_flag = 1;
+RVis.plotflag = 0; % 1 = plot, 2 = plot and export_fig
+PVisConf =  images_dtb_2d(RVis);
+VisLogOdds = PVisConf.logOddsCorrMap;
+
+RComb.t = 0.001:0.001:duration/1000;
+RComb.Bup = BComb;
+RComb.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
+RComb.lose_flag = 1;
+RComb.plotflag = 0; % 1 = plot, 2 = plot and export_fig
+PCombConf =  images_dtb_2d(RComb);
+CombLogOdds = PCombConf.logOddsCorrMap;
 
 % TEMP, CF : try one P for conf (log odds)
 R.t = 0.001:0.001:duration;
@@ -160,8 +153,8 @@ for d = 1:length(deltas)
         
         nCor(m,c,d,h) = sum(Jdata & usetrs_data);
         if options.RTtask            
-            meanRT_fit(m,c,d,h) = Ptemp.up.mean_t(uh) + Tnds(m);
-            RTfit(Jdata) = Ptemp.up.mean_t(uh) + Tnds(m); % save mean to each trial, for fit struct
+            meanRT_fit(m,c,d,h) = Ptemp.up.mean_t(uh) + muTnd;
+            RTfit(Jdata) = Ptemp.up.mean_t(uh) + muTnd; % save mean to each trial, for fit struct
             meanRT_data(m,c,d,h) = mean(data.RT(Jdata & usetrs_data));
             sigmaRT(m,c,d,h) = std(data.RT(Jdata & usetrs_data)) / sqrt(nCor(m,c,d,h));
         end
