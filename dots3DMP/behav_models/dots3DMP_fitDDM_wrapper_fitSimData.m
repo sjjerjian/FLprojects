@@ -49,6 +49,8 @@ if options.ploterr, options.fh = 400; end
 [X, err_final, fit, fitInterp] = dots3DMP_fitDDM(data,options,guess,fixed);
 % fitInterp is in fact not obsolete, and needs fixing in ^^
 
+
+% plot it!
 dots3DMP_plots_fit_byCoh(data,fitInterp,conftask,RTtask);
 
 
@@ -60,21 +62,6 @@ if any(unique(fit.delta(isnan(fit.choice)))==0) %--> should be nonzeros only
     keyboard
 end
 % this doesn't help, need to do the predict step in the fitDDM func
-
-
-parsedData = dots3DMP_parseData(fitInterp,mods,cohs,deltas,hdgs,conftask,RTtask); 
-
-% plot it!
-
-% means per condition, logistic fits
-parsedData = dots3DMP_parseData(data,mods,cohs,deltas,hdgs,conftask,RTtask);
-
-% gaussian fits
-gfit = dots3DMP_fit_cgauss(data,mods,cohs,deltas,conftask,RTtask);
-
-% plot it
-dots3DMP_plots(parsedData,mods,cohs,deltas,hdgs,conftask,RTtask)
-%     dots3DMP_plots_cgauss_byCoh(gfit,parsedData,mods,cohs,deltas,hdgs,conftask,RTtask)
 
 
 

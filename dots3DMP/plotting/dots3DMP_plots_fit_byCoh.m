@@ -9,7 +9,6 @@ function dots3DMP_plots_fit_byCoh(data,fit,conftask,RTtask)
 
 if nargin<3, conftask=1; end
 if nargin<4, RTtask = 0; end
-if nargin<5, fitgauss = 0; end
 
 %% actual data
 
@@ -36,7 +35,8 @@ end
 % first, single-cues + zero-delta comb
 D = find(deltas==0);
          %ves %vis %comb
-clr{1} = {'ko','mo','co'};
+% clr{1} = {'ko','mo','co'};
+clr{1} = {'ko','ro','bo'};
 clr{2} = {'ko','ro','bo'};
 clr{3} = {'ko','yo','go'};
 figure(101);
@@ -189,7 +189,8 @@ end
 % first, single-cues + zero-delta comb
 
 %ves %vis %comb
-clr{1} = {'k-','m-','c-'};
+% clr{1} = {'k-','m-','c-'};
+clr{1} = {'k-','r-','b-'};
 clr{2} = {'k-','r-','b-'};
 clr{3} = {'k-','y-','g-'};
 
@@ -217,9 +218,9 @@ end
 
 % now comb separated by delta
 
-clr{1} = {'bs','cs','gs'};
-clr{2} = {'b^','c^','g^'};
-clr{3} = {'bo','co','go'};
+clr{1} = {'b-','c-','g-'};
+clr{2} = {'b-','c-','g-'};
+clr{3} = {'b-','c-','g-'};
 
 if length(deltas)>1
     figure(108);

@@ -3,20 +3,20 @@ function [err,fit] = dots3DMP_fit_2Dacc_err_singlebound_noMC_signed(param, guess
 % SJ 10-11-2021 no Monte Carlo simulation for fitting, it's redundant! just use model
 % predictions directly
 
+% single bound, separate Tnds version
+
+% uses *signed* headings for MOI calculation (SJ, newer)
+
 global call_num
 
     % set parameters for this run based on guess and fixed params flag
 param = getParam(param, guess, fixed);
 
-% % % if isfield(data,'PDW') % probably obsolete
-% % %     data.conf = data.PDW;
-% % % end
-
 mods   = unique(data.modality)';
 cohs   = unique(data.coherence)'; 
 hdgs   = unique(data.heading)';
 % deltas = unique(data.delta)';
-    deltas = 0; % only fit 0 delta!
+    deltas = 0; % only fit 0 delta, predict the rest!
 
 duration = 2; % stimulus duration (s)
 
@@ -42,15 +42,18 @@ duration = duration + ttc;
 k = mean([kves kvis]);
 R.t = 0.001:0.001:duration;
 R.Bup = B;
-R.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
+% *** marking differences in signed vs. unsigned ver ***
+R.drift = k * sind(hdgs);
 R.lose_flag = 1;
 R.plotflag = 0; % 1 = plot, 2 = plot and export_fig
 Pconf =  images_dtb_2d(R);
 
+
 % now compute a separate P for model choices and RTs (modality-specific)
 RVes.t = 0.001:0.001:duration;
 RVes.Bup = B;
-RVes.drift = kves * sind(hdgs(hdgs>=0));
+% *** marking differences in signed vs. unsigned ver ***
+RVes.drift = kves * sind(hdgs);
 RVes.lose_flag = 1;
 RVes.plotflag = 0;
 PVes =  images_dtb_2d(RVes);
@@ -61,7 +64,8 @@ kcomb = nan(1,length(cohs));
 for c = 1:length(cohs)
     RVis.t = 0.001:0.001:duration;
     RVis.Bup = B;
-    RVis.drift = kvis(c) * sind(hdgs(hdgs>=0));
+% *** marking differences in signed vs. unsigned ver ***
+    RVis.drift = kvis(c) * sind(hdgs);
     RVis.lose_flag = 1;
     RVis.plotflag = 0;
     PVis{c} =  images_dtb_2d(RVis);
@@ -69,7 +73,8 @@ for c = 1:length(cohs)
     kcomb(c) = sqrt(kves.^2 + kvis(c).^2); % optimal per Drugo
     RComb.t = 0.001:0.001:duration;
     RComb.Bup = B;
-    RComb.drift = kcomb(c) * sind(hdgs(hdgs>=0));
+% *** marking differences in signed vs. unsigned ver ***
+    RComb.drift = kcomb(c) * sind(hdgs);
     RComb.lose_flag = 1;
     RComb.plotflag = 0;
     PComb{c} =  images_dtb_2d(RComb);
@@ -78,7 +83,7 @@ end
 
 %%
 
-usetrs_data  = data.correct | data.heading==0; % use only correct (OR 0 hdg) trials for RT/SEP fits
+usetrs_data  = data.correct | abs(data.heading)<1e-6; % use only correct (OR ~0 hdg) trials for RT/SEP fits
 
 pRight_model = nan(length(data.heading),1);
 pHigh_model  = nan(length(data.heading),1);
@@ -99,7 +104,8 @@ for d = 1:length(deltas)
     end
     
     for h = 1:length(hdgs)
-        uh = abs(hdgs(h))==(hdgs(hdgs>=0));
+        % *** marking differences in signed vs. unsigned ver ***
+%         uh = abs(hdgs(h))==(hdgs(hdgs>=0));
         
         Jdata  = data.modality==mods(m) & data.coherence==cohs(c) & data.heading==hdgs(h) & data.delta==deltas(d);
 
@@ -114,20 +120,18 @@ for d = 1:length(deltas)
         end
         
         % CHOICE
-        if hdgs(h)<0
-            % if hdg is leftward, then pRight is p(incorrect), aka P.lo
-            pRight_model(Jdata) = P.lo.p(uh);  
-        else
-            pRight_model(Jdata) = P.up.p(uh);  
-        end
-        
+        % *** marking differences in signed vs. unsigned ver ***
+        pRight_model(Jdata) = P.up.p(h)/(P.up.p(h)+P.lo.p(h)); % this is the 2nd panel in plot from images_dtb_2d
+                        % unbiased, unlike old method, but slopes are wrong
+
         % RT
         nCor(m,c,d,h) = sum(Jdata & usetrs_data);
         if options.RTtask            
             % old:
-%             meanRT_model(m,c,d,h) = P.up.mean_t(uh) + Tnds(m);
+            meanRT_model(m,c,d,h) = P.up.mean_t(h) + Tnds(m); % THIS STILL COULD BE BETTER FOR SIGNED!
+        % *** marking differences in signed vs. unsigned ver ***
             % new:
-            meanRT_model(m,c,d,h) = P.up.mean_t(uh)*P.up.p(uh) + P.lo.mean_t(uh)*P.lo.p(uh) + Tnds(m); % new
+%             meanRT_model(m,c,d,h) = P.up.mean_t(h)*P.up.p(h) + P.lo.mean_t(h)*P.lo.p(h) + Tnds(m); % new, I think weighting is unnecessary because mean_t already takes it into account
 
             RTfit(Jdata) = meanRT_model(m,c,d,h); % save mean to each trial, for 'fit' struct
             meanRT_data(m,c,d,h) = mean(data.RT(Jdata & usetrs_data));
@@ -146,10 +150,14 @@ for d = 1:length(deltas)
 %         Pxt = squeeze(P.up.distr_loser(uh,:,:))'; % density of DV for this condition
 %         pHigh = sum(Pxt.*(Pconf.logOddsCorrMap>theta)); % sum of density above theta [but still is a function of time!]
 %         pHigh_model(Jdata) = sum(pHigh); % marginalize over time [OR use each trial's/cond's RT???]
+        % *** marking differences in signed vs. unsigned ver ***
 
         % new:
-        Pxt = squeeze(P.up.distr_loser(uh,:,:))' .* P.up.p(uh);
-        Pxt2= squeeze(P.lo.distr_loser(uh,:,:))' .* P.lo.p(uh);
+        Pxt = squeeze(P.up.distr_loser(h,:,:))';
+        Pxt2= squeeze(P.lo.distr_loser(h,:,:))';
+%         Pxt = squeeze(P.up.distr_loser(h,:,:))' .* P.up.p(h);
+%         Pxt2= squeeze(P.lo.distr_loser(h,:,:))' .* P.lo.p(h); %-- neither
+%         of these works, pconf is all close to zero
         pHigh = sum(Pxt.*(Pconf.logOddsCorrMap>theta)) + sum(Pxt2.*(Pconf.logOddsCorrMap>theta));
         pHigh_model(Jdata) = sum(pHigh);
     end
