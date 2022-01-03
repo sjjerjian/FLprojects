@@ -121,7 +121,6 @@ for d = 1:length(deltas)
         % CHOICE
         if hdgs(h)<0
             % if hdg is leftward, then pRight is p(incorrect), aka P.lo
-                % *** marking differences in signed vs. unsigned ver ***
             pRight_model(Jdata) = P.lo.p(uh)/(P.up.p(uh)+P.lo.p(uh));
                                     % unbiased, unlike old method, but slopes are wrong
         else
@@ -129,17 +128,15 @@ for d = 1:length(deltas)
                 % *** marking differences in signed vs. unsigned ver ***
             pRight_model(Jdata) = P.up.p(uh)/(P.up.p(uh)+P.lo.p(uh));
                                     % unbiased, unlike old method, but slopes are wrong
-% note: previous attempt using raw p.up.p only was wrong because p.up.p for
-% hdg=0 is, say, .28, which is prob of correct bound crossing *before tmax*
-% -- ie does not take into account non-bound crossing choices
+            % note: 'old method' using raw p.up.p only was wrong because p.up.p for
+            % hdg=0 is <<0.5, revealing that it is prob of correct bound crossing
+            % *before tmax* - ie does not take into account non-bound crossings
         end
         
         % RT
         nCor(m,c,d,h) = sum(Jdata & usetrs_data);
         if options.RTtask            
-            % *** marking differences in signed vs. unsigned ver ***
-            meanRT_model(m,c,d,h) = P.up.mean_t(uh) + Tnds(m); % this works well!
-            
+            meanRT_model(m,c,d,h) = P.up.mean_t(uh) + Tnds(m); % I think weighting by P.up.p is unnecessary because mean_t already takes it into account            
             RTfit(Jdata) = meanRT_model(m,c,d,h); % save mean to each trial, for 'fit' struct
             meanRT_data(m,c,d,h) = mean(data.RT(Jdata & usetrs_data));
             sigmaRT(m,c,d,h) = std(data.RT(Jdata & usetrs_data)) / sqrt(nCor(m,c,d,h));
@@ -151,12 +148,13 @@ for d = 1:length(deltas)
 %             meanConf_data(m,c,d,h) = mean(data.conf(Jdata & usetrs_data));
 %             sigmaConf(m,c,d,h) = std(data.conf(Jdata & usetrs_data)) / sqrt(nCor(m,c,d,h));
             error('code for this is not complete');
+        else
+            % *** marking differences in signed vs. unsigned ver ***
+            Pxt = squeeze(P.up.distr_loser(uh,:,:))'; % density of DV for this condition
+            pHigh = sum(Pxt.*(Pconf.logOddsCorrMap>theta)); % sum of density above theta [but still is a function of time!]
+            pHigh_model(Jdata) = sum(pHigh); % marginalize over time [OR use each trial's/cond's RT???]
         end
 
-        % *** marking differences in signed vs. unsigned ver ***
-        Pxt = squeeze(P.up.distr_loser(uh,:,:))'; % density of DV for this condition
-        pHigh = sum(Pxt.*(Pconf.logOddsCorrMap>theta)); % sum of density above theta [but still is a function of time!]
-        pHigh_model(Jdata) = sum(pHigh); % marginalize over time [OR use each trial's/cond's RT???]
     end
     
 end

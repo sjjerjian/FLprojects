@@ -120,19 +120,13 @@ for d = 1:length(deltas)
         end
         
         % CHOICE
-        % *** marking differences in signed vs. unsigned ver ***
         pRight_model(Jdata) = P.up.p(h)/(P.up.p(h)+P.lo.p(h)); % this is the 2nd panel in plot from images_dtb_2d
                         % unbiased, unlike old method, but slopes are wrong
 
         % RT
         nCor(m,c,d,h) = sum(Jdata & usetrs_data);
         if options.RTtask            
-            % old:
-            meanRT_model(m,c,d,h) = P.up.mean_t(h) + Tnds(m); % THIS STILL COULD BE BETTER FOR SIGNED!
-        % *** marking differences in signed vs. unsigned ver ***
-            % new:
-%             meanRT_model(m,c,d,h) = P.up.mean_t(h)*P.up.p(h) + P.lo.mean_t(h)*P.lo.p(h) + Tnds(m); % new, I think weighting is unnecessary because mean_t already takes it into account
-
+            meanRT_model(m,c,d,h) = P.up.mean_t(h) + Tnds(m); % I think weighting by P.up.p is unnecessary because mean_t already takes it into account
             RTfit(Jdata) = meanRT_model(m,c,d,h); % save mean to each trial, for 'fit' struct
             meanRT_data(m,c,d,h) = mean(data.RT(Jdata & usetrs_data));
             sigmaRT(m,c,d,h) = std(data.RT(Jdata & usetrs_data)) / sqrt(nCor(m,c,d,h));
@@ -144,22 +138,14 @@ for d = 1:length(deltas)
 %             meanConf_data(m,c,d,h) = mean(data.conf(Jdata & usetrs_data));
 %             sigmaConf(m,c,d,h) = std(data.conf(Jdata & usetrs_data)) / sqrt(nCor(m,c,d,h));
             error('code for this is not complete');
+        else            
+            % *** marking differences in signed vs. unsigned ver ***
+            Pxt = squeeze(P.up.distr_loser(h,:,:))';
+            Pxt2= squeeze(P.lo.distr_loser(h,:,:))'; % again I don't think weighting by P.up.p is necessary. but this is still off
+            pHigh = sum(Pxt.*(Pconf.logOddsCorrMap>theta)) + sum(Pxt2.*(Pconf.logOddsCorrMap>theta));
+            pHigh_model(Jdata) = sum(pHigh);
         end
 
-%         % old:
-%         Pxt = squeeze(P.up.distr_loser(uh,:,:))'; % density of DV for this condition
-%         pHigh = sum(Pxt.*(Pconf.logOddsCorrMap>theta)); % sum of density above theta [but still is a function of time!]
-%         pHigh_model(Jdata) = sum(pHigh); % marginalize over time [OR use each trial's/cond's RT???]
-        % *** marking differences in signed vs. unsigned ver ***
-
-        % new:
-        Pxt = squeeze(P.up.distr_loser(h,:,:))';
-        Pxt2= squeeze(P.lo.distr_loser(h,:,:))';
-%         Pxt = squeeze(P.up.distr_loser(h,:,:))' .* P.up.p(h);
-%         Pxt2= squeeze(P.lo.distr_loser(h,:,:))' .* P.lo.p(h); %-- neither
-%         of these works, pconf is all close to zero
-        pHigh = sum(Pxt.*(Pconf.logOddsCorrMap>theta)) + sum(Pxt2.*(Pconf.logOddsCorrMap>theta));
-        pHigh_model(Jdata) = sum(pHigh);
     end
     
 end
@@ -221,7 +207,7 @@ if options.conftask==1 % SEP
     fit.PDW = nan(size(fit.conf));
 elseif options.conftask==2 % PDW
     fit.conf = pHigh_model;
-    fit.PDW = pHigh_model;
+    fit.PDW = pHigh_model; % keep both for backward compatibility
 end
 fit.RT = RTfit;
 

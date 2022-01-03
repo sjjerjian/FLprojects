@@ -94,14 +94,23 @@ P.y=g;
 P.dy=dg;
 
 % CF: log posterior odds of a correct response (Eq. 3 in Kiani et al. 2014)
-    % HERE I THINK IS WHERE WE NEED TO GO BACK TO THE SIGNED VERSION IN 1D (certstim)
-odds = (squeeze(sum(P.up.distr_loser,1)) / length(R.drift)) ./ ...
-       (squeeze(sum(P.lo.distr_loser,1)) / length(R.drift));
-% fix some stray negatives/zeros (what about infs?)
-odds(odds<1) = 1;
-
+I = R.drift>=0; % In case drift is signed, calculate only for positives,
+                % then the kluge with separate marginals (Pxt's) can be done elsewhere
+odds = (squeeze(sum(P.up.distr_loser(I,:,:),1)) / length(R.drift(I))) ./ ...
+       (squeeze(sum(P.lo.distr_loser(I,:,:),1)) / length(R.drift(I)));
+odds(odds<1) = 1; % fix some stray negatives/zeros (what about infs?)
 P.logOddsCorrMap = log(odds);
 P.logOddsCorrMap = P.logOddsCorrMap';
+
+
+% % % % from 1D:
+% % % I = xmesh>0;
+% % % logPosteriorOddsRight = log(Pxt_marginal(I,:,1)./Pxt_marginal(I,:,2));
+% % % bet_high_xt(I,:) = logPosteriorOddsRight > theta;
+% % % I = xmesh<0;
+% % % logPosteriorOddsLeft = log(Pxt_marginal(I,:,2)./Pxt_marginal(I,:,1));
+% % % bet_high_xt(I,:) = logPosteriorOddsLeft > theta2;
+
 
 
 if R.plotflag
@@ -116,8 +125,7 @@ if R.plotflag
     n = 100; % set n to 100+ for smooth plots, lower for faster plotting
     
     % (2) first an example PDF
-    c = round(length(R.drift)/2) - 1; % pick an intermediate drift rate, or make a loop to see all of them
-%     c = 3; % temp, for signed
+    c = round(length(R.drift(I))/2) - 1 + sum(I==0); % pick an intermediate drift rate, or make a loop to see all of them
     q = 50; % exponent for log cutoff (redefine zero as 10^-q, for better plots)
     Pmap = squeeze(P.up.distr_loser(c,:,:))';
     Pmap(Pmap<10^-q) = 10^-q;

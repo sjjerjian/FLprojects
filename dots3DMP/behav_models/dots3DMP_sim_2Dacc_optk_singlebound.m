@@ -361,14 +361,6 @@ end
 subject = 'simul';
 
 
-%% save it
-% cd('/Users/chris/Documents/MATLAB')
-% cd('/Users/stevenjerjian/Desktop/FetschLab/Analysis')
-save(sprintf('2DAccSim_conftask%d_%dtrs.mat',conftask,ntrials),'data','cohs','deltas','hdgs','mods','origParams','RTtask','conftask','subject')
-
-
-
-
 %% plots
 if 1
     mods   = unique(data.modality);
@@ -386,4 +378,13 @@ if 1
     dots3DMP_plots(parsedData,mods,cohs,deltas,hdgs,conftask,RTtask)
     dots3DMP_plots_cgauss_byCoh(gfit,parsedData,mods,cohs,deltas,hdgs,conftask,RTtask)
 end
+
+
+
+%% save it
+% cd('/Users/chris/Documents/MATLAB')
+cd('/Users/stevenjerjian/Desktop/FetschLab/Analysis')
+save(sprintf('2DAccSim_conftask%d_%dtrs.mat',conftask,ntrials),'data','cohs','deltas','hdgs','mods','origParams','RTtask','conftask','subject')
+
+
 
