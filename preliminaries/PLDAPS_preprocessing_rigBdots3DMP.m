@@ -30,7 +30,7 @@ for d = 2:length(dateRange)
     dateStr = [dateStr newline num2str(dateRange(d))];
 end
 
-localDir = ['/Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data.nosync/' subject '/'];
+localDir = ['/Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data/' subject '/'];
 % localDir = ['/Users/chris/Documents/MATLAB/PLDAPS_data/' subject '/'];
 remoteDir = ['/var/services/homes/fetschlab/data/' subject '/'];
 

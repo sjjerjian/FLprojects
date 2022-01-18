@@ -10,11 +10,11 @@
 % simulated data, different models
 
 clear; clc; close all
-cd /Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data.nosync/dataStructs
+cd /Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data/dataStructs
 
 %% select subject, load the data
 
-subject = 'lucio';
+subject = 'human';
 
 switch subject
     
@@ -28,13 +28,14 @@ switch subject
     case 'human'
 
         conftask = 1;
-        RTtask   = 0; % change this to select RT or non-RT dataset
+        RTtask   = 1; % change this to select RT or non-RT dataset
        
         if ~RTtask
             load('human_20190625-20191231_nonRT_clean.mat');% human non-RT, SfN 2021
             
         else
-            load('human_20200213-20210922_RT_clean.mat') % human RT, SfN 2021
+%             load('human_20200213-20210922_RT_clean.mat') % human RT, SfN 2021
+            load('human_20200213-20220113_RT_clean_Jan2022.mat') % human RT, Jan 2022
             RTlims = [0.25 2.5];
         end
         
@@ -55,7 +56,7 @@ if RTtask
 end
 
 if strcmp(subject,'human') && RTtask
-    % not enough good data, so let's just remove for now
+    % not enough good data, so let's just remove for now?
     removethese = data.heading==0;
     fnames = fieldnames(data);
     for f=1:length(fnames)
