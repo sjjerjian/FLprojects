@@ -3,7 +3,9 @@
 
 % for SfN2021 poster, using:
 % human_20190626-20191231: non-RT data, n=5 (_nonRT_clean)
-% human_20200203-2021xxxx: RT data, n = tbd (RT_clean)
+% human_20200203-20211020: RT data, n =  (RT_clean)
+
+% as of Jan 2022, human_20200203-20220113
 
 % processing steps
 % 1. remove sessions/subjects (e.g. training sessions) to consolidate data
@@ -26,14 +28,16 @@ paradigm = 'dots3DMP';
 RTtask = 1;
 
 if ~RTtask,  dateRange = 20190625:20191231; % non-RT
-% else,        dateRange = 20200213:20210922; % RT
-else,        dateRange = 20200213:20211020; % RT
+else,        dateRange = 20200213:20220113; % RT
+% else,        dateRange = 20200213:20211020; % RT
 
 end
 
 folder = '/Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data/dataStructs/';
 file = [subject '_' num2str(dateRange(1)) '-' num2str(dateRange(end)) '.mat'];
 load([folder file], 'data');
+
+data = rmfield(data,{'reward','confRT','insertTrial','PDW','oneTargChoice','oneTargConf'});
 
 %%
 % some new useful vars
@@ -51,13 +55,13 @@ if ~RTtask
     excludes_subj = {'XRJ'}; % remaining subjs should be AAW, CXD, EMF, IWT, LLV
     subjs = {'AAW','LLV','IWT','CXD','EMF'}; % non-RT
 else
-    excludes_filename = {'humanVZC20200229dots3DMP1239','KVU202109281702','DCJ202110061444','DCJ202110061450'}; % KVU 09/28 first block, DCJ 10/06 first block
+    excludes_filename = {'humanVZC20200229dots3DMP1239','humanKVU20210928dots3DMP1702','humanDCJ20211006dots3DMP1444','humanDCJ20211006dots3DMP1450','humanDJB20211202dots3DMP1609'}; % KVU 2021/09/28 first block, DCJ 2021/10/06 first block, DJB 2021/12/02 first block
     excludes_subjDate = {'FRK20200216','FRK20200223','VZC20200222','DRF20210824','DRF20210826',...
         'ABF20210819','ABF20210826','DCJ20211001','KVU20210921','KVU20210924','SBG20210929','SBG20211001','SBG20211006'};
     excludes_subj = {'NEX', 'NKT', 'TST'};
 %     subjs = {'DRH','SJJ','LLV','IPQ','FRK','VZC','DRF','ABF','DCJ','KVU','SBG'}; % RT
-    subjs = {'DRH','SJJ','LLV','DRF','ABF','DCJ','KVU','SBG'}; % RT
-%     subjs = {'DRH','SJJ','LLV','IPQ','FRK','DRF','KVU','SBG'}; % RT
+%     subjs = {'DRH','SJJ','LLV','DRF','ABF','DCJ','KVU','SBG'}; % RT
+    subjs = {'DRH','SJJ','LLV','IPQ','FRK','DRF','KVU','SBG','DJB'}; % RT
 
 end
 % subjs = {'AAW' 'LLV' 'CXD' 'DRH' 'IPQ' 'SJJ' 'VZC'}; % all 'good' data (pre and post RT)
@@ -149,8 +153,8 @@ end
 
 data.heading(abs(data.heading)<0.01) = 0;
 
-hdgVals = [1 2 3];
-hdgVals = [2 5 10];
+% hdgVals = [1 2 3];
+hdgVals = [1 3 8]; % arbitrary
 
 data.heading(data.heading<-0.5 & data.heading>=-2) = -hdgVals(1);
 data.heading(data.heading>0.5 & data.heading<=2) = hdgVals(1);
@@ -259,7 +263,7 @@ end
 if ~RTtask
     save([folder file(1:end-4) '_nonRT_clean.mat'],'data')
 else
-    save([folder file(1:end-4) '_RT_clean.mat'],'data')
+    save([folder file(1:end-4) '_RT_clean_Jan2022.mat'],'data')
 end
 % save([file(1:end-4) '_clean.mat'],'data')
 fprintf('done.\n')

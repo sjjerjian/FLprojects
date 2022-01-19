@@ -29,11 +29,11 @@ else
     if conftask==1 % continuous, sacc endpoint
         flippedGauss = @(b,hdg) 1 - ( b(1) .* exp(-(hdg-b(2)).^2 ./ (2*b(3).^2)) + b(4));
         flippedGauss_err = @(param,SEP,hdg) nansum((flippedGauss(param,hdg)-SEP).^2);
-        guess_fgauss = [0.2 0 6 0.5];
+        guess_fgauss = [0.2 0 2 0.4];
     elseif conftask==2 % PDW, probabilities
         flippedGauss = @(b,hdg) 1 - ( b(1) .* exp(-(hdg-b(2)).^2 ./ (2*b(3).^2)) + b(4));
         flippedGauss_err = @(param,pdw,hdg) -( sum(log(flippedGauss(param,hdg(pdw)))) + sum(log(1-flippedGauss(param,hdg(~pdw)))) );
-        guess_fgauss = [0.2 0 6 0.5];
+        guess_fgauss = [0.2 0 2 0.5];
     end
     
     if RTtask
@@ -59,12 +59,6 @@ unc = 0;
 options = optimset('Display','off');
 
 Nmcd = nan(length(mods),length(cohs),length(deltas));
-
-if conftask==1
-    conf = data.conf;
-elseif conftask==2
-    conf = data.PDW;
-end
 
 for n = 1:nboots
     
@@ -103,18 +97,26 @@ for n = 1:nboots
             
             if unc
                 [beta,~,~,~,~,~] = fminunc(@(x) cgauss_err(x,data.choice(bootI)==2,data.heading(bootI)), guess_cgauss, options);
-                if conftask
-                    [betaConf,~,~,~,~,~] = fminunc(@(x) flippedGauss_err(x,conf(bootI)==1,data.heading(bootI)), guess_fgauss, options);
+
+                if conftask==1 % sacc endpoint
+                    [betaConf,~] = fminunc(@(x) flippedGauss_err(x,data.conf(I),data.heading(I)), guess_fgauss,options);
+                elseif conftask==2 % PDW
+                    [betaConf,~] = fminunc(@(x) flippedGauss_err(x,data.PDW(I)==1,data.heading(I)), guess_fgauss,options);
                 end
+                
                 if RTtask
                     [betaRT,~] = fminunc(@(x) gauss_err(x,data.RT(I),data.heading(I)), guess_gauss,options);
                 end
                 
             else
                 beta = fminsearch(@(x) cgauss_err(x,data.choice(bootI)==2,data.heading(bootI)), guess_cgauss, options);
-                if conftask
-                    betaConf = fminsearch(@(x) flippedGauss_err(x,conf(bootI)==1,data.heading(bootI)), guess_fgauss, options);
+
+                if conftask==1 % sacc endpoint
+                    [betaConf,~] = fminsearch(@(x) flippedGauss_err(x,data.conf(I),data.heading(I)), guess_fgauss,options);
+                elseif conftask==2 % PDW
+                    [betaConf,~] = fminsearch(@(x) flippedGauss_err(x,data.PDW(I)==1,data.heading(I)), guess_fgauss,options);
                 end
+                
                 if RTtask
                     [betaRT,~] = fminsearch(@(x) gauss_err(x,data.RT(I),data.heading(I)), guess_gauss,options);
                 end
@@ -127,6 +129,7 @@ for n = 1:nboots
                 gfitBoot.conf.mu{n}(m,c,D)    = betaConf(2);
                 gfitBoot.conf.sigma{n}(m,c,D) = betaConf(3);
                 gfitBoot.conf.bsln{n}(m,c,D)  = betaConf(4);
+                if abs(betaConf(2))>5, keyboard,end
             end
             
             if RTtask
@@ -147,16 +150,20 @@ for n = 1:nboots
             
             if unc
                 [beta,~,~,~,~,~] = fminunc(@(x) cgauss_err(x,data.choice(bootI)==2,data.heading(bootI)), guess_cgauss, options);
-                if conftask
-                    [betaConf,~,~,~,~,~] = fminunc(@(x) flippedGauss_err(x,conf(bootI)==1,data.heading(bootI)), guess_fgaus, options);
+                if conftask==1
+                    betaConf = fminunc(@(x) flippedGauss_err(x,data.conf(bootI),data.heading(bootI)), guess_fgauss, options);
+                elseif conftask==2
+                    betaConf = fminunc(@(x) flippedGauss_err(x,data.PDW(bootI)==1,data.heading(bootI)), guess_fgauss, options);
                 end
                 %                 if RTtask
                 %                     [betaRT,~] = fminunc(@(x) gauss_err(x,data.RT(bootI),data.heading(bootI)), guess_gauss,fitOptions);
                 %                 end
             else
                 beta = fminsearch(@(x) cgauss_err(x,data.choice(bootI)==2,data.heading(bootI)), guess_cgauss, options);
-                if conftask
-                    betaConf = fminsearch(@(x) flippedGauss_err(x,conf(bootI)==1,data.heading(bootI)), guess_fgauss, options);
+                if conftask==1
+                    betaConf = fminsearch(@(x) flippedGauss_err(x,data.conf(bootI),data.heading(bootI)), guess_fgauss, options);
+                elseif conftask==2
+                    betaConf = fminsearch(@(x) flippedGauss_err(x,data.PDW(bootI)==1,data.heading(bootI)), guess_fgauss, options);
                 end
                 %                 if RTtask
                 %                     [betaRT,~] = fminsearch(@(x) gauss_err(x,data.RT(bootI),data.heading(bootI)), guess_gauss,fitOptions);

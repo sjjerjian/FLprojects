@@ -43,7 +43,7 @@ D = length(deltas)+1; % (the extra column we made for pooling across deltas)
 
 % initialize vars for storing param fits
 % deal func looks nicer, but is slow for some reason...
-n = nan(length(mods),length(cohs),length(deltas),2);
+n = nan(length(mods)+1,length(cohs),length(deltas),2);
                                                % ^2 for high and low confidence fits
 
 muPMF = n; muPMFse = n;
@@ -56,16 +56,18 @@ baselineRT = n; baselineRTse = n;
 
 for c = 1:length(cohs)
     % choice
-    for m = 1:length(mods)     % m c d h
-        if m==1
-            I = data.modality==mods(m);
+    for m = 1:length(mods)+1     % m c d h
+        
+        if m==length(mods)+1
+            I = true(size(data.modality));
+        elseif D==length(deltas)+1
+            I = data.modality==mods(m) & data.coherence==cohs(c); % all trials irrespective of delta
         else
-            if D==length(deltas)+1
-                I = data.modality==mods(m) & data.coherence==cohs(c); % all trials irrespective of delta
-            else
-                I = data.modality==mods(m) & data.coherence==cohs(c) & data.delta==deltas(D);
-            end
+            I = data.modality==mods(m) & data.coherence==cohs(c) & data.delta==deltas(D);
         end
+        
+        if sum(I)==0, continue, end
+        
         I_hi = I & hiConf;
         I_lo = I & ~hiConf;
         
@@ -100,16 +102,16 @@ for c = 1:length(cohs)
     
     % RT
     if RTtask
-        for m = 1:length(mods)        
-            if m==1
-                I = data.modality==mods(m);
+        for m = 1:length(mods)+1      
+            if m==length(mods)+1
+                I = true(size(data.modality));
+            elseif D==length(deltas)+1
+                I = data.modality==mods(m) & data.coherence==cohs(c); % all trials irrespective of delta
             else
-                if D==length(deltas)+1
-                    I = data.modality==mods(m) & data.coherence==cohs(c); % all trials irrespective of delta
-                else
-                    I = data.modality==mods(m) & data.coherence==cohs(c) & data.delta==deltas(D);
-                end
+                I = data.modality==mods(m) & data.coherence==cohs(c) & data.delta==deltas(D);
             end
+            if sum(I)==0, continue, end
+            
             I_hi = I & hiConf;
             I_lo = I & ~hiConf;
             
@@ -160,6 +162,7 @@ end
 
 %% now separate by delta
 
+%{
 for c = 1:length(cohs)
     % choice
     for d = 1:length(deltas)     % m c d h
@@ -246,6 +249,7 @@ for c = 1:length(cohs)
     end
     
 end
+%}
 
 % save outputs
 gfit = struct();

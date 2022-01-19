@@ -13,7 +13,7 @@ data.choice = []; % initialize this one field, you'll see why
 
 fieldExcludes = {'leftEarly','tooSlow','fixFP','FPHeld','eyeXYs','corrLoopActive','goodtrial', ...
                  'timeTargDisappears','probOfMemorySaccade','leftTargR','leftTargTheta', ...
-                 'rightTargR','rightTargTheta','audioFeedback','textFeedback','rewardDelay'};
+                 'rightTargR','rightTargTheta','audioFeedback','textFeedback','rewardDelay','reward'};
 
 % now search localDir again for matching files and extract the desired variables from PDS
 allFiles = dir(localDir);
@@ -71,24 +71,24 @@ for d = 1:length(dateRange)
                             % maybe don't need this, all reward analyses
                             % will have to be done within session first, so
                             % go to cleaned-up PDS files
-                            if isfield(PDS.data{t},'reward')
-                                fnames = fieldnames(PDS.data{t}.reward);
-                                fnames(ismember(fnames,fieldExcludes)) = [];
-                                for F = 1:length(fnames)
-                                    eval(['data.reward.' fnames{F} '(T,1) = PDS.data{t}.reward.' fnames{F} ';']);
-                                end
-                            end
+%                             if isfield(PDS.data{t},'reward')
+%                                 fnames = fieldnames(PDS.data{t}.reward);
+%                                 fnames(ismember(fnames,fieldExcludes)) = [];
+%                                 for F = 1:length(fnames)
+%                                     eval(['data.reward.' fnames{F} '(T,1) = PDS.data{t}.reward.' fnames{F} ';']);
+%                                 end
+%                             end
                             
                             % SJ 10/2021 not true 'RT', need to replace
-                            % with time that eyes leave choice target
-                            if isfield(PDS.data{t},'postTarget')
-                                try
-                                    data.confRT(T,1) = PDS.data{t}.postTarget.timeConfTargEntered - PDS.data{t}.postTarget.timeToConfidence;
-                                catch
-                                    data.confRT(T,1) = NaN;
+                            % with time that eyes leave choice target?
+%                             if isfield(PDS.data{t},'postTarget')
+%                                 try
 %                                     data.confRT(T,1) = PDS.data{t}.postTarget.timeConfTargEntered - PDS.data{t}.postTarget.timeToConfidence;
-                                end
-                            end
+%                                 catch
+%                                     data.confRT(T,1) = NaN;
+% %                                     data.confRT(T,1) = PDS.data{t}.postTarget.timeConfTargEntered - PDS.data{t}.postTarget.timeToConfidence;
+%                                 end
+%                             end
                             
                             % dependent variables are stored in PDS.data.behavior
                             fnames = fieldnames(PDS.data{t}.behavior);
@@ -124,7 +124,7 @@ for d = 1:length(dateRange)
 
                         else
                             % no matching nexonar data (not recorded?)
-                            % or possibly more than one matching file - should be impossible
+                            % or more than one matching file (but this should be impossible)
                             disp(['could not find matching nexonar data for ' allFiles(f).name '...skipping'])
                         end
                     end

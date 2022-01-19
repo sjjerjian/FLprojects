@@ -28,7 +28,7 @@ mods = [1 2 3]; % stimulus modalities: ves, vis, comb
 duration = 3000; % stimulus duration (ms)
 
 lose_flag = 1;
-plot_flag = 0;
+plot_flag = 1;
 
 %% PARAMS
 
@@ -75,19 +75,33 @@ end
 % are their averages, for the purpose of expected logOddsCorr
 k = mean([kves kvis]);
 
-RVes.t = 0.001:0.001:duration/1000;
-RVes.Bup = BVes;
-RVes.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
-RVes.lose_flag = lose_flag;
-RVes.plotflag = plot_flag; % 1 = plot, 2 = plot and export_fig
-PVes =  images_dtb_2d(RVes);
+R.t = 0.001:0.001:duration/1000;
+R.Bup = B;
+R.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
+R.lose_flag = lose_flag;
+R.plotflag = plot_flag; % 1 = plot, 2 = plot and export_fig
+P =  images_dtb_2d(R);
 
-RVis.t = 0.001:0.001:duration/1000;
-RVis.Bup = BVis;
-RVis.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
-RVis.lose_flag = lose_flag;
-RVis.plotflag = plot_flag; % 1 = plot, 2 = plot and export_fig
-PVis =  images_dtb_2d(RVis);
+% RVes.t = 0.001:0.001:duration/1000;
+% RVes.Bup = Bs(1);
+% RVes.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
+% RVes.lose_flag = lose_flag;
+% RVes.plotflag = plot_flag; % 1 = plot, 2 = plot and export_fig
+% PVes =  images_dtb_2d(RVes);
+% 
+% RVis.t = 0.001:0.001:duration/1000;
+% RVis.Bup = Bs(2);
+% RVis.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
+% RVis.lose_flag = lose_flag;
+% RVis.plotflag = plot_flag; % 1 = plot, 2 = plot and export_fig
+% PVis =  images_dtb_2d(RVis);
+% 
+% RComb.t = 0.001:0.001:duration/1000;
+% RComb.Bup = Bs(3);
+% RComb.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
+% RComb.lose_flag = lose_flag;
+% RComb.plotflag = plot_flag; % 1 = plot, 2 = plot and export_fig
+% PComb =  images_dtb_2d(RComb);
 
 RComb.t = 0.001:0.001:duration/1000;
 RComb.Bup = BComb;
@@ -144,7 +158,7 @@ Tnds = muTnd + randn(ntrials,1).*sdTnd; % obs
 % assume momentary evidence is proportional to sin(heading),
 % as in drugowitsch et al 2014
 
-% dv_all = cell(ntrials,1); % shouldn't need to store every trial's DV, but if you want to, it's here
+dv_all = cell(ntrials,1); % shouldn't need to store every trial's DV, but if you want to, it's here
 
 choice = nan(ntrials,1);
 RT = nan(ntrials,1);
@@ -171,8 +185,9 @@ for n = 1:ntrials
     Tnd = Tnds(n) / 1000; % Tnd for nth trial in seconds
 
     switch modality(n)
+        
         case 1
-            B = BVes; P = PVes; R = RVes;
+            %B = Bs(1); P = PVes; R = RVes;
             mu = acc .* kves * sind(hdg(n)) / 1000; % mean of momentary evidence
                 % (I'm guessing drift rate in images_dtb is per second, hence div by 1000)
             s = [sigmaVes sigmaVes]; % standard deviaton vector (see below)
@@ -197,11 +212,6 @@ for n = 1:ntrials
 
             mu = wVes.*muVes + wVis.*muVis;
             
-            % clearly brain does not have access to optimal weights at
-            % outset of trial, but must come up with some heuristic version
-            % of these based on inferred reliability from accumulated
-            % evidence? 
-
             % the DV is a sample from a dist with mean = weighted sum of
             % means. thus the variance is the weighted sum of variances
             % (error propagation formula):
@@ -220,7 +230,7 @@ for n = 1:ntrials
     % dv(:,1) corresponds to evidence favoring rightward, not evidence
     % favoring the correct decision (as in Kiani eqn. 3 and images_dtb)
 
-%     dv_all{n} = dv;
+    dv_all{n} = dv;
     % decision outcome
     cRT1 = find(dv(1:dur(n)-timeToConf,1)>=B, 1);
     cRT2 = find(dv(1:dur(n)-timeToConf,2)>=B, 1);
@@ -293,7 +303,11 @@ for n = 1:ntrials
                 conf(n) = RT(n) < theta;
             end
     end
-                  
+    
+    if rand<confLapse(modality(n)) && conftask==2
+        conf(n) = true;
+    end
+                         
     if isnan(conf(n)), conf(n)=0; end % if dvs are almost overlapping, force conf to zero as it can sometimes come out as NaN
     RT(n) = RT(n) + Tnd;
 

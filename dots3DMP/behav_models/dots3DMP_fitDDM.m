@@ -191,8 +191,9 @@ mods = unique(data.modality);
 cohs = unique(data.coherence);
 deltas = unique(data.delta);
 
-    nreps = 200;
-    [Dfit.heading, Dfit.modality, Dfit.coherence, Dfit.delta, ~] = dots3DMP_create_trial_list(hdgs,mods,cohs,deltas,nreps,0);
+% nreps = 200;
+nreps = 1;
+[Dfit.heading, Dfit.modality, Dfit.coherence, Dfit.delta, ~] = dots3DMP_create_trial_list(hdgs,mods,cohs,deltas,nreps,0);
 
     % the observables are just placeholders because the err func still needs to
     % calculate err even though in this case it's meaningless. What will be

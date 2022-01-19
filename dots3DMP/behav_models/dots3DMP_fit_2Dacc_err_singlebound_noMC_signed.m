@@ -15,8 +15,12 @@ param = getParam(param, guess, fixed);
 mods   = unique(data.modality)';
 cohs   = unique(data.coherence)'; 
 hdgs   = unique(data.heading)';
-% deltas = unique(data.delta)';
+
+if options.dummyRun
+    deltas = unique(data.delta)';
+else
     deltas = 0; % only fit 0 delta, predict the rest!
+end
 
 duration = 2; % stimulus duration (s)
 
@@ -61,6 +65,7 @@ PVes =  images_dtb_2d(RVes);
 PVis = cell(1,length(cohs));
 PComb = cell(1,length(cohs));
 kcomb = nan(1,length(cohs));
+
 for c = 1:length(cohs)
     RVis.t = 0.001:0.001:duration;
     RVis.Bup = B;
@@ -70,16 +75,34 @@ for c = 1:length(cohs)
     RVis.plotflag = 0;
     PVis{c} =  images_dtb_2d(RVis);
     
-    kcomb(c) = sqrt(kves.^2 + kvis(c).^2); % optimal per Drugo
-    RComb.t = 0.001:0.001:duration;
-    RComb.Bup = B;
-% *** marking differences in signed vs. unsigned ver ***
-    RComb.drift = kcomb(c) * sind(hdgs);
-    RComb.lose_flag = 1;
-    RComb.plotflag = 0;
-    PComb{c} =  images_dtb_2d(RComb);
-end
+%     kcomb(c) = sqrt(kves.^2 + kvis(c).^2); % optimal per Drugo
+%     RComb.t = 0.001:0.001:duration;
+%     RComb.Bup = B;
+% % *** marking differences in signed vs. unsigned ver ***
+%     RComb.drift = kcomb(c) * sind(hdgs);
+%     RComb.lose_flag = 1;
+%     RComb.plotflag = 0;
+%     PComb{c} =  images_dtb_2d(RComb);
+%    
 
+    % compute w and mu to capture biases under cue conflict
+    wVes = sqrt( kves^2 / (kves^2 + kvis(c)^2) );
+    wVis = sqrt( kvis(c)^2 / (kves^2 + kvis(c)^2) );
+    for d = 1:length(deltas)
+        clear Rcomb
+        % positive delta defined as ves to the left, vis to the right
+        muVes = kves    * sind(hdgs-deltas(d)/2);
+        muVis = kvis(c) * sind(hdgs+deltas(d)/2);
+        
+        RComb.t = 0.001:0.001:duration;
+        RComb.Bup = B;
+        % *** marking differences in signed vs. unsigned ver ***
+        RComb.drift = wVes.*muVes + wVis.*muVis;
+        RComb.lose_flag = 1;
+        RComb.plotflag = 0;
+        PComb{c}{d} =  images_dtb_2d(RComb);
+    end
+end
 
 %%
 
@@ -116,7 +139,7 @@ for d = 1:length(deltas)
         
         if m==1,     P = PVes;
         elseif m==2, P = PVis{c};
-        elseif m==3, P = PComb{c};
+        elseif m==3, P = PComb{c}{d};
         end
         
         % CHOICE
@@ -140,8 +163,13 @@ for d = 1:length(deltas)
             error('code for this is not complete');
         else            
             % *** marking differences in signed vs. unsigned ver ***
-            Pxt = squeeze(P.up.distr_loser(h,:,:))';
-            Pxt2= squeeze(P.lo.distr_loser(h,:,:))'; % again I don't think weighting by P.up.p is necessary. but this is still off
+%             Pxt = squeeze(P.up.distr_loser(h,:,:))';
+%             Pxt2= squeeze(P.lo.distr_loser(h,:,:))'; % again I don't think weighting by P.up.p is necessary. but this is still off
+            
+            % density of losing DV for this condition
+            Pxt = squeeze(P.up.distr_loser(h,:,:))' .* P.up.p(h);
+            Pxt2= squeeze(P.lo.distr_loser(h,:,:))' .* P.lo.p(h);
+            
             pHigh = sum(Pxt.*(Pconf.logOddsCorrMap>theta)) + sum(Pxt2.*(Pconf.logOddsCorrMap>theta));
             pHigh_model(Jdata) = sum(pHigh);
         end

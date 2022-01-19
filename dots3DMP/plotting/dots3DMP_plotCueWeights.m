@@ -1,30 +1,45 @@
 function dots3DMP_plotCueWeights(wves,wvesBoot,cohs,conftask)
 
-figure(810); set(gcf,'Color',[1 1 1],'Position',[50 20 500 250],'PaperPositionMode','auto'); clf;
+if conftask==1
+    xlabpos = 1.3; jit = 0.1; cohlabs = {'Low','High'}; ylabpos = 0.9;
+else
+    xlabpos = 0.4; jit = 0.02; cohlabs = cohs; ylabpos = 0.4;
+end
+
+figure(810); set(gcf,'Color',[1 1 1],'Position',[50 20 250 250],'PaperPositionMode','auto'); clf;
 if nargin==5,subplot(121); end
 hold on;
 
-erPred = errorbar(cohs,wves.choice.pred,std(wvesBoot.choice.pred),'k-o','LineWidth',2,'MarkerSize',6,'MarkerFaceColor','k'); 
-erEmp = errorbar(cohs,wves.choice.emp,std(wvesBoot.choice.emp),'r-o','LineWidth',2,'MarkerSize',6,'MarkerFaceColor','r');    
-
+fs = 14;
+h1 = gca;
+erPred = errorbar(h1,cohs-jit,wves.choice.pred,std(wvesBoot.choice.pred),'k-o','LineWidth',1.5,'MarkerSize',5,'MarkerFaceColor','w'); 
+erEmp = errorbar(h1,cohs+jit,wves.choice.emp,std(wvesBoot.choice.emp),'r-o','LineWidth',1.5,'MarkerSize',5,'MarkerFaceColor','w');    
 set(erPred,'Color','k');
 set(erEmp,'Color','r');
 
-text(cohs(1),0.5,'Choice-Pred','color','k')
-text(cohs(1),0.45,'Choice-Emp','color','r')
+
+text(h1,xlabpos,ylabpos,'Choice (predicted)','color','k','fontsize',fs)
+text(h1,xlabpos,ylabpos-0.1,'Choice (empirical)','color','r','fontsize',fs)
 
 if conftask
-    erConf = errorbar(cohs,wves.conf.emp,std(wvesBoot.conf.emp),'b-o','LineWidth',2,'MarkerSize',6,'MarkerFaceColor','c');
+    erConf = errorbar(h1,cohs,wves.conf.emp,std(wvesBoot.conf.emp),'b-o','LineWidth',1.5,'MarkerSize',5,'MarkerFaceColor','w');
     set(erConf,'Color','b')
-    text(cohs(1),0.4,'Conf-Emp','color','b')
+    text(h1,xlabpos,ylabpos-0.2,'Conf (empirical)','color','b','fontsize',fs)
 end
 
+ylim(h1,[0 1]);
+set(h1,'XTick',cohs,'Xlim',[cohs(1)-jit*3 cohs(end)+jit*3],'XTickLabel',cohlabs,'Ytick',0:0.125:1,'YTickLabel',{'0','','','','.5','','','','1'});
+xlabel(h1,'Visual coherence'); ylabel(h1,'Vestibular weight');
+changeAxesFontSize(h1,16,16); set(h1,'box','off'); tidyaxes(h1);
 
-ylim([0.25 1.05]);
-set(gca,'XTick',cohs,'Xlim',[cohs(1)-0.05 cohs(end)+0.05],'XTickLabel',cohs,'Ytick',0:0.25:1);
-xlabel('Visual coherence'); ylabel('Vestibular weight');
-changeAxesFontSize(gca,16,16); set(gca,'box','off'); tidyaxes;
 
+% h2 = axes;
+% set(h2,'XLim',get(h1,'XLim'));
+% set(h2,'Color','none');
+% set(h2,'XTick',[]);
+% set(h2,'YDir','reverse');
+% set(h2,'YAxisLocation','Right');
+% set(h2,'YLabel','Visual weight');
 
 % plot thresholds
 
