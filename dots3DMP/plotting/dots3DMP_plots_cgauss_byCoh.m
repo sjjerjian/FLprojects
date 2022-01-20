@@ -8,7 +8,6 @@ function dots3DMP_plots_cgauss_byCoh(gfit,parsedData,mods,cohs,deltas,hdgs,conft
 D = gfit.D;
 
 if all(mods==1), cohs=1; end
-
 fsz = 15; % fontsize
 
 spRows = 1 + double(conftask>0) + double(RTtask);
@@ -17,19 +16,19 @@ modlabels = {'Ves','Vis','Comb'};
 xLab = sprintf('heading angle (%s)',char(176));
 
 if conftask==1 
-    yLab = 'SaccEP'; confYlims = [0.2 0.9]; 
+    yLab = 'SaccEP'; confYlims = [0.2 0.9]; RTyt = 0:0.25:2; 
     if all(mods==1), RTylims = [0.9 1.5]; 
     else,            RTylims = [0.9 1.7]; 
     end
     xt = -10:5:10;
      if length(mods)>1, cohlabs = {'Low Coh','High Coh'}; end
 elseif conftask==2
-    yLab = 'P(High Bet)'; confYlims = [0.4 1.0]; 
+    yLab = 'P(High Bet)'; confYlims = [0.4 1.0]; RTyt = 0:0.1:2; 
     if all(mods==1), RTylims = [0.5 0.72]; 
     else,            RTylims = [0.5 0.9]; 
     end
     xt = -12:6:12;
-    if length(mods)>1, cohlabs = {['coh = ' num2str(cohs(1))],['coh = ' num2str(cohs(2))]}; end
+    if length(mods)>1, cohlabs = {sprintf('coh = %.1f',cohs(1)),sprintf('coh = %.1f',cohs(2))}; end
 end 
 
 
@@ -52,11 +51,11 @@ for c = 1:length(cohs)
         text(hdgs(1)+1,1.0-m*0.12,modlabels{m},'color',clr{c}{m}(1),'fontsize',fsz);
 %         text(hdgs(1)+0.5,1.0-m*0.07,sprintf('%s: mu = %.2f, s = %.2f',modlabels{m},beta(1),beta(2)),'color',clr{c}{m}(1))
     end
-    if length(mods)>1; title(cohlabs{1}); end
+    if length(mods)>1; title(cohlabs{c}); end
     ylim([0 1]);
     set(gca,'xtick',xt);
     set(gca,'ytick',0:0.25:1,'yticklabel',{'0','.25','.5','.75','1'});
-    %     xlabel(xLab);
+    if ~conftask && ~RTtask, xlabel(xLab); end
     if c==1, ylabel('P(right)'); end
     try changeAxesFontSize(gca,fsz,fsz); tidyaxes(gca,fsz); catch; disp('plot clean up skipped'); end
     
@@ -105,6 +104,13 @@ clr{1} = {'bs','cs','gs'};
 clr{2} = {'b^','c^','g^'};
 clr{3} = {'bo','co','go'};
 clr{4} = {'bd','cd','gd'};
+
+
+% clr{1} = {'bs','gs'};
+% clr{2} = {'b^','g^'};
+% clr{3} = {'bo','go'};
+% clr{4} = {'bd','gd'};
+
 
 clear L;
 figure(208);

@@ -61,7 +61,8 @@ for n = 1:length(newlines)
     
     if any(strfind(dateStr,thisDate)) && contains(remoteFiles{n},paradigm)
         currentFileList{m,1} = remoteFiles{n}; m=m+1;
-        if ~any(strfind(localFileList,remoteFiles{n})) || overwriteLocalFiles % always copy if overwrite option selected
+        if contains(remoteFiles{n},'humanSBG20211015.mat'),keyboard,end
+        if ~contains(localFileList,remoteFiles{n}) || overwriteLocalFiles % always copy if overwrite option selected
             if ~useVPN %any(strfind(ifstuff,'172.'))
                 cmd = ['scp -r fetschlab@172.30.3.33:' remoteDir remoteFiles{n} ' ' localDir]; % MBI machine
             else

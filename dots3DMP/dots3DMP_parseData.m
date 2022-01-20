@@ -18,6 +18,9 @@ if useAbsHdg
     hdgs = unique(abs(hdgs));
     data.heading = abs(data.heading);
 end
+if RTCorrOnly
+    use_trs = data.correct | abs(data.heading) < 1e-6;
+end
 
 n = nan(length(mods),length(cohs),length(deltas)+1,length(hdgs));
                                % add extra column^ for pooling all trials irrespective of delta
@@ -50,8 +53,8 @@ for d = 1:length(deltas)+1 % add extra column for all trials irrespective of del
         
         if RTtask
             if RTCorrOnly
-                RTmean(m,c,d,h) = nanmean(data.RT(J & data.correct));
-                RTse(m,c,d,h) = nanstd(data.RT(J))/sqrt(nansum(J & data.correct));
+                RTmean(m,c,d,h) = nanmean(data.RT(J & use_trs));
+                RTse(m,c,d,h) = nanstd(data.RT(J))/sqrt(nansum(J & use_trs));
             else
                 RTmean(m,c,d,h) = nanmean(data.RT(J));
                 RTse(m,c,d,h) = nanstd(data.RT(J))/sqrt(n(m,c,d,h));
@@ -62,15 +65,28 @@ for d = 1:length(deltas)+1 % add extra column for all trials irrespective of del
         end
         
         if conftask==1 % saccEndpoint
-            confMean(m,c,d,h) = nanmean(data.conf(J));
-            confSE(m,c,d,h) = nanstd(data.conf(J))/sqrt(n(m,c,d,h));
+            
+            if RTCorrOnly
+                confMean(m,c,d,h) = nanmean(data.conf(J & use_trs));
+                confSE(m,c,d,h) = nanstd(data.conf(J & use_trs))/sqrt(sum(J & use_trs));
+            else
+                confMean(m,c,d,h) = nanmean(data.conf(J));
+                confSE(m,c,d,h) = nanstd(data.conf(J))/sqrt(n(m,c,d,h));
+            end
+            
         elseif conftask==2 % PDW
             % ignore 1-target trials!! these are just for training purposes
             if isfield(data,'oneTargConf')
                 J = J & ~data.oneTargConf;
             end
-            confMean(m,c,d,h) = nansum(J & data.PDW==1) / sum(J); % 1 is high
+            
+            if RTCorrOnly
+                confMean(m,c,d,h) = nansum(J & data.PDW==1 & use_trs) / sum(J & use_trs);
+            else
+                confMean(m,c,d,h) = nansum(J & data.PDW==1) / sum(J); % 1 is high
+            end
             % SE gets calculated below
+            
         else % no conf at all
             confMean(m,c,d,h) = NaN;
             confSE(m,c,d,h) = NaN;

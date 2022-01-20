@@ -1,5 +1,5 @@
 function [nexPDS,nexClean,exitflag] = dots3DMP_nexonarCleanUp(nex,PDS)
-% cleans up nexonar data struct via cross-ref with matching PDS
+% cleans up nexonar data struct via cross-ref with matching PDS file
 % SJ 08-2021
 %
 % OUTPUTS:
@@ -12,21 +12,23 @@ function [nexPDS,nexClean,exitflag] = dots3DMP_nexonarCleanUp(nex,PDS)
 %
 % on each trial, PLDAPS sends trial info (pldaps.iTrial, stim conditions),
 % and later, the trial outcome info (choice, RT etc), via UDP buffer to the
-% nexonar computer. this is done to make cross-referencing the two more reliabel, 
+% nexonar computer. this is done to make cross-referencing the two more reliable, 
 % and intended to enable nex struct to suffice for stand-alone analyses on nexonar data
 
-% BUT...on some trials, the information for one or both of these seems to be
+% Alas, on some trials, the information for one or both of these seems to be
 % copied from the previous trial, which is obviously screwing up
 % conditional analyses, because the match with nex.nexdata is lost
 % I guess this is because the UDP packet on a given trial is dropped, and
-% the way the FLnexonar.cs code was written, it would still have the
-% previous trial's info in the workspace
+% the way the FLnexonar.cs code is written, the
+% previous trial's info is still in the workspace, and so gets pulled in to
+% the current trial
 
 % another thing to be careful about - nexonar data streaming only starts at the motion state,
 % so trials with early breakfixes will never be streamed to Nexonar and therefore not exist in nex, 
 % but trials with breakfixes during motion or choice periods will...
-% ...so also make a nexPDS struct that matches the length of PDS, which
-% we can add to the data struct later
+% ...so this code also makes a nexPDS struct that matches the length of PDS, which
+% we can add to the data struct later (see addNexonarToDataStruct flag in
+% PLDAPS_preprocessing)
 
 
 % nexClean will be the same as nex, but corrected

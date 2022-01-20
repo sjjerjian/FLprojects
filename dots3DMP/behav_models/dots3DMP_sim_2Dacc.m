@@ -11,7 +11,8 @@ clear
 close all
 
 RTtask = 1;
-conftask = 1; % 1 - sacc endpoint, 2 - PDW
+conftask = 2; % 1 - sacc endpoint, 2 - PDW
+useVelAcc = 0 ;
 
 plotExampleTrials = 1;
 
@@ -26,18 +27,21 @@ hdgs = [-12 -6 -3 -1.5 0 1.5 3 6 12];
 deltas = [-3 0 3]; % conflict angle; positive means vis to the right
 mods = [1 2 3]; % stimulus modalities: ves, vis, comb
 duration = 2000; % stimulus duration (ms)
-% duration = 1300;
+
+%% 
+% set some parameters manually to get reasonable sim outputs
 
 % sensitivity constants for converting heading angle into mean of momentary evidence
 ks = 25; % scale factor, for quickly testing different k levels
   % set manually to get reasonable results from images_dtb_2d
 kves = ks;
 kvis = ks * [2 4.5]/3; % straddles vestibular reliability, by construction
-% kvis = ks * [1 2.7]/3; % straddles vestibular reliability, by construction
 
-theta = 0.8; % threshold for high bet in logOdds, ignored if conftask==1
+% threshold for high bet in logOdds, ignored if conftask==1
+theta = 0.8; 
 
-sigmaVes = 0.01; % std of momentary evidence
+
+sigmaVes = 0.01;        % std of momentary evidence
 sigmaVis = [0.01 0.01]; % allow for separate sigmas for condition, coherence
     % set manually to get reasonable looking dv trajectories;
     % also affects peakiness/flatness of confidence curve
@@ -45,44 +49,74 @@ sigmaVis = [0.01 0.01]; % allow for separate sigmas for condition, coherence
 B = 1.2; % bound height (also hand-tuned)
 
 % draw non-decision times from Gaussian dist
-% muTnd will be a parameter to fit, sdTnd can be fixed at reasonable value
-muTnd = 300; sdTnd = 60; % ms
-% Tnd = 0.4; % fixed val
+muTnd = [0.3 0.3 0.3]; sdTnd = 0.06; % in seconds
+%% use parameters from model fits to data
 
-% assume the mapping is based on an equal amount of experience with the
+subject = 'lucio';
+
+kves = 0.23;
+kvis = [0.15 0.32];
+
+B = 0.33;
+muTnd  = [0.49 0.69 0.56];
+confLapse = [0.07 0.38 0.09];
+theta = 0.07;
+
+% these are marginalized out of model fitting (?), need them here
+sigmaVes = 0.01;
+sigmaVis = [0.01 0.01];
+sdTnd  = 0; % fixed SD
+
+% kves and kvis were scaled down for minimization, but scaled up 
+kves = kves.*100;
+kvis = kvis.*100;
+%%
+
+% assume the log odds mapping is based on an equal amount of experience with the
 % *three* levels of reliability (ves, vis-low, vis-high) hence k and sigma
 % are their averages
 k = mean([kves kvis]);
 
+
+% uses method of images to compute PDF of the 2D DV, as in van den Berg et
+% al. 2016 (similar to Kiani et al. 2014)
+% lose_flag and plot_flag slow things down. 
+% lose_flag is needed for logOdds mapping
 R.t = 0.001:0.001:duration/1000;
 R.Bup = B;
 R.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
 R.lose_flag = 1;
-R.plotflag = 0; % 1 = plot, 2 = plot and export_fig
-
+R.plotflag  = 1; % 1 = plot, 2 = plot and export_fig
 P =  images_dtb_2d(R);
-% uses method of images to compute PDF of the 2D DV, as in van den Berg et
-% al. 2016 (similar to Kiani et al. 2014)
 
-% create acceleration and velocity profiles (arbitrary for now)
-% SJ 04/2020
-% Hou et al. 2019, peak vel = 0.37m/s, SD = 210ms
-% 07/2020 lab settings...160cm in 1.3s, sigma=0.14
 
-ampl = 0.16; % movement in metres
-pos = normcdf(1:duration,duration/2,0.14*duration)*ampl;
-vel = gradient(pos)*1000; % metres/s
-acc = gradient(vel);
+if useVelAcc
+    % create acceleration and velocity profiles for scaling drift rate - SJ 04/2020
+    % cf. Drugowitsch et al. 2014
+    % cf. Hou et al. 2019, peak vel = 0.37m/s, SD = 210ms
+    % vel = normpdf(1:duration,duration/2,210);
+    % vel = 0.37*vel./max(vel);
+    % acc = gradient(vel)*1000; % multiply by 1000 to get from m/s/ms to m/s/s
+    
+    % FL settings...160cm, sigma=0.14 (programmed)
+    ampl = 0.16; % movement in metres
+    pos = normcdf(1:duration,duration/2,0.14*duration)*ampl;
+    vel = gradient(pos)*1000; % metres/s
+    acc = gradient(vel);
+    
+    % normalize
+    vel = vel./max(vel);
+    acc = abs(acc./max(acc)); % (and abs)
+    
+else
+    vel = ones(1,duration);
+    acc = vel;
+end
 
-% vel = normpdf(1:duration,duration/2,210);
-% vel = 0.37*vel./max(vel);
-% acc = gradient(vel)*1000; % multiply by 1000 to get from m/s/ms to m/s/s
 
-% normalize
-vel = vel./max(vel);
-acc = abs(acc./max(acc)); % (and abs)
-
-origParams.ks = ks;
+% store parameter settings for bookkeeping
+origParams.kves = kves;
+origParams.kvis = kvis;
 origParams.sigmaVes = sigmaVes;
 origParams.sigmaVis = sigmaVis;
 origParams.B = B;
@@ -132,8 +166,13 @@ S = [1 -1/sqrt(2) ; -1/sqrt(2) 1];
 
 tic
 for n = 1:ntrials
-    Tnd = Tnds(n) / 1000; % Tnd for nth trial in seconds
-
+    
+    if length(muTnd)==1
+        Tnd = Tnds(n); % Tnd for nth trial, in seconds
+    else
+        Tnd = Tnds(n,modality(n));
+    end
+    
     switch modality(n)
         case 1
         
@@ -182,7 +221,9 @@ for n = 1:ntrials
     % dv(:,1) corresponds to evidence favoring rightward, not evidence
     % favoring the correct decision (as in Kiani eqn. 3 and images_dtb)
 
+    % store each trial's dv, if desired...
 %     dv_all{n} = dv;
+
     % decision outcome
     cRT1 = find(dv(:,1)>=B, 1);
     cRT2 = find(dv(:,2)>=B, 1);
@@ -249,7 +290,7 @@ for n = 1:ntrials
     end
     if isnan(conf(n)), conf(n)=0; end % if dvs are almost overlapping, force conf to zero as it can sometimes come out as NaN
 
-    RT(n) = RT(n) + Tnd; % add NDT
+    RT(n) = RT(n) + Tnd; % add NDT, already in seconds!
     
     if plotExampleTrials
 
@@ -260,22 +301,19 @@ for n = 1:ntrials
             hold on; box off;
             xlabel('Time (ms)');
             ylabel('Accum. evidence');
-            ylim([-1.25 1.1].*B); xlim([0 duration]);
+            ylim([-1.1 1.1].*B); xlim([0 duration]);
             %             set(gca,'yTick',-0.5:0.5:2);
             set(gca,'xTick',0:500:2000);
             changeAxesFontSize(gca,18,18);
-
-            yl = get(gca,'ylim');
-            plot(1:length(vel),vel+yl(1),'k--','linew',0.5)
-
+            
             plot(dv(1:round((RT(n)-Tnd)*1000),1),'k-','LineWidth',2); hold on; % winning (R, since we preselect for R choice)
             plot(dv(1:round((RT(n)-Tnd)*1000),2),'color',[1 1 1]*0.5,'LineWidth',1); hold on; % losing (L)
             fprintf('Vest hdg = %.1f, RT (-NDT) = %.2f, conf = %.2f',hdg(n),RT(n)-Tnd,conf(n));
 
             plot(1:length(dv),ones(1,length(dv))*B,'k-','LineWidth',4);
-            if conftask==2, text(1, B+0.02, sprintf('Theta = %.g',theta),'verti','bottom'); end
+            if conftask==2, text(50, B+0.02, sprintf('\\Theta = %.g',theta),'verti','bottom','fontsize',14,'fontweight','bold'); end
 
-            plot([round((RT(n)-Tnd)*1000) round((RT(n)-Tnd)*1000)],dv(round((RT(n)-Tnd)*1000),:),'k:')
+%             plot([round((RT(n)-Tnd)*1000) round((RT(n)-Tnd)*1000)],dv(round((RT(n)-Tnd)*1000),:),'k:')
 %             plot([round(RT(n)*1000) round(RT(n)*1000)],[dv(round((RT(n)-Tnd)*1000),2) B],'r--')
                 
             box off;
@@ -289,19 +327,19 @@ for n = 1:ntrials
 
             doneWith1=1; n
         end
-        if modality(n)==2 && hdg(n)==6 && coh(n)==cohs(2) && choice(n)==1 && doneWith2==0
+        if modality(n)==2 && hdg(n)==3 && coh(n)==cohs(2) && choice(n)==1 && doneWith2==0
             figure(1000); hold on; 
             plot(dv(1:round((RT(n)-Tnd)*1000),1),'r-','LineWidth',2); %hold on; % winning (R, since we preselect for R choice)
             plot(dv(1:round((RT(n)-Tnd)*1000),2),'m-','LineWidth',1); % losing (L)            doneWith2 = 1;
-            plot([round((RT(n)-Tnd)*1000) round((RT(n)-Tnd)*1000)],dv(round((RT(n)-Tnd)*1000),:),'r:')
+%             plot([round((RT(n)-Tnd)*1000) round((RT(n)-Tnd)*1000)],dv(round((RT(n)-Tnd)*1000),:),'r:')
             fprintf('Vis hdg = %.1f, RT (-NDT) = %.2f, conf = %.2f',hdg(n),RT(n)-Tnd,conf(n));
             doneWith2 = 1; n
         end
-        if modality(n)==3 && hdg(n)==1.5 && coh(n)==cohs(2) && choice(n)==1 && delta(n)==0 && doneWith3==0
+        if modality(n)==3 && hdg(n)==3 && coh(n)==cohs(2) && choice(n)==1 && delta(n)==0 && doneWith3==0
             figure(1000); hold on; 
             plot(dv(1:round((RT(n)-Tnd)*1000),1),'b-','LineWidth',2); %hold on; % winning (R, since we preselect for R choice)
             plot(dv(1:round((RT(n)-Tnd)*1000),2),'c-','LineWidth',1); % losing (L)
-            plot([round((RT(n)-Tnd)*1000) round((RT(n)-Tnd)*1000)],dv(round((RT(n)-Tnd)*1000),:),'b:')
+%             plot([round((RT(n)-Tnd)*1000) round((RT(n)-Tnd)*1000)],dv(round((RT(n)-Tnd)*1000),:),'b:')
             fprintf('Comb hdg = %.1f, RT (-NDT) = %.2f, conf = %.2f',hdg(n),RT(n)-Tnd,conf(n));
             doneWith3 = 1; n
 %             export_fig('threeTrials','-eps');
@@ -311,14 +349,24 @@ for n = 1:ntrials
 end
 toc
 
-figure(1000); %yl = get(gca,'ylim');
-plot(1:length(vel),vel+yl(1),'k--','linew',0.5)
+% if plotExampleTrials
+% figure(1000);
+% text(duration*0.75,0+B/2+0.2,'Ves','fontsize',14,'horizo','center');
+% text(duration*0.75,0+B/2,'Vis','fontsize',14,'horizo','center');
+% text(duration*0.75,0+B/2-0.2,'Comb','fontsize',14,'horizo','center');
+
+
+% yl = get(gca,'ylim');
+% if useVelAcc,plot(1:length(vel),vel+yl(1),'k--','linew',0.5); end
+% end
+
 choice(choice==0) = sign(randn); % not needed under usual circumstances
 
 % sanity check:
-pCorrect_total = (sum(choice==1 & hdg>0) + sum(choice==-1 & hdg<0)) / ntrials
+correct = (choice==1 & hdg>0) | (choice==-1 & hdg<0) | ...
+    (rand<0.5 & (hdg==0 | abs(hdg)<abs(delta)));
 
-
+pCorrect = sum(correct) / ntrials
 
 
 
@@ -333,77 +381,103 @@ data.delta = delta;
 data.choice = choice;
 data.RT = RT; % already in seconds
 data.conf = conf;
+data.correct = correct;
+
 
 if conftask==2
     data.PDW=data.conf;
 end
-subject = 'simul';
+% subject = 'simul';
+
+cd('/Users/stevenjerjian/Desktop/FetschLab/Analysis')
+save(sprintf('2DAccSim_lucioParams.mat',conftask,ntrials),'data','cohs','deltas','hdgs','mods','origParams','RTtask','conftask','subject')
 
 % cd('/Users/stevenjerjian/Desktop/FetschLab/Analysis')
 % save(sprintf('2DAccSim_conftask%d_%dtrs.mat',conftask,ntrials),'P','R','data','cohs','deltas','hdgs','mods','origParams','RTtask','conftask','subject')
 
 %% plots
-if 0
-dots3DMP_parseData
-dots3DMP_plots
-%%
-dots3DMP_parseData_splitConf
-dots3DMP_plots_splitConf
+mods   = unique(data.modality);
+cohs   = unique(data.coherence);
+deltas = unique(data.delta);
+hdgs   = unique(data.heading);
 
+% means per condition, logistic fits
+parsedData = dots3DMP_parseData(data,mods,cohs,deltas,hdgs,conftask,RTtask);
 
-%% fit cumulative gaussians
+% gaussian fits
+gfit = dots3DMP_fit_cgauss(data,mods,cohs,deltas,conftask,RTtask);
 
-dots3DMP_fit_cgauss
-dots3DMP_plots_cgauss
-% dots3DMP_plots_cgauss_forTalk % nicer looking versions
-
+% plot it
+%     dots3DMP_plots(parsedData,mods,cohs,deltas,hdgs,conftask,RTtask)
+dots3DMP_plots_cgauss_byCoh(gfit,parsedData,mods,cohs,deltas,hdgs,conftask,RTtask)
 
 %% now try fitting the fake data to recover the generative parameters
+% 
+% % options.errfun = 'dots3DMP_fit_2Dacc_err_nSims';
+options.errfun = 'dots3DMP_fit_2Dacc_err_sepbounds_noSim';
 
-options.errfun = 'dots3DMP_fit_2Dacc_err_nSims';
-options.nreps  = 100;
+% % options.nreps  = 100;
+% % options.confModel = 'evidence+time';
+
+
 % choose whether to run fit with interpolated headings
+
 % this is sort of redundant  for now, because model fits are
 % generated via Monte Carlo and are going to be too noisy for a nice
 % interpolated fit
-options.runInterpFit = 0; 
 
-% % options.fitMethod = 'fms';
-options.fitMethod = 'global';
+% SJ 10/2021, no longer doing model fits via Monte Carlo
+options.runInterpFit = 1; 
+
+options.fitMethod = 'fms'; %'fms','global','multi','pattern','bads'
+% options.fitMethod = 'global';
 % options.fitMethod = 'multi';
 % options.fitMethod = 'pattern';
 % options.fitMethod = 'bads';
 
 % initial guess (or hand-tuned params)
-ks      = 18;
-sigma   = [0.01 0.01 0.01];
-B       = 1;
+kmult   = 30;
+kvis    = kmult.*cohs';
+kves    = mean(kvis);
+BVes    = 0.6;
+BVis    = 1.2;
+BComb   = 0.8;
 Tnd     = 300;
-fixed   = [0 1 1 1 0 1];
-guess   = [ks sigma(1:3) B Tnd];
+Ttc     = 0; % time to confidence!
+
+fixed   = [0 1 1 1 1 1 1 1];
+guess   = [kves kvis(1:2) BVes BVis BComb Tnd Ttc];
 
 if conftask==2 % PDW
-    theta = 1.0;
+    theta = 0.6;
 
-    fixed   = [0 1 1 1 0 1];
-    guess   = [ks sigma(1:3) B theta Tnd];
+    fixed   = [0 1 1 1 1 1 1 1 1];
+
+    guess   = [guess theta];
 end
 
 % ************************************
-% set all fixed to 1 for hand-tuning:
-% fixed(:)=1;
+% set all fixed to 1 for hand-tuning, or 0 for full fit
+fixed(:)=1;
 % ************************************
 
 % plot error trajectory (prob doesn't work with parallel fit methods)
 options.ploterr  = 1;
+options.dummyRun = 0;
 options.RTtask   = RTtask;
 options.conftask = conftask; % 1 - sacc endpoint, 2 - PDW
 
 if options.ploterr, options.fh = 400; end
 
+% remove 
+% removethese = data.RT == max(data.RT);
+% fnames = fieldnames(data);
+% 
+% for f=1:length(fnames)
+%     data.(fnames{f})(removethese) = [];
+% end
+
 [X, err_final, fit, fitInterp] = dots3DMP_fitDDM(data,options,guess,fixed);
 
 % plot it!
-%%dots3DMP_plots_fit(data,fitInterp,conftask,RTtask)
-
-end
+dots3DMP_plots_fit_byCoh(data,fitInterp,conftask,RTtask,0)

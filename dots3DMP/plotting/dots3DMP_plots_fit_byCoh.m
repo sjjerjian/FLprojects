@@ -10,12 +10,36 @@ function dots3DMP_plots_fit_byCoh(data,fit,conftask,RTtask)
 if nargin<3, conftask=1; end
 if nargin<4, RTtask = 0; end
 
-%% actual data
+fsz = 14; % fontsize
 
 mods   = unique(data.modality);
 cohs   = unique(data.coherence);
 deltas = unique(data.delta);
 hdgs   = unique(data.heading);
+
+if all(mods==1), cohs=1; end
+
+xLab = sprintf('heading angle (%s)',char(176));
+modlabels = {'Ves','Vis','Comb'};
+
+if conftask==1 
+    yLab = 'SaccEP'; confYlims = [0.2 0.9]; 
+    if all(mods==1), RTylims = [0.9 1.5]; 
+    else,            RTylims = [0.9 1.9]; 
+    end
+    xt = -10:5:10;
+     if length(mods)>1, cohlabs = {'Low Coh','High Coh'}; end
+elseif conftask==2
+    yLab = 'P(High Bet)'; confYlims = [0.4 1.0]; 
+    if all(mods==1), RTylims = [0.5 0.72]; 
+    else,            RTylims = [0.5 0.9]; 
+    end
+    xt = -12:6:12;
+    if length(mods)>1, cohlabs = {['coh = ' num2str(cohs(1))],['coh = ' num2str(cohs(2))]}; end
+end 
+
+%% actual data
+% plot as individual points with error bars
 
 useAbsHdg = 0;
 RTCorrOnly = 1; % when fitting correct RTs only, only compare to those in the data
@@ -40,34 +64,26 @@ clr{1} = {'ko','ro','bo'};
 clr{2} = {'ko','ro','bo'};
 clr{3} = {'ko','yo','go'};
 figure(101);
-set(gcf,'Color',[1 1 1],'Position',[300 500 950+300*(length(cohs)-2) 800],'PaperPositionMode','auto'); clf;
+set(gcf,'Color',[1 1 1],'Position',[300 1000 230+300*(length(cohs)-1) 200+150*(conftask>0)+150*RTtask],'PaperPositionMode','auto'); clf;
 for c = 1:length(cohs)
     subplot(spRows,length(cohs),c); hold on;
     for m = 1:length(mods)     % m c d h
-        h(m) = errorbar(hdgs, squeeze(parsedData.pRight(m,c,D,:)), squeeze(parsedData.pRightSE(m,c,D,:)), [clr{c}{m}]); 
-%         h(m) = errorbar(hdgs, squeeze(parsedData.pCorrect(m,c,D,:)), squeeze(parsedData.pCorrectSE(m,c,D,:)), [clr{c}{m}]); 
-        if length(mods)>1; title(['coh = ' num2str(cohs(c))]); end
+        h(m) = errorbar(hdgs, squeeze(parsedData.pRight(m,c,D,:)), squeeze(parsedData.pRightSE(m,c,D,:)), [clr{c}{m}],'linewidth',1.5); 
     end
-    legend(h,'vestib','visual','comb','Location','northwest');
-    xlabel('heading angle (deg)'); ylabel('P(Right)');
-    ylim([0 1]);
-        
+    
     if conftask>0
         subplot(spRows,length(cohs),c+length(cohs)); hold on
         for m = 1:length(mods)
-            h(m) = errorbar(hdgs, squeeze(parsedData.confMean(m,c,D,:)), squeeze(parsedData.confSE(m,c,D,:)), [clr{c}{m}]);
+            h(m) = errorbar(hdgs, squeeze(parsedData.confMean(m,c,D,:)), squeeze(parsedData.confSE(m,c,D,:)), [clr{c}{m}],'linewidth',1.5);
         end
-        xlabel('heading angle (deg)');
-        ylabel(confYL);
-        ylim([0 1]); 
+
     end
     
     if RTtask
         subplot(spRows,length(cohs),c+length(cohs)*(2-(conftask==0))); hold on
         for m = 1:length(mods)
-            h(m) = errorbar(hdgs, squeeze(parsedData.RTmean(m,c,D,:)), squeeze(parsedData.RTse(m,c,D,:)), [clr{c}{m}]); 
+            h(m) = errorbar(hdgs, squeeze(parsedData.RTmean(m,c,D,:)), squeeze(parsedData.RTse(m,c,D,:)), [clr{c}{m}],'linewidth',1.5); 
         end
-        xlabel('heading angle (deg)'); ylabel('RT (s)');
     end
     
 end
@@ -81,35 +97,26 @@ clr{3} = {'bo','co','go'};
 
 clear L;
 figure(108);
-set(gcf,'Color',[1 1 1],'Position',[50 20 950+300*(length(cohs)-2) 800],'PaperPositionMode','auto'); clf;
+set(gcf,'Color',[1 1 1],'Position',[50 20 230+300*(length(cohs)-1) 200+150*(conftask>0)+150*RTtask],'PaperPositionMode','auto'); clf;
 for c = 1:length(cohs)
     subplot(spRows,length(cohs),c); hold on
     for d = 1:length(deltas)     % m c d h
-        h(d) = errorbar(hdgs, squeeze(parsedData.pRight(3,c,d,:)), squeeze(parsedData.pRightSE(3,c,d,:)), [clr{c}{d}]);
-%         h(d) = errorbar(hdgs, squeeze(parsedData.pCorrect(3,c,d,:)), squeeze(parsedData.pCorrectSE(3,c,d,:)), [clr{c}{d}]); 
-        L{d} = sprintf('\x0394=%d',deltas(d));
-        if length(mods)>1; title(['coh = ' num2str(cohs(c))]); end
+        h(d) = errorbar(hdgs, squeeze(parsedData.pRight(3,c,d,:)), squeeze(parsedData.pRightSE(3,c,d,:)), [clr{c}{d}],'linewidth',1.5);
+%         L{d} = sprintf('\x0394=%d',deltas(d));
     end
-    ylim([0 1]);
-    legend(h,L,'location','northwest');
-    xlabel('heading angle (deg)'); ylabel('proportion rightward choices');
-    
+
     if conftask>0
         subplot(spRows,length(cohs),c+length(cohs)); hold on
         for d = 1:length(deltas)
-            h(d) = errorbar(hdgs, squeeze(parsedData.confMean(3,c,d,:)), squeeze(parsedData.confSE(3,c,d,:)), [clr{c}{d}]);
+            h(d) = errorbar(hdgs, squeeze(parsedData.confMean(3,c,d,:)), squeeze(parsedData.confSE(3,c,d,:)), [clr{c}{d}],'linewidth',1.5);
         end
-        ylim([0 1]); 
-        xlabel('heading angle (deg)');
-        ylabel(confYL);
     end
     
     if RTtask
         subplot(spRows,length(cohs),c+length(cohs)*(2-(conftask==0))); hold on
         for d = 1:length(deltas)
-            h(d) = errorbar(hdgs, squeeze(parsedData.RTmean(3,c,d,:)), squeeze(parsedData.RTse(3,c,d,:)), [clr{c}{d}]); 
+            h(d) = errorbar(hdgs, squeeze(parsedData.RTmean(3,c,d,:)), squeeze(parsedData.RTse(3,c,d,:)), [clr{c}{d}],'linewidth',1.5); 
         end
-        xlabel('heading angle (deg)'); ylabel('RT (s)');
     end
     
 end
@@ -118,6 +125,7 @@ end
 
 
 %% fit
+% plot curve only, overlaid on actual data points
 
 mods   = unique(fit.modality);
 cohs   = unique(fit.coherence);

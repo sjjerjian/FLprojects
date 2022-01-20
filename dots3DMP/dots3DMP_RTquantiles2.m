@@ -17,22 +17,27 @@ if nargin<3, plotOption = 2; end
 % familiar manual kluge necessary to avoid invalid combinations:
 ucoh = unique(data.coherence);
 ucond = [1 ucoh(1); 2 ucoh(1); 2 ucoh(2); 3 ucoh(1); 3 ucoh(2)];
-titles = {'Ves';'Vis-lo';'Vis-hi';'Comb-lo';'Comb-hi';'All'};
+titles = {'Ves';'Vis-Low';'Vis-High';'Comb-Low';'Comb-High';'All'};
 
-nbins = 5; % number of bins for RT
 uhdg  = unique(abs(data.heading));
 
-if conftask==1
-    confdata = data.conf>=median(data.conf);
-    disp('doing a gross median conf split for now...')
+if conftask==1 % assume human
+    confdata = data.conf;
     errfun   = @(x,n) std(x) / sqrt(n);
-    
-elseif conftask==2
+    yLab = 'Sacc EP';
+    yL = [0 1];
+    nbins = 4; % number of RT quantiles
+elseif conftask==2 
     confdata = data.PDW;
     errfun   = @(x,n) sqrt( (x.*(1-x)) ./ n);
+    yLab = 'P(High Bet)';
+    yL = [0 1];
+    nbins = 5;
 end
 
-xRange = prctile(data.RT,[0.5 99]);
+xRange = prctile(data.RT,[0.5 98]);
+xRange = [0.35 0.95];
+
 % xRange = [min(data.RT) max(data.RT)];
 
 for c = 1:size(ucond,1)+1 % the extra one is for all conditions pooled
@@ -72,8 +77,8 @@ for c = 1:size(ucond,1)+1 % the extra one is for all conditions pooled
             lowRT    = data.RT(I & confdata==0);
             
             % PDW for correct and error under each condition
-            corrConf = data.PDW(I & (data.correct | data.heading==0));
-            errConf  = data.PDW(I & (~data.correct | data.heading==0));
+            corrConf = confdata(I & (data.correct | data.heading==0));
+            errConf  = confdata(I & (~data.correct | data.heading==0));
             
             % accuracy for high and low bets under each condition
             highCorr  = data.correct(I & confdata==1);
@@ -119,7 +124,7 @@ if plotOption==2
 end
                     
     
-%% plotting
+%% plot conf vs RT
 
 
 subplotInd = [2 3 4 5 6 1];
@@ -136,15 +141,21 @@ for c = 1:size(ucond,1)+1 % the extra one is for all conditions pooled
     subplot(3,2,subplotInd(c));
     
     clear g L
-    for h = 1:length(uhdg)      
+    for h = 1:length(uhdg)  
         
+%         len = 0.2;
+%         hdgVec = len .* [sind(uhdg(h)) cosd(uhdg(h))];
+%         startPoint = [1.3 0.7];
+%         xVec = startPoint(1)+[0 hdgVec(1)];
+%         yVec = startPoint(2)+[0 hdgVec(2)];
+            
         if plotOption==-1 % plot all trials
             g(h) = errorbar(squeeze(X(c,h,:)),squeeze(Y(c,h,:)),squeeze(Ye(c,h,:)),'color',cmap(h,:),'LineWidth', 2,...
                 'LineStyle','-','Marker','o','MarkerSize',6,'MarkerFaceColor',cmap(h,:)); hold on;
         elseif plotOption==0 % plot error trials only
             if h<=3
                 g(h) = errorbar(squeeze(X(c,h,:,2)),squeeze(Y(c,h,:,2)),squeeze(Ye(c,h,:,2)),'color',cmap(h,:),'LineWidth', 2,...
-                    'LineStyle','--','Marker','o','MarkerSize',6,'MarkerFaceColor',cmap(h,:)); hold on;
+                    'LineStyle','-','Marker','o','MarkerSize',6,'MarkerFaceColor',cmap(h,:)); hold on;
             end
         elseif plotOption==1 % plot correct trials only
             g(h) = errorbar(squeeze(X(c,h,:,1)),squeeze(Y(c,h,:,1)),squeeze(Ye(c,h,:,1)),'color',cmap(h,:),'LineWidth', 2,...
@@ -157,29 +168,46 @@ for c = 1:size(ucond,1)+1 % the extra one is for all conditions pooled
             k(h) = errorbar(squeeze(X(c,h,:,1)),squeeze(Y(c,h,:,1)),squeeze(Ye(c,h,:,1)),'color',cmap(h,:),'LineWidth', 2,...
                 'LineStyle','-','Marker','o','MarkerSize',6,'MarkerFaceColor',cmap(h,:)); hold on;
         end
-        xlim(xRange);
-        ylim([0.3 1])
+        
+%         plot(xVec,yVec,'color',cmap(h,:))
+%         text(xVec(2),yVec(2),num2str(uhdg(h)),'color',cmap(h,:),'fontsize',12,'horizo','center');
+
+        %if c==size(ucond,1)+1
+            plot(xRange(2)*0.8+[0.08 0.15],0.9-0.15*h*ones(1,2),'color',cmap(h,:),'linewidth',3);
+            text(xRange(2)*0.8+0.23,0.9-0.15*h,sprintf('%s%s',num2str(uhdg(h)),char(176)),'color','k','fontsize',14,'horizo','center');
+        %end
+       
     end
-    if c<size(ucond,1)+1
-        if ucond(c,1)==3,xlabel('RT (s)');
-        else, set(gca,'xticklabel',[]);
-        end
-        if ucond(c,1)==2 && ucond(c,2)==ucoh(1)
-            if conftask==1, ylabel('Sacc EP'); else, ylabel('P(High Bet)'); end
-        end
-    else
-        set(gca,'xticklabel',[]);
-    end
-    if mod(c,2)==1
-        set(gca,'yticklabel',[]);
-    end
+    xlim(xRange);
+    ylim(yL)
+    
+    %if c<size(ucond,1)+1
+    %    if ucond(c,1)==3,
+    %        xlabel('RT (s)');
+    %    else, set(gca,'xticklabel',[]);
+    %    end
+    %    if ucond(c,1)==2 && ucond(c,2)==ucoh(1), 
+    %        ylabel(yLab); 
+    %    end
+    %else
+    %    set(gca,'xticklabel',[]);
+        text(xRange(2)*0.8+0.2,0.95,'|hdg|','color',cmap(end,:),'fontsize',14,'horizo','center','fontweight','bold');
+
+    %end
+    %if mod(c,2)==1
+    %    set(gca,'yticklabel',[]);
+    %end
     changeAxesFontSize(gca,fsz,fsz); tidyaxes(gca,fsz); set(gca,'box','off');
     set(gca,'ytick',0:0.25:1,'yticklabel',{'0','','.5','','1'});
     title(titles{c});
+    %set(gca,'xtick',0:0.25:2.25);
+    %if conftask==1,set(gca,'xticklabel',{'0','','.5','','1','','1.5','','2',''});
+    %end
 end
-sh=suptitle('Confidence-RT'); set(sh,'fontsize',fsz,'fontweight','bold');
+% sh=suptitle('Confidence-RT'); set(sh,'fontsize',fsz,'fontweight','bold');
 
-%%
+%% repeat for accuracy vs RT
+
 figure(17);
 set(gcf,'Color',[1 1 1],'Position',[200 200 270*2 170*3],'PaperPositionMode','auto');
 
@@ -193,12 +221,12 @@ for c = 1:size(ucond,1)+1 % the extra one is for all conditions pooled
     for h = 1:length(uhdg)      
         
         if plotOption==-1
-            g(h) = errorbar(squeeze(Xc(c,h,:)),squeeze(Yc(c,h,:)),squeeze(Yce(c,h,:)),'color',cmap(h,:),'LineWidth', 2,...
+            g(h) = errorbar(squeeze(X(c,h,:)),squeeze(Yc(c,h,:)),squeeze(Yce(c,h,:)),'color',cmap(h,:),'LineWidth', 2,...
                 'LineStyle','-','Marker','o','MarkerSize',6,'MarkerFaceColor',cmap(h,:)); hold on;
         elseif plotOption==0 
             if h<=3
                 g(h) = errorbar(squeeze(Xc(c,h,:,2)),squeeze(Yc(c,h,:,2)),squeeze(Yce(c,h,:,2)),'color',cmap(h,:),'LineWidth', 2,...
-                    'LineStyle','--','Marker','o','MarkerSize',6,'MarkerFaceColor',cmap(h,:)); hold on;
+                    'LineStyle','-','Marker','o','MarkerSize',6,'MarkerFaceColor',cmap(h,:)); hold on;
             end
         elseif plotOption==1
             g(h) = errorbar(squeeze(Xc(c,h,:,1)),squeeze(Yc(c,h,:,1)),squeeze(Yce(c,h,:,1)),'color',cmap(h,:),'LineWidth', 2,...
@@ -211,9 +239,16 @@ for c = 1:size(ucond,1)+1 % the extra one is for all conditions pooled
             k(h) = errorbar(squeeze(Xc(c,h,:,1)),squeeze(Yc(c,h,:,1)),squeeze(Yce(c,h,:,1)),'color',cmap(h,:),'LineWidth', 2,...
                 'LineStyle','-','Marker','o','MarkerSize',6,'MarkerFaceColor',cmap(h,:)); hold on;
         end
-        xlim(xRange);
-        ylim([0.2 1])
+        if c==size(ucond,1)+1
+            plot([max(X(:))+0.08 max(X(:))+0.15],0.9-0.15*h*ones(1,2),'color',cmap(h,:),'linewidth',3);
+            text(max(X(:))+0.23,0.9-0.15*h,sprintf('%s%s',num2str(uhdg(h)),char(176)),'color','k','fontsize',14,'horizo','center');
+        end
     end
+    
+
+    xlim(xRange);
+    ylim([0 1])
+    
     if c<size(ucond,1)+1 
         if ucond(c,1)==3,xlabel('RT (s)');
         else, set(gca,'xticklabel',[]);
@@ -223,13 +258,17 @@ for c = 1:size(ucond,1)+1 % the extra one is for all conditions pooled
         end
     else
         set(gca,'xticklabel',[]);
+        text(max(X(:))+0.2,0.95,'|hdg|','color',cmap(end,:),'fontsize',14,'horizo','center','fontweight','bold');
     end
     if mod(c,2)==1
         set(gca,'yticklabel',[]);
     end
     changeAxesFontSize(gca,fsz,fsz); tidyaxes(gca,fsz); set(gca,'box','off');
     set(gca,'ytick',0:0.25:1,'yticklabel',{'0','','.5','','1'});
+    set(gca,'xtick',0:0.25:2.25);
+    if conftask==1,set(gca,'xticklabel',{'0','','.5','','1','','1.5','','2',''});
+    end
     title(titles{c});
 end
-sh=suptitle('Accuracy-RT'); set(sh,'fontsize',fsz,'fontweight','bold');
+% sh=suptitle('Accuracy-RT'); set(sh,'fontsize',fsz,'fontweight','bold');
  

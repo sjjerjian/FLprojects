@@ -15,8 +15,11 @@ param = getParam(param, guess, fixed);
 mods   = unique(data.modality)';
 cohs   = unique(data.coherence)'; 
 hdgs   = unique(data.heading)';
-% deltas = unique(data.delta)';
+if options.dummyRun
+    deltas = unique(data.delta)';
+else
     deltas = 0; % only fit 0 delta, predict the rest!
+end
 
 duration = 2; % stimulus duration (s)
 
