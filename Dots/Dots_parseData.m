@@ -1,6 +1,14 @@
+function parsedData = Dots_parseData(data,conftask,RTtask,RTCorrOnly)
+
+% Following SJ, CF converted to function, for cleaner workspace
+
+if nargin < 4, RTCorrOnly = 0; end
+if nargin < 3, RTtask = 0; end
+if nargin < 2, conftask = 0; end
+
+
 cohs = unique(data.scoh);
-    if cohs(end)==1; cohs(end)=[]; end % weird. it's only 4 trials.
-dirs = unique(data.direction);
+if cohs(end)==1; cohs(end)=[]; end % one or more files had a few stray 100% coh trials in there by mistake
 
 n = nan(length(cohs),1);
 
@@ -15,6 +23,7 @@ nPDW2 = n; % corr
 nPDW3 = n; % err
 
 pRight = n1;
+pCorrect = n1;
 pRightHigh = n2;
 pRightLow = n3;
 
@@ -32,11 +41,16 @@ pHighErr = nPDW3;
 % for logistic regression (or whatever)
 xVals = linspace(cohs(1),cohs(end),100);
 
+K = ~isnan(data.RT); % need to start tagging non-RT trials as NaN!
+if RTCorrOnly; K = K & data.correct==1; end
+
 for c = 1:length(cohs)
     % choice
     J = data.scoh==cohs(c);
     n1(c) = sum(J);
     pRight(c) = sum(J & data.choice==1) / n1(c); % 0 is left, 1 is right
+
+    pCorrect(c) = sum(J & data.correct==1) / n1(c); 
     
     JJ = data.scoh==cohs(c) & data.PDW==1;
     n2(c) = sum(JJ);
@@ -44,10 +58,9 @@ for c = 1:length(cohs)
     
     JJJ = data.scoh==cohs(c) & data.PDW==0;
     n3(c) = sum(JJJ);
-    pRightLow(c) = sum(JJJ & data.choice==1) / n3(c); 
-    
+    pRightLow(c) = sum(JJJ & data.choice==1) / n3(c);
+        
     % RT
-    K = ~isnan(data.RT); % need to start tagging non-RT trials as NaN!
     nRT1(c) = sum(J & K);
     RTmean(c) = mean(data.RT(J & K));
     RTse(c) = std(data.RT(J & K))/sqrt(nRT1(c));
@@ -75,6 +88,7 @@ for c = 1:length(cohs)
 end
 
 pRightSE = sqrt( (pRight.*(1-pRight)) ./ n1 );
+pCorrectSE = sqrt( (pCorrect.*(1-pCorrect)) ./ n1 );
 pRightSEhigh = sqrt( (pRightHigh.*(1-pRightHigh)) ./ n2 );
 pRightSElow = sqrt( (pRightLow.*(1-pRightLow)) ./ n3 );
 
@@ -84,20 +98,72 @@ pHighSEerr = sqrt( (pHighErr.*(1-pHighErr)) ./ nPDW3 );
 
 
 % fit logistic regression
+% all trials
 X = data.scoh;
 y = data.choice==1; % 1 is right
 [B1, ~, stats1] = glmfit(X, y, 'binomial');
-
 yVals1 = glmval(B1,xVals,'logit');
 
+% high bet only
 I = data.PDW==1;
 X = data.scoh(I);
 y = data.choice(I)==1;
 [B2, ~, stats2] = glmfit(X, y, 'binomial');
 yVals2 = glmval(B2,xVals,'logit');
 
+% low bet only
 I = data.PDW==0;
 X = data.scoh(I);
 y = data.choice(I)==1;
 [B3, ~, stats3] = glmfit(X, y, 'binomial');
 yVals3 = glmval(B3,xVals,'logit');
+
+parsedData = struct();
+parsedData.n = n;
+parsedData.pRight = pRight;
+parsedData.pRightHigh = pRightHigh;
+parsedData.pRightLow = pRightLow;
+parsedData.pRightSE = pRightSE;
+parsedData.pRightSEhigh = pRightSEhigh;
+parsedData.pRightSElow = pRightSElow;
+parsedData.pCorrect = pCorrect;
+parsedData.pCorrectSE = pCorrectSE;
+parsedData.xVals = xVals;
+parsedData.yVals1 = yVals1;
+parsedData.yVals2 = yVals2;
+parsedData.yVals3 = yVals3;
+parsedData.B1 = B1;
+parsedData.B2 = B2;
+parsedData.B3 = B3;
+parsedData.stats1 = stats1;
+parsedData.stats2 = stats2;
+parsedData.stats3 = stats3;
+parsedData.yVals1 = yVals1;
+parsedData.yVals2 = yVals2;
+parsedData.yVals3 = yVals3;
+
+if conftask==1
+    parsedData.confMean = confMean;
+    parsedData.confSE = confSE;
+elseif conftask==2
+    parsedData.pHigh = pHigh;
+    parsedData.pHighCorr = pHighCorr;
+    parsedData.pHighErr = pHighErr;
+    parsedData.pHighSE = pHighSE;
+    parsedData.pHighSEcorr = pHighSEcorr;
+    parsedData.pHighSEerr = pHighSEerr;
+end
+
+if RTtask
+    parsedData.RTmean = RTmean;
+    parsedData.RTse = RTse;
+    parsedData.RTmeanHigh = RTmeanHigh;
+    parsedData.RTseHigh = RTseHigh;
+    parsedData.RTmeanLow = RTmeanLow;
+    parsedData.RTseLow = RTseLow;
+end
+
+
+
+
+

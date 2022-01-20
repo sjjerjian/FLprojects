@@ -54,8 +54,8 @@ if R.lose_flag
     P.lo.distr_loser = zeros(ndrift,nt,ngrid);
 end
 
-for id=1:ndrift  %loop over drifts
-    for k=2:nt  %loop over time startint at t(2)
+for id=1:ndrift %loop over drifts
+    for k=2:nt  %loop over time starting at t(2)
         if R.lose_flag
             [P.up.pdf_t(id,k) P.lo.pdf_t(id,k) P.up.distr_loser(id,k,:) P.lo.distr_loser(id,k,:)]...
                 = flux_img7(R.Bup,R.drift(id),R.t(k),g,g);
@@ -84,7 +84,6 @@ P.lo.p = P.lo.cdf_t(:,end);
 try
     P.up.mean_t = P.up.pdf_t * R.t  ./P.up.p;
     P.lo.mean_t = P.lo.pdf_t * R.t  ./P.lo.p;
-   
 catch
     P.up.mean_t = P.up.pdf_t * R.t'  ./P.up.p;
     P.lo.mean_t = P.lo.pdf_t * R.t'  ./P.lo.p;
@@ -103,6 +102,25 @@ P.logOddsCorrMap = log(odds);
 P.logOddsCorrMap = P.logOddsCorrMap';
 
 
+
+% okay, well, maybe we need both R and L (even for unsigned?)
+% R/corr
+I = R.drift>=0; % In case drift is signed, calculate only for positives,
+                % then the kluge with separate marginals (Pxt's) can be done elsewhere
+odds = (squeeze(sum(P.up.distr_loser(I,:,:),1)) / length(R.drift(I))) ./ ...
+       (squeeze(sum(P.lo.distr_loser(I,:,:),1)) / length(R.drift(I)));
+odds(odds<1) = 1; % fix some stray negatives/zeros (what about infs?)
+P.logOddsCorrMapR = log(odds);
+P.logOddsCorrMapR = P.logOddsCorrMapR';
+% L/incorr
+odds = (squeeze(sum(P.lo.distr_loser(I,:,:),1)) / length(R.drift(I))) ./ ...
+       (squeeze(sum(P.up.distr_loser(I,:,:),1)) / length(R.drift(I)));
+odds(odds<1) = 1; % fix some stray negatives/zeros (what about infs?)
+P.logOddsCorrMapL = log(odds);
+P.logOddsCorrMapL = P.logOddsCorrMapL';
+
+
+
 % % % % from 1D:
 % % % I = xmesh>0;
 % % % logPosteriorOddsRight = log(Pxt_marginal(I,:,1)./Pxt_marginal(I,:,2));
@@ -110,8 +128,6 @@ P.logOddsCorrMap = P.logOddsCorrMap';
 % % % I = xmesh<0;
 % % % logPosteriorOddsLeft = log(Pxt_marginal(I,:,2)./Pxt_marginal(I,:,1));
 % % % bet_high_xt(I,:) = logPosteriorOddsLeft > theta2;
-
-
 
 if R.plotflag
 

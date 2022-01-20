@@ -15,10 +15,10 @@ close all
 %% decide which files to load
 
 
-% subject = 'hanzo';
-% paradigm = 'Dots';
+subject = 'hanzo';
+paradigm = 'Dots';
 
-% dateRange = 20210208:20210212; % last week
+dateRange = 20210208:20210212; % last week
 
 % % month by month
 % dateRange = 20190301:20190331; % skip, too early?
@@ -60,7 +60,7 @@ close all
 
 
 
-% now do Genji!
+%% now do Genji!
 
 
 % subject = 'human';
@@ -74,15 +74,16 @@ close all
 % subject = 'human';
 % paradigm = 'dots3DMP';
 % dateRange = 20190612:20200308; % everything!
+% 
+% subject = 'lucio';
+% paradigm = 'dots3DMP';
+% dateRange = 20200315:20210512; % RT
+% 
+% dateStr = num2str(dateRange(1));
+% for d = 2:length(dateRange)
+%     dateStr = [dateStr newline num2str(dateRange(d))];
+% end
 
-subject = 'lucio';
-paradigm = 'dots3DMP';
-dateRange = 20200315:20210512; % RT
-
-dateStr = num2str(dateRange(1));
-for d = 2:length(dateRange)
-    dateStr = [dateStr newline num2str(dateRange(d))];
-end
 
 % localDir = ['/Users/chris/Documents/MATLAB/PLDAPS_data/' subject '/'];
 localDir = ['/Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data/' subject '/'];

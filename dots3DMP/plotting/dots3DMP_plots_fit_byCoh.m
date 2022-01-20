@@ -171,18 +171,16 @@ for c=1:length(cohs)
     RTse(1,c,:,:) = RTse(1,1,:,:);
 end
 
+% make analogous 'parsed' struct
 parsedFit = struct();
-parsedFit.n = n;
 parsedFit.pRight = pRight;
-parsedFit.pRightSE = pRightSE;
 if conftask
     parsedFit.confMean = confMean;
-    parsedFit.confSE = confSE;
 end
 if RTtask
     parsedFit.RTmean = RTmean;
-    parsedFit.RTse = RTse;
 end
+
 
 % plot it!
 

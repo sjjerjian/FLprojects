@@ -50,11 +50,8 @@ if options.ploterr, options.fh = 400; end
 [X, err_final, fit, fitInterp] = dots3DMP_fitDDM(data,options,guess,fixed);
 % fitInterp is in fact not obsolete, and needs fixing in ^^
 
-
 % plot it!
 dots3DMP_plots_fit_byCoh(data,fitInterp,conftask,RTtask);
-
-
 
 
 %% in progress

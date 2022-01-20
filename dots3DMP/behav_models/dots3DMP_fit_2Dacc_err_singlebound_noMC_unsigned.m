@@ -1,7 +1,7 @@
 function [err,fit] = dots3DMP_fit_2Dacc_err_singlebound_noMC_unsigned(param, guess, fixed, data, options)
 
-% SJ 10-11-2021 no Monte Carlo simulation for fitting, it's redundant! just use model
-% predictions directly
+% SJ 10-11-2021 no Monte Carlo simulation for fitting, it's redundant!
+% just use model predictions directly
 
 % single bound, separate Tnds version
 
