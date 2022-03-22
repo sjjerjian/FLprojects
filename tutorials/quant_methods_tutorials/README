@@ -1,0 +1,13 @@
+
+
+To use these tutorials, add folder "quant_methods_tutorials" and all sub-folders to Matlab path.
+
+
+
+
+Edit history:
+
+04-28-2014 Mike N. Shadlen
+	Copied original files from quant_methods_tutorials folder.
+	Updated all files to work with Matlab 2014a.
+
