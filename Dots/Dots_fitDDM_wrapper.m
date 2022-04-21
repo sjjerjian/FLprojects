@@ -13,11 +13,23 @@
 clear
 load Hanzo_data_fall2020.mat
 
-% parse trial data into aggregated and other support vars
-Dots_parse
+options.RTtask = 1;
+options.conftask = 2;
+cohs = unique(data.scoh);
 
-% optional
-% Dots_plot
+% weirdly, unsigned coh has two vals, exactly 0 and slightly greater...
+% TEMP KLUGE
+data.coherence(data.coherence<1e-10) = 0;
+
+
+% parse trial data into aggregated and other support vars
+RTCorrOnly = 0;
+parsedData = Dots_parseData(data,options.conftask,options.RTtask,RTCorrOnly);
+
+
+% optional [data will be plotted below regardless, along with the fits]
+% Dots_plot(parsedData,cohs,options.conftask,options.RTtask)
+
 
 
 %% now the fitting itself
@@ -25,7 +37,7 @@ Dots_parse
 
 %****** first select which model to fit ********
 % options.errfcn = @errfcn_DDM_1D_wConf; modelID=1; % 1D DDM with threshold on log odds, usually for var dur [Kiani 09 (FP4)]
-options.errfcn = @errfcn_DDM_2D_wConf; modelID=2; % 2D DDM aka anticorrelated race, for RT+conf [Kiani 14 / van den Berg 16 (WolpertMOI)]
+options.errfcn = @errfcn_DDM_2D_wConf_noMC; modelID=2; % 2D DDM aka anticorrelated race, for RT+conf [Kiani 14 / van den Berg 16 (WolpertMOI)]
 %***********************************************
 
 
@@ -75,11 +87,21 @@ fixed(:)=1;
 % ************************************
 
 % fit it!
-[X, err_final, fit] = Dots_fitDDM(guess,fixed,data,options);
+[X, err_final, fit, parsedFit] = Dots_fitDDM(guess,fixed,data,options);
 
 
 
-%% plot DDM fits + compare to data
+
+%% plot it!
+Dots_plot_fit(parsedData,parsedFit,cohs,options.conftask,options.RTtask);
+
+
+
+
+
+
+
+%% OLD:
 
 % to generate smooth curves, call errfcn again with interpolated
 % coh axis (and resampled durs if var dur task)

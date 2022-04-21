@@ -1,4 +1,4 @@
-function [X, LL_final, data, fit] = Dots_fitDDM(guess,fixed,data,options)
+function [X, LL_final, fit, parsedFit] = Dots_fitDDM(guess,fixed,data,options)
 
 % master function for Dots DDM fitting (3DMP remains separate)
 %   data:  data struct, requires at minimum a variable for choice and one for signed coherence
@@ -78,7 +78,7 @@ end
 % run err func again at the fitted/fixed params to generate a final
 % error value and model-generated data points (expected Pright etc)
 options.ploterr = 0;
-[LL_final, data, fit] = options.errfcn(X,guess,fixed,data,options);
+[LL_final, fit, parsedFit] = options.errfcn(X,guess,fixed,data,options);
 
 disp('done.');
 
