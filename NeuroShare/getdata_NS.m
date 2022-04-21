@@ -14,7 +14,7 @@ function [nsData] = getdata_NS(completeFilePath, dataType, dataChannel)
                    
                    
 % Open the file and extract some basic information
-[ns_status, hFile] = ns_OpenFile(completeFilePath); 
+[ns_status, hFile] = ns_OpenFile(completeFilePath,'single'); 
 
 % Determine correct entityID for desired datastream
 switch dataType    
@@ -27,11 +27,11 @@ switch dataType
             switch dataType
                 case 'Spike' 
                     if strcmp('nev', fileType); entityID = EntityIndices(i); break; end 
-                case {'LFP'} 
+                case {'LFP' 'Analog 1k'} 
                     if strcmp('ns2', fileType); entityID = EntityIndices(i); break; end 
                 case 'Hi-Res'   
-                    if strcmp('nf3', fileType); entityID = EntityIndices(i); break; end                
-                case {'Raw' 'Analog 30k' 'Analog 1k'} 
+                    if strcmp('ns3', fileType); entityID = EntityIndices(i); break; end                
+                case {'Raw' 'Analog 30k'} 
                     if strcmp('ns5', fileType); entityID = EntityIndices(i); break; end   
             end
         end
@@ -62,6 +62,7 @@ switch dataType
         end
         % Sorted spikes
         uniqueUnits = unique(unit_id(unit_id~=0));
+        SortedSpikeData = cell(1,1);
         for i = 1:length(uniqueUnits)
             SortedSpikeData{i} = spikeWindowData(:,unit_id==uniqueUnits(i));
         end
@@ -69,6 +70,7 @@ switch dataType
         nsData.spikeWindowData = spikeWindowData;
         nsData.sample_count = sample_count;
         nsData.unit_id = unit_id;
+        
         nsData.SortedSpikeData = SortedSpikeData;
 
     case {'LFP' 'Hi-Res' 'Raw' 'Analog 30k' 'Analog 1k'}

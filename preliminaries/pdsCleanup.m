@@ -10,14 +10,18 @@
 % can be removed for simple behavioral analyses
 removeAnalogData = 1;
 removeTimingData = 1;
+
 if strcmp(subject,'human')
     removeMotionTrackingData = 1; % will change this later
     removeDotPositionData = 1;
 else
     removeMotionTrackingData = 0;
     removeDotPositionData = 0;
+    generate3DDotPosition = 1;
 end
-
+if removeDotPositionData==1
+    generate3DDotPosition=0;
+end
 
 fprintf(['\ncleaning up ' remoteFiles{n} '...']);
 try
@@ -27,6 +31,18 @@ catch me
     return
 end
 
+% SJ added 02/2022, to generate 3DMP dots offline from trialSeeds, no
+% need to save online for storage space reasons
+% need to validate this again
+if generate3DDotPosition
+    try
+        if ~isfield(PDS.data{t}.stimulus,'dotX_3D')
+            [dotX_3D,dotY_3D,dotZ_3D,dotSize] = generateDots3D_offline(PDS);   
+        end
+    catch
+    end
+end
+
 try PDS = rmfield(PDS,'initialParameters'); catch; end
 try PDS = rmfield(PDS,'initialParameterNames'); catch; end
 try PDS = rmfield(PDS,'initialParametersMerged'); catch; end
@@ -34,7 +50,17 @@ try PDS = rmfield(PDS,'functionHandles'); catch; end
 try PDS = rmfield(PDS,'conditionNames'); catch; end
 
 for t = 1:length(PDS.data) % loop over trials for this file
-
+    
+    if generate3DDotPosition 
+        try % pass in the 3D dots generated offline
+            PDS.data{t}.stimulus.dotX_3D = dotX_3D{t};
+            PDS.data{t}.stimulus.dotY_3D = dotY_3D{t};
+            PDS.data{t}.stimulus.dotZ_3D = dotZ_3D{t};
+            PDS.data{t}.stimulus.dotSize = dotSize{t};
+        catch
+        end
+    end
+    
     if removeAnalogData % also removes analog-derived vars
         try PDS.data{t}.datapixx = rmfield(PDS.data{t}.datapixx,'adc'); catch; end
         try PDS.data{t}.behavior = rmfield(PDS.data{t}.behavior,'fixFP'); catch; end
@@ -59,6 +85,9 @@ for t = 1:length(PDS.data) % loop over trials for this file
         try PDS.data{t}.stimulus = rmfield(PDS.data{t}.stimulus,'dotX'); catch; end
         try PDS.data{t}.stimulus = rmfield(PDS.data{t}.stimulus,'dotY'); catch; end
         try PDS.data{t}.stimulus = rmfield(PDS.data{t}.stimulus,'dotZ'); catch; end
+        try PDS.data{t}.stimulus = rmfield(PDS.data{t}.stimulus,'dotX_3D'); catch; end
+        try PDS.data{t}.stimulus = rmfield(PDS.data{t}.stimulus,'dotY_3D'); catch; end
+        try PDS.data{t}.stimulus = rmfield(PDS.data{t}.stimulus,'dotZ_3D'); catch; end
         try PDS.data{t}.stimulus = rmfield(PDS.data{t}.stimulus,'dotPos'); catch; end        
         try PDS.data{t}.stimulus = rmfield(PDS.data{t}.stimulus,'dotSize'); catch; end
     end
@@ -107,9 +136,12 @@ for t = 1:length(PDS.data) % loop over trials for this file
     
     try
         if PDS.conditions{t}.stimulus.modality==1 % don't need a bunch of nans for vestib trials, make it just one nan
-            PDS.data{t}.stimulus.dotX = NaN;
-            PDS.data{t}.stimulus.dotY = NaN;
-            PDS.data{t}.stimulus.dotZ = NaN;
+            PDS.data{t}.stimulus.dotX_3D = NaN;
+            PDS.data{t}.stimulus.dotY_3D = NaN;
+            PDS.data{t}.stimulus.dotZ_3D = NaN;
+%             PDS.data{t}.stimulus.dotX = NaN;
+%             PDS.data{t}.stimulus.dotY = NaN;
+%             PDS.data{t}.stimulus.dotZ = NaN;
             PDS.data{t}.stimulus.dotSize = NaN;
         end
     catch    

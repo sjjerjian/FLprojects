@@ -58,7 +58,7 @@ if conftask==2
     confCorrSE = sqrt( (confCorr.*(1-confCorr)) ./ nCorr );
     confErrSE = sqrt( (confErr.*(1-confErr)) ./ nErr );
 else
-    disp('not showing errors')
+    disp('not showing standard errors')
     confCorrSE = zeros(size(confCorr));
     confErrSE = zeros(size(confErr));
 end
