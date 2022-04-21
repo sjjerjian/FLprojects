@@ -40,7 +40,7 @@ clr{3} = {'ko','yo','go'};
 clr{4} = clr{1};
 figure(101+D);
 % set(gcf,'Color',[1 1 1],'Position',[300 1000 230+300*(length(cohs)-1) 200+150*(conftask>0)+150*RTtask],'PaperPositionMode','auto'); clf;
-set(gcf,'Color',[1 1 1],'Position',[200 80 700 900],'PaperPositionMode','auto'); clf;
+set(gcf,'Color',[1 1 1],'Position',[200 80 500 200+250*(double(conftask>0)+double(RTtask))],'PaperPositionMode','auto'); clf;
 for c = 1:length(cohs)
     % choice
     subplot(spRows,length(cohs),c); box off; hold on;
@@ -80,7 +80,7 @@ for c = 1:length(cohs)
     
     % RT
     if RTtask
-        subplot(spRows,length(cohs),c+length(cohs)*(2-(conftask==0))); box off; hold on;
+        subplot(spRows,length(cohs),c+length(cohs)*(2-double(conftask==0))); box off; hold on;
         for m = 1:length(mods)        
             beta = [gfit.RT.ampl(m,c,D) gfit.RT.mu(m,c,D) gfit.RT.sigma(m,c,D) gfit.RT.bsln(m,c,D)];
             h(m) = plot(parsedData.xVals, gfit.RT.func(beta,parsedData.xVals), [clr{c}{m}(1) '-'],'linewidth',1.5); hold on;       
@@ -115,7 +115,7 @@ clr{4} = {'bd','cd','gd'};
 clear L;
 figure(208);
 % set(gcf,'Color',[1 1 1],'Position',[50 20 230+300*(length(cohs)-1) 200+150*(conftask>0)+150*RTtask],'PaperPositionMode','auto'); clf;
-set(gcf,'Color',[1 1 1],'Position',[900 80 700 900],'PaperPositionMode','auto'); clf;
+set(gcf,'Color',[1 1 1],'Position',[900 80 500 200+250*(double(conftask>0))+double(RTtask)],'PaperPositionMode','auto'); clf;
 for c = 1:length(cohs)
     % choice
     subplot(spRows,length(cohs),c); box off; hold on;
@@ -156,7 +156,7 @@ for c = 1:length(cohs)
 
     % RT
     if RTtask
-        subplot(spRows,length(cohs),c+length(cohs)*(2-(conftask==0))); box off; hold on;
+        subplot(spRows,length(cohs),c+length(cohs)*(2-double(conftask==0))); box off; hold on;
         for d = 1:length(deltas)
             beta = [gfit.RT.ampl(3,c,d) gfit.RT.mu(3,c,d) gfit.RT.sigma(3,c,d) gfit.RT.bsln(3,c,d)];
             h(d) = plot(parsedData.xVals, gfit.RT.func(beta,parsedData.xVals), [clr{c}{d}(1) '-'],'linewidth',1.5); hold on;

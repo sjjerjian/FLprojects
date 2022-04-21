@@ -14,7 +14,7 @@ if conftask==1
 elseif conftask==2
     xt = -12:6:12;
 elseif conftask==0
-    error('cannot plot confidence-based curves for non-confidence task!');
+    error('cannot plot confidence-based curves for non-confidence task, doh!');
 end
 
 %% first, for all trials irrespective of delta
@@ -26,7 +26,9 @@ modlabels = {'Ves','Vis','Comb'};
 
          %ves %vis %comb
 clr{1} = {'ko','ro','bo'};
-clr{2} = {'ko','ro','bo'};
+clr{2} = {'kd','rd','bd'};
+fclr{1} = 'krb';
+fclr{2} = 'www';
 clnstl = '-:'; % high low conf line style
 
 
@@ -37,12 +39,18 @@ for c=1:length(cohs)
     for m=1:length(mods)
         subplot(length(mods),length(cohs),c+(m-1)*length(cohs))
 %         subplot(1,length(mods),m)
-        if m==1 && c~=1, delete(gca); continue, end
-        
+        if m==1 && c~=1
+            delete(gca);
+            % plot all trials here?
+%             beta = [gfit.choice.mu(end,1,D,cc) gfit.choice.sigma(end,1,D,cc)];
+%             h(cc) = plot(parsedData.xVals, gfit.choice.func(beta,parsedData.xVals), 'color',[1 1 1]*0.5,'linestyle',clnstl(cc),'linewidth',1.5); hold on;
+%             errorbar(hdgs, squeeze(parsedData.pRight(end,1,D,:,cc)), squeeze(parsedData.pRightSE(end,1,D,:,cc)), 'color',[1 1 1]*0.5,'linewidth',1.5,'markerfacecolor',[1 1 1]*0.5);
+        else
+            
         for cc=1:2
             beta = [gfit.choice.mu(m,c,D,cc) gfit.choice.sigma(m,c,D,cc)];
             h(cc) = plot(parsedData.xVals, gfit.choice.func(beta,parsedData.xVals), clr{cc}{m}(1),'linestyle',clnstl(cc),'linewidth',1.5); hold on;
-            errorbar(hdgs, squeeze(parsedData.pRight(m,c,D,:,cc)), squeeze(parsedData.pRightSE(m,c,D,:,cc)), clr{cc}{m},'linewidth',1.5);
+            errorbar(hdgs, squeeze(parsedData.pRight(m,c,D,:,cc)), squeeze(parsedData.pRightSE(m,c,D,:,cc)), clr{cc}{m},'linewidth',1.5,'markerfacecolor',fclr{cc}(m));
         end
         set(gca,'xtick',xt);
         set(gca,'ytick',0:0.25:1,'yticklabel',{'0','.25','.5','.75','1'});
@@ -54,11 +62,15 @@ for c=1:length(cohs)
             ht=title(modlabels{m}); set(ht,'color',clr{1}{m}(1)); 
             hL=legend(h,'High Bet','Low Bet','Location','northwest','box','off');
         end
+        
+        end
+        
     if m==length(mods), xlabel(xLab); end
     if c==1, ylabel('P(right)'); end
     try changeAxesFontSize(gca,15,15); tidyaxes; catch; end
     end
 end
+
 
 % RT
 
@@ -75,7 +87,7 @@ for c=1:length(cohs)
         for cc=1:2
             beta = [gfit.RT.ampl(m,c,D,cc) gfit.RT.mu(m,c,D,cc) gfit.RT.sigma(m,c,D,cc) gfit.RT.bsln(m,c,D,cc)];
             h(cc) = plot(parsedData.xVals, gfit.RT.func(beta,parsedData.xVals), clr{cc}{m}(1),'linestyle',clnstl(cc),'linewidth',1.5); hold on;
-            errorbar(hdgs, squeeze(parsedData.RTmean(m,c,D,:,cc)), squeeze(parsedData.RTse(m,c,D,:,cc)), clr{cc}{m},'linewidth',1.5);
+            errorbar(hdgs, squeeze(parsedData.RTmean(m,c,D,:,cc)), squeeze(parsedData.RTse(m,c,D,:,cc)), clr{cc}{m},'linewidth',1.5,'markerfacecolor',fclr{cc}(m));
         end
         set(gca,'xtick',xt);
         if conftask==1

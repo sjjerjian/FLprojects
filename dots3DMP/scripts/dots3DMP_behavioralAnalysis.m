@@ -35,7 +35,9 @@ switch subject
             
         else
 %             load('human_20200213-20210922_RT_clean.mat') % human RT, SfN 2021
-            load('human_20200213-20220113_RT_clean_Jan2022.mat') % human RT, Jan 2022
+%             load('human_20200213-20220113_RT_clean_Jan2022.mat') % human RT, Jan 2022
+            load('human_20200213-20220317_RT_clean_Mar2022.mat') % human RT, Jan 2022
+
             RTlims = [0.25 2.5];
         end
         
@@ -46,8 +48,9 @@ switch subject
         % conftask & RTtask should already be saved in file
 end
 
+fnames = fieldnames(data);
+
 if RTtask
-    fnames = fieldnames(data);
     removethese = data.RT < RTlims(1) | data.RT > RTlims(2);
     
     for f=1:length(fnames)
@@ -58,7 +61,6 @@ end
 if strcmp(subject,'human') && RTtask
     % not enough good data, so let's just remove for now?
     removethese = data.heading==0;
-    fnames = fieldnames(data);
     for f=1:length(fnames)
         data.(fnames{f})(removethese) = [];
     end
@@ -70,7 +72,17 @@ deltas = unique(data.delta);
 % deltas = [-3 3];
 hdgs   = unique(data.heading);
 
-%% basic parsing and summary plots of data
+
+subjs = {'DRH','SJJ','IPQ','SBG','DJB'}; % RT
+removethese = ~ismember(data.subj,subjs);
+for f=1:length(fnames)
+    data.(fnames{f})(removethese) = [];
+end
+
+%%
+
+
+%% basic parsing and descriptive gaussian fits 
 
 % means per condition, logistic fits
 parsedData = dots3DMP_parseData(data,mods,cohs,deltas,hdgs,conftask,RTtask); 
@@ -78,6 +90,7 @@ parsedData = dots3DMP_parseData(data,mods,cohs,deltas,hdgs,conftask,RTtask);
 % gaussian fits
 gfit = dots3DMP_fit_cgauss(data,mods,cohs,deltas,conftask,RTtask); 
 
+%% summary plots
 % logistic fit plots
 % dots3DMP_plots(parsedData,mods,cohs,deltas,hdgs,conftask,RTtask)
 
