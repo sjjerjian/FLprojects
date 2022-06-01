@@ -1,4 +1,4 @@
-function dots3DMP_RTquantiles(data,conftask,plotOption)
+function [fh]=dots3DMP_RTquantiles(data,conftask,plotOption)
 
 if conftask==0, error('Need a confidence task!'); end
 if nargin<3, plotOption = 2; end
@@ -21,13 +21,13 @@ titles = {'Ves';'Vis (Low Coh)';'Vis (High Coh)';'Comb (Low Coh)';'Comb (High Co
 
 uhdg  = unique(abs(data.heading));
 
-if conftask==1 % assume human
-    confdata = data.conf;
+if conftask==1
+    confdata = data.conf >= median(data.conf);
     errfun   = @(x,n) std(x) / sqrt(n);
     yLab = 'Sacc EP';
     yL = [0 1];
     nbins = 4; % number of RT quantiles
-    xRange = [0.4 2.2];
+    xRange = [0.4 2.2];  % assume human for RT purposes
 elseif conftask==2 
     confdata = data.PDW;
     errfun   = @(x,n) sqrt( (x.*(1-x)) ./ n);
@@ -128,7 +128,7 @@ subplotInd = [2 3 4 5 6 1];
 mcols = {'Greys','Reds','Reds','Blues','Blues','Purples'};
 fsz = 16;
 
-figure(16);
+fh(1)=figure(16);
 set(gcf,'Color',[1 1 1],'Position',[200 200 270*2 170*3],'PaperPositionMode','auto');
 
 for c = 1:size(ucond,1)+1 % the extra one is for all conditions pooled
@@ -205,7 +205,7 @@ end
 
 %% repeat for accuracy vs RT, for high / low bets
 
-figure(17);
+fh(2)=figure(17);
 set(gcf,'Color',[1 1 1],'Position',[200 200 270*2 170*3],'PaperPositionMode','auto');
 
 for c = 1:size(ucond,1)+1 % the extra one is for all conditions pooled

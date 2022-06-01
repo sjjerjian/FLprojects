@@ -17,7 +17,8 @@ for c = 1:length(cohs)      % m c d
     
     end
 
-    % confidence-based
+    % confidence-based (likely also to be noisier than choice - fits may
+    % not be very good gaussians, particularly at individual subject level)
     if conftask
         
         wves.conf.pred(c) = (1/gfit.conf.sigma(1,1,D)^2) / ((1/gfit.conf.sigma(1,1,D)^2) + (1/gfit.conf.sigma(2,c,D)^2));

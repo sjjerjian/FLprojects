@@ -39,7 +39,7 @@ unc = 0; % saves biases from fminunc instead of fminsearch (SEs always are fminu
 
 % parameter initial guesses
 guess_cgauss = [0 2];
-guess_fgauss = [0.2 0 6 0.5];
+guess_fgauss = [0.2 0 4 0.4];
 guess_gauss  = [0.5 0 6 1];
 
 fitOptions = optimset('display','none','MaxFunEvals',1000,'MaxIter',1000);

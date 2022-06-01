@@ -11,19 +11,21 @@
 
 clear all
 close all
+addpath(genpath('/Users/stevenjerjian/Desktop/FetschLab/Analysis/codes/'))
+
 
 %% decide which files to load
 
 paradigm = 'dots3DMP';
 today    = str2double(datestr(now,'yyyymmdd'));
 
-% subject = 'lucio';
-% dateRange = 20220101:today; % RT
+subject = 'lucio';
+dateRange = 20211101:today; % RT
 % dateRange = 20210714;
 
-subject = 'human';
-dateRange = 20190625:20191231; % non-RT
-% dateRange = 20200213:today; % RT
+% subject = 'human';
+% dateRange = 20190625:20191231; % non-RT
+% % dateRange = 20200213:today; % RT
 
 dateStr = num2str(dateRange(1));
 for d = 2:length(dateRange)
@@ -44,7 +46,7 @@ addDotPositionToStruct = 0; % SJ 01-2022
 %% get PDS files from server -- DON'T FORGET VPN
 % will skip files that already exist locally, unless overwrite set to 1
 
-useSCP = 1; % 1 - secure copy of files to local folder, 0 - load files directly from mounted drive, save locally only after cleanup
+useSCP = 0; % 1 - secure copy of files to local folder, 0 - load files directly from mounted drive, save locally only after cleanup
 useVPN = 0; % 1 - use proxy VPN (off campus), 0 - use 172 address
 overwriteLocalFiles = 0; % set to 1 to always use the server copy
 getDataFromServer % now also includes pdsCleanup to reduce file size and complexity

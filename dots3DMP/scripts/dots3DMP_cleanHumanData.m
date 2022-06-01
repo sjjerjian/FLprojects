@@ -41,8 +41,8 @@ fields2remove = {'reward','confRT','insertTrial','PDW','oneTargChoice','oneTargC
 for f = 1:length(fields2remove)
     try data = rmfield(data,fields2remove{f}); end
 end
-    
-    
+ 
+
 %%
 % some new useful vars
 for k = 1:length(data.filename)
@@ -76,7 +76,7 @@ end
 % excludes_subj = {};
 % subjs = unique(data.subj);
 
-removethese = ismember(data.filename,excludes_filename) | ismember(data.subjDate,excludes_subjDate) | ismember(data.subj,excludes_subj) | ~ismember(data.subj,subjs); %#ok<NASGU>
+removethese = ismember(data.filename,excludes_filename) | ismember(data.subjDate,excludes_subjDate) | ismember(data.subj,excludes_subj) | ~ismember(data.subj,subjs);
 fnames = fieldnames(data);
 for F = 1:length(fnames)
     data.(fnames{F})(removethese) = [];
@@ -166,6 +166,9 @@ end
 
 data.heading(abs(data.heading)<0.01) = 0;
 
+% fix data.correct (see function description for issue!)
+data.correct = dots3DMPCorrectTrials(data.choice,data.heading,data.delta);
+    
 % hdgVals = [1 2 3];
 hdgVals = logspace(log10(1.25),log10(10),3); % arbitrary
 
@@ -221,6 +224,30 @@ end
 % final look at blocks 
 [blocks,nTrialsByBlock] = blockCounts(data.filename);
 
+%% final pass, remove some 'bad' RTs, and subjects with too few trials
+
+if ~RTtask
+    subjs = unique(data.subj);
+    subjs2keep = 1:5;
+%     subjs2keep = [1 3 4 5];
+else
+    RTlims = [0.25 2.5];
+    fnames = fieldnames(data);
+    removethese = data.RT < RTlims(1) | data.RT > RTlims(2);
+    for f=1:length(fnames), data.(fnames{f})(removethese) = []; end
+    
+    % should standardize RTs too for better analysis when pooling subject data?
+    % let's check the distributions first
+    
+    subjs = unique(data.subj);
+    subjs2keep = [1 3 5 8 9];
+%     subjs2keep = [1 3 8 9];
+
+end
+fnames = fieldnames(data);
+removethese = ~ismember(data.subj,subjs(subjs2keep));
+for f=1:length(fnames), data.(fnames{f})(removethese) = []; end
+
 %% normalize confidence ratings, *within subject*
 
 if normalize
@@ -269,7 +296,7 @@ for s = 1:length(usubj)
     % data.conf(data.conf<0) = 0;
     
     % Normalize RTs too
-    data.RT = (data.RT - min(data.RT)) / max((data.RT - min(data.RT)));
+%     data.RT = (data.RT - min(data.RT)) / max((data.RT - min(data.RT)));
 
     % append each subj to a new data struct
     if s==1
@@ -282,16 +309,23 @@ for s = 1:length(usubj)
 end
 data = data_new;
 data.confRaw = data_orig.conf;
-data.RTorig  = data_orig.RT;
+% data.RTorig  = data_orig.RT;
 clear data_new data_orig
 end
 
 
+
+
+% remove zero heading trials, insufficient data
+% for f=1:length(fnames), data.(fnames{f})(data.heading==0) = []; end
+
+
+
 %%
 if ~RTtask
-    save([folder file(1:end-4) '_nonRT_clean_Mar2022.mat'],'data')
+    save([folder file(1:end-4) '_nonRT_clean_Apr2022.mat'],'data')
 else
-    save([folder file(1:end-4) '_RT_clean_Mar2022.mat'],'data')
+    save([folder file(1:end-4) '_RT_clean_Apr2022.mat'],'data')
 end
 % save([file(1:end-4) '_clean.mat'],'data')
 fprintf('done.\n')
