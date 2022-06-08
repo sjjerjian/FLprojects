@@ -42,6 +42,7 @@ mountDir  = ['/Volumes/homes/fetschlab/data/' subject '/'];
 
 addNexonarDataToStruct = 0; % SJ 08-2021
 addDotPositionToStruct = 0; % SJ 01-2022
+saveRewardData = 1; % SJ 06-2022
 
 %% get PDS files from server -- DON'T FORGET VPN
 % will skip files that already exist locally, unless overwrite set to 1
@@ -49,7 +50,7 @@ addDotPositionToStruct = 0; % SJ 01-2022
 useSCP = 0; % 1 - secure copy of files to local folder, 0 - load files directly from mounted drive, save locally only after cleanup
 useVPN = 0; % 1 - use proxy VPN (off campus), 0 - use 172 address
 overwriteLocalFiles = 0; % set to 1 to always use the server copy
-getDataFromServer % now also includes pdsCleanup to reduce file size and complexity
+% getDataFromServer % now also includes pdsCleanup to reduce file size and complexity
 
 %% get Nexonar files from server
 
@@ -57,7 +58,7 @@ if addNexonarDataToStruct
     localDir = ['/Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data/' subject '/nexonar/'];
     remoteDir = ['/var/services/homes/fetschlab/data/' subject '/' subject '_nexonar/'];
     
-    getDataFromServer % get nexonar data, will skip pdsCleanup
+    getDataFromServer % get nexonar data, this will skip pdsCleanup
     
     % re-assign localDirs for createDataStructure
     localDir = ['/Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data/' subject '/'];

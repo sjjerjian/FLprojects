@@ -78,7 +78,8 @@ for n = 1:length(newlines)
             
             if ~contains(localFileList,matFiles{n2}) || overwriteLocalFiles % always copy if overwrite option selected
                 cmd = ['scp -r ' IPadd ':' remoteDir remoteFolders{n} '/' matFiles{n2} ' ' localDir];
-%                 system(cmd,'-echo');
+                system(cmd,'-echo');
+%                 system(cmd);
             else
                 disp([remoteFolders{n} '/' matFiles{n2} ' exists locally, not copied']);
             end

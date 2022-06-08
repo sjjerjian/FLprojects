@@ -163,16 +163,26 @@ if ~isempty(p.rejecteventsoutliers)
 end
 
 % find first and last trials with at least one spike, if alltrials=0;
-if p.alltrials 
-    tr_start=1;
-    tr_end=Ntr;
-else
-    t=find((spktimes(1)-(align+p.tmin))<0);
-    if ~isempty(t), tr_start=t(1); else, tr_start=1; end
-    t=find((spktimes(end)-(align+p.tmax))>0);
-    if ~isempty(t), tr_end=t(end); else, tr_end=Ntr; end
-end
+% if p.alltrials 
+%     tr_start=1;
+%     tr_end=Ntr;
+% else
+%     t=find((spktimes(1)-(align+p.tmin))<0);
+%     if ~isempty(t), tr_start=t(1); else, tr_start=1; end
+%     t=find((spktimes(end)-(align+p.tmax))>0);
+%     if ~isempty(t), tr_end=t(end); else, tr_end=Ntr; end
+% end
 
+tr_start=1;
+tr_end=Ntr;
+if ~p.alltrials
+    [~,t] = min(abs(align+p.tmin-spktimes(1)));
+    if ~isempty(t), tr_start=t; end
+    [~,t] = min(abs(align+p.tmax-spktimes(end)));
+    if ~isempty(t), tr_end=t; end
+end
+    
+    
 % if p.plot && ~isempty(p.sort) && ~isempty(p.split)
 %     fprintf('Can''t have both sorting and splitting\n');
 %     return;
@@ -215,6 +225,7 @@ if ~isempty(p.sort)
    if ~isempty(p.split)
        p.split=p.split(ind);
    end
+   p.sort=p.sort(ind);
    for ie=1:Nov
        if isempty(p.otherevents{ie}), continue; end
        p.otherevents{ie}=p.otherevents{ie}(ind);
@@ -321,7 +332,7 @@ end
 set(gca,'ydir','reverse');
 xlim([p.tmin p.tmax]);
 ylim([tr_start-0.5 tr_end+0.5]);
-if ~isempty(p.eventsnames)&&(p.legend)
+if ~isempty(p.eventsnames)&&(p.legend)&&(~p.plotsingletrialevents)
    legend(p.eventsnames,'Location','NorthEastOutside');
    if length(p.eventsnames)~=length(p.otherevents)+1 
       warning('plot_raster_hist:EventsNames','Check EventsNames');
@@ -390,13 +401,13 @@ if ~isempty(p.split)
                 line(ones(1,2)*nanmedian(ot{ie}),[0 max(200,mx)],'color',p.eventscolor(ie,:),'linewidth',0.5,'Tag','eventline');
                 %             prcev=prctile(ot{ie},[25 75]);
                 %             patch([prcev fliplr(prcev)],[0 0 max(200,mx) max(200,mx)],p.eventscolor(ie,:),'facealpha',0.2,'edgealpha',0)
-                %             if nanmedian(ot{ie})>p.tmin && nanmedian(ot{ie})<p.tmax
-                %                 text(nanmedian(ot{ie}),0-(mx*0.02),p.eventsnames{ie+1},'color',p.eventscolor(ie,:),'fontsize',8,'horizontalalignment','right','rotation',45)
-                %             end
+%                 if nanmedian(ot{ie})>p.tmin && nanmedian(ot{ie})<p.tmax
+%                     text(nanmedian(ot{ie}),5+max(200,mx),p.eventsnames{ie+1},'color',p.eventscolor(ie,:),'fontsize',8,'horizontalalignment','left','rotation',45)
+%                 end
             end
         end
         line([0 0],[0 max(200,mx)],'color',p.alignlinecolor,'linewidth',1,'Tag','eventline');
-%         text(0,0-(mx*0.02),p.eventsnames{1},'color',p.alignlinecolor,'fontsize',8,'horizontalalignment','right','rotation',45)
+%         text(0,5+max(200,mx),p.eventsnames{1},'color',p.alignlinecolor,'fontsize',8,'horizontalalignment','left','rotation',45)
         end
     end
     if p.plot && ~isempty(p.splitlabels)&&(p.legend)

@@ -19,9 +19,7 @@ function [nexPDS,nexClean,exitflag] = dots3DMP_nexonarCleanUp(nex,PDS)
 % copied from the previous trial, which is obviously screwing up
 % conditional analyses, because the match with nex.nexdata is lost
 % I guess this is because the UDP packet on a given trial is dropped, and
-% the way the FLnexonar.cs code is written, the
-% previous trial's info is still in the workspace, and so gets pulled in to
-% the current trial
+% the way the FLnexonar.cs code is written, the previous trial's info is still in the workspace, and so gets pulled in to the current trial
 
 % another thing to be careful about - nexonar data streaming only starts at the motion state,
 % so trials with early breakfixes will never be streamed to Nexonar and therefore not exist in nex, 
@@ -29,10 +27,15 @@ function [nexPDS,nexClean,exitflag] = dots3DMP_nexonarCleanUp(nex,PDS)
 % ...so this code also makes a nexPDS struct that matches the length of PDS, which
 % we can add to the data struct later (see addNexonarToDataStruct flag in
 % PLDAPS_preprocessing)
+% TODO: maybe we should start nexonar streaming a bit earlier?
+% now sending a nexStart and nexEnd event to Trellis for purpose of
+% alignment with recording, but might want a bit more data either side of
+% motion
 
 
-% nexClean will be the same as nex, but corrected
-% nexPDS contains just the nexdata, with the same length as PDS.data
+% nexClean will be the same as nex, but 'corrected'
+% nexPDS contains just the nexdata, with the same length as PDS.data, so
+% can be added to data struct in createDataStructure
 nexClean = nex;
 nexPDS = cell(1,length(PDS.data));
 
@@ -45,6 +48,8 @@ badInfoTrialsIndex = find(diff(nexClean.pldaps.trialSeed)==0)+1;
 % SJ 01-19-2022, there seemed to be a bug here! fixed it?
 % need to double check the logic here and comment, because it's clearly
 % confusing
+
+% for each of these duplicated trials, 
 for t=1:length(badInfoTrialsIndex)
     done=0;
     

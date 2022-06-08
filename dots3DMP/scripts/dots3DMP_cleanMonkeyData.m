@@ -1,4 +1,4 @@
-% clean lucio data structure 
+% clean monkey data structure 
 
 clear all; close all
 
@@ -8,7 +8,7 @@ RTtask = 1;
 subject = 'lucio';
 paradigm = 'dots3DMP';
 % dateRange = 20210315:20210805; % RT
-dateRange = 20211101:20220510; % RT
+dateRange = 20211101:20220602; % RT
 
 
 %%
@@ -18,6 +18,10 @@ folder = '/Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data/dataStructs/';
 file = [subject '_' num2str(dateRange(1)) '-' num2str(dateRange(end)) '.mat'];
 load([folder file], 'data');
 
+try data = rmfield(data,'amountRewardLowConf'); catch, end
+try data = rmfield(data,'amountRewardHighConf'); catch, end
+
+
 % load('/Users/chris/Downloads/lucio_20210315-20210707_clean.mat')
 
 %% temp: CF needs these for now
@@ -26,9 +30,6 @@ for k = 1:length(data.filename)
 %     data.oneTargChoice(k,:) = 0;
 %     data.oneTargConf(k,:) = 0;
 end
-
-
-
 
 %%
 % struct data has fields:
@@ -122,23 +123,23 @@ end
 data.correct = dots3DMPCorrectTrials(data.choice,data.heading,data.delta);
 
 % remove one target trials
-removethese = data.oneTargChoice | data.oneTargConf;
-for F = 1:length(fnames)
-    eval(['data.' fnames{F} '(removethese) = [];']);
-end
+% removethese = data.oneTargChoice | data.oneTargConf;
+% for F = 1:length(fnames)
+%     eval(['data.' fnames{F} '(removethese) = [];']);
+% end
 
-try data = rmfield(data,'reward'); catch, end
+% try data = rmfield(data,'reward'); catch, end
 % try data = rmfield(data,'subj'); catch, end
-try data = rmfield(data,'oneTargChoice'); catch, end
-try data = rmfield(data,'oneTargConf'); catch, end
+% try data = rmfield(data,'oneTargChoice'); catch, end
+% try data = rmfield(data,'oneTargConf'); catch, end
 try data = rmfield(data,'TargMissed'); catch, end
 try data = rmfield(data,'subjDate'); catch, end
 try data = rmfield(data,'insertTrial'); catch, end
 try data = rmfield(data,'confRT'); catch, end
 
 
-sorted_fnames = {'filename','subj','date','heading','modality','coherence','delta','choice','RT','PDW','correct'};
-data = orderfields(data,sorted_fnames);
+% sorted_fnames = {'filename','subj','date','heading','modality','coherence','delta','choice','RT','PDW','correct'};
+% data = orderfields(data,sorted_fnames);
 
 
 %% check block and day trial counts
@@ -161,17 +162,17 @@ save(fullfile(folder,[file(1:end-4) '_clean.mat']),'data');
 
 
 % CF temp:
-parsedData = dots3DMP_parseData(data,mods,cohs,deltas,hdgs,conftask,RTtask);
+% parsedData = dots3DMP_parseData(data,mods,cohs,deltas,hdgs,conftask,RTtask);
 
 %%
 % dots3DMP_plots_func_forAumena(parsedData,mods,cohs,deltas,hdgs,conftask,RTtask);
 
 %%
-gfit = dots3DMP_fit_cgauss(data,mods,cohs,deltas,conftask,RTtask);
+% gfit = dots3DMP_fit_cgauss(data,mods,cohs,deltas,conftask,RTtask);
 
 %%
 % dots3DMP_plots_cgauss_func(gfit,parsedData,mods,cohs,deltas,hdgs,conftask,RTtask)
-dots3DMP_plots_cgauss_byCoh(gfit,parsedData,mods,cohs,deltas,hdgs,conftask,RTtask)
+% dots3DMP_plots_cgauss_byCoh(gfit,parsedData,mods,cohs,deltas,hdgs,conftask,RTtask)
 
 
 

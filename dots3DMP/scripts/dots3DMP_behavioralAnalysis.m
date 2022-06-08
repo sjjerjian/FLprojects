@@ -11,6 +11,7 @@
 
 clear; clc; close all
 cd /Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data/dataStructs
+addpath(genpath('/Users/stevenjerjian/Desktop/FetschLab/Analysis/codes/'))
 
 %% select subject, load the data
 
@@ -19,8 +20,8 @@ subject = 'lucio';
 switch subject
     
     case 'lucio'
-        load('lucio_20210315-20210805_clean.mat') % recent lucio data, PDW + RT
-        load('lucio_20211101-20220510_clean.mat') % recent lucio data, PDW + RT
+%         load('lucio_20210315-20210805_clean.mat') % recent lucio data, PDW + RT
+        load('lucio_20211101-20220602_clean.mat') % recent lucio data, PDW + RT
 
         conftask = 2; % 1=colorbars, 2=PDW
         RTtask   = 1;
@@ -74,12 +75,6 @@ deltas = unique(data.delta);
 % deltas = [-3 3];
 hdgs   = unique(data.heading);
 
-
-subjs = {'DRH','SJJ','IPQ','SBG','DJB'}; % RT
-removethese = ~ismember(data.subj,subjs);
-for f=1:length(fnames)
-    data.(fnames{f})(removethese) = [];
-end
 
 %%
 
@@ -136,7 +131,7 @@ end
 % plotOption == 1 - plot correct/high bet only
 % plotOption == 2 - plot correct/error or high/low bet separately
 % plotOption == -1 - plot all trials
-dots3DMP_RTquantiles2(data,conftask,1)
+dots3DMP_RTquantiles(data,conftask,1)
 
 %% PDW and RT for correct vs incorrect trials
 
@@ -152,6 +147,22 @@ gfit_byConf       = dots3DMP_fit_cgauss_byConf(data,mods,cohs,deltas,conftask,RT
 
 % plot it
 dots3DMP_plots_cgauss_byConf(gfit_byConf,parsedData_byConf,mods,cohs,deltas,hdgs,conftask,RTtask)
+
+%%
+
+rewRatio = data.amountRewardHighConfOffered ./ data.amountRewardLowConfOffered;
+nbins = 4;
+confQ = [0 quantile(rewRatio,nbins-1) inf];
+confGroup = discretize(rewRatio, confQ); 
+% confGroup = double(data.PDW)+1;
+% confGroup(logical(data.oneTargConf))= 3;
+
+splitPDW = 0;
+removeOneTarg = 1;
+parsedData = dots3DMP_parseData_multiConf(data,mods,cohs,deltas,hdgs,confGroup,conftask,RTtask,removeOneTarg,splitPDW); % don't remove 1-targets, and don't split by hi/lo, so we can plot P(high bet) as function of reward ratio
+
+dots3DMP_plots_multiConf(parsedData,mods,cohs,deltas,hdgs,conftask,RTtask,splitPDW)
+
 
 %% relationship between confidence and cue weights
 

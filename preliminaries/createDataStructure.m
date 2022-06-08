@@ -13,7 +13,7 @@ data.choice = []; % initialize this one field, you'll see why
 
 fieldExcludes = {'leftEarly','tooSlow','fixFP','FPHeld','eyeXYs','corrLoopActive','goodtrial', ...
                  'timeTargDisappears','probOfMemorySaccade','leftTargR','leftTargTheta', ...
-                 'rightTargR','rightTargTheta','audioFeedback','textFeedback','rewardDelay','reward'};
+                 'rightTargR','rightTargTheta','audioFeedback','textFeedback','rewardDelay','fixRewarded'};
 
 % now search localDir again for matching files and extract the desired variables from PDS
 allFiles = dir(localDir);
@@ -54,8 +54,10 @@ for d = 1:length(dateRange)
                             fnames = fieldnames(PDS.conditions{t}.stimulus);
                             fnames(ismember(fnames,fieldExcludes)) = [];
                             for F = 1:length(fnames)
-                                eval(['data.' fnames{F} '(T,1) = PDS.conditions{t}.stimulus.' fnames{F} ';']);
+%                                 eval(['data.' fnames{F} '(T,1) = PDS.conditions{t}.stimulus.' fnames{F} ';']);
+                                data.(fnames{F})(T,1) = PDS.conditions{t}.stimulus.(fnames{F});
                             end
+                            
                                 % EXCEPT! dot duration, and anything else in
                                 % PDS.data.stimulus, i.e. things that are generated
                                 % on each trial and not pre-configured. For now
@@ -66,7 +68,17 @@ for d = 1:length(dateRange)
                             if isfield(PDS.data{t}.stimulus,'dotPos')
                                 data.dotPos{T,1} = PDS.data{t}.stimulus.dotPos;
                             end
-                                                      
+                            
+                            % reward variables
+                            if saveRewardData
+                                fnames = fieldnames(PDS.data{t}.reward);
+                                fnames(ismember(fnames,fieldExcludes)) = [];
+                                for F = 1:length(fnames)
+                                    %                                 eval(['data.' fnames{F} '(T,1) = PDS.data{t}.reward.' fnames{F} ';']);
+                                    data.(fnames{F})(T,1) = PDS.data{t}.reward.(fnames{F});
+                                end
+                            end
+                            
                             % SJ 10/2021 'pseudo-RT for sequential PDW'
 %                             if isfield(PDS.data{t},'postTarget')
 %                                 try
@@ -84,7 +96,9 @@ for d = 1:length(dateRange)
                                 % SJ 07-2020, correct defaults to logical but
                                 % then gives error for NaN - use double instead
                                 if strcmp(fnames{F},'correct'), data.correct(T,1) = 0; end
-                                eval(['data.' fnames{F} '(T,1) = PDS.data{t}.behavior.' fnames{F} ';']);
+%                                 eval(['data.' fnames{F} '(T,1) = PDS.data{t}.behavior.' fnames{F} ';']);
+                                data.(fnames{F})(T,1) = PDS.data{t}.behavior.(fnames{F});
+
                             end
                                                         
                             % noticed a couple extra things we need, not in either place -CF 02-2021

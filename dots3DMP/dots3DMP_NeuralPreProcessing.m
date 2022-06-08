@@ -52,7 +52,7 @@ paradigms = {'dots3DMPtuning','dots3DMP','RFMapping','VesMapping'};
 subject = 'lucio';
 
 % dateRange = 20220218;
-dateRange = 20220512;
+dateRange = 20220512:20220531;
 
 dateStr = num2str(dateRange(1));
 for d = 2:length(dateRange)

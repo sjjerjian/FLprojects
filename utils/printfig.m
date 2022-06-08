@@ -31,18 +31,19 @@ set(f,'renderer', 'painters');
 set(f,'position',[10,10,x,y])
 
 
+
 if append
     switch filetype
         case 'ps' , print(f,'-dpsc2',name,'-append');
         case 'eps', print(f,'-depsc2',name,'-append');
-        case 'png', export_fig(name,'-png','-nocrop','-append',f);
-        case 'pdf', export_fig(name,'-pdf','-nocrop','-append',f);
+        case 'png', export_fig(name,f,'-png','-nocrop','-append');
+        case 'pdf', export_fig(name,f,'-pdf','-nocrop','-append');
     end
 else
     switch filetype
         case 'ps' , print(f,'-dpsc2',name); 
         case 'eps', print(f,'-depsc2',name);
-        case 'png', export_fig(name,'-png','-nocrop',f);
+        case 'png', export_fig(name,f,'-png','-nocrop');
         case 'pdf', print(f,'-dpdf',name);
     end 
 end

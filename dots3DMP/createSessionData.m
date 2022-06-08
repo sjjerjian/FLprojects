@@ -3,18 +3,20 @@
 % create a cell with neural Data for each session, see
 % dots3DMP_NeuralPreProcessing for explanation of dataCell structure
 
-
-
-keepMU   = 0; % for now, ignore MU to keep databases small
+% set to 0 for testing, smaller cells
+% set to 1 to keep all MUs, good for initial comparison of cluster PSTHs to
+% inform manual curation
+keepMU   = 1; 
 
 dataCell = {};
 sess     = length(dataCell); % eventually allow for this code to append to existing dataCell if desired, instead of always starting from blank
 
 sflds = {'subject','date','pen','gridxy','probe_type','probe_ID'};
 for n = 1:length(currentFolderList)
-    disp(currentFolderList{n})
+%     disp(currentFolderList{n})
     if isempty(strfind(currentFolderList{n},'20')) || contains(currentFolderList{n},'Impedance'); continue; end
     
+    try
     clear info
     load(fullfile(localDir,[subject currentFolderList{n} 'dots3DMP_info.mat']));
     
@@ -79,8 +81,12 @@ for n = 1:length(currentFolderList)
                 load(fullfile(localDir,NSfilename));
                 
                 % pull in relevant condition data from PLDAPS and sub-select trials from this paradigm
+                
+                
                 [thisParEvents] = nsEventConditions(nsEvents,allPDS);
                 
+                % do some concatenation in pldaps and events fields in case
+                % the same par+block is split over multiple files (unlikely)
                 nTr    = length(thisParEvents.Events.trStart);
                 fnames = fieldnames(thisParEvents.Events);
                 for f=1:length(fnames)
@@ -97,6 +103,7 @@ for n = 1:length(currentFolderList)
                 currPos = currPos+nTr+1;
                 
                 % deal with single electrode recording neural data
+                % NEEDS WORK
                 if contains(info.probe_type{1},'Single')
                     remoteDirSpikes = sprintf('/var/services/homes/fetschlab/data/%s/%s_neuro/%d/%s%ddots3DMP%04d/',subject,subject,info.date,subject,info.date,info.trellis_filenums(utf));
                     mountDir = sprintf('/Volumes/homes/fetschlab/data/%s/%s_neuro/%d/%s%ddots3DMP%04d/',subject,subject,info.date,subject,info.date,unique_trellis_files(utf));
@@ -124,7 +131,11 @@ for n = 1:length(currentFolderList)
                     % pick out spikes from the sp.st vector which can be linked
                     % to this paradigm's timeframe (with a good buffer on either
                     % side, e.g. 20secs), and what time to shift the spike
-                    % times by so that they align with events again
+                    % times by (if any) so that they align with events again
+                    % this shift is only necessary if multiple Trellis
+                    % recordings were made for same location - these will
+                    % have been concatenated for kilosort sorting, but
+                    % events will be separate
                     
                     timeStampsShifted = thisParEvents.analogInfo.timeStampsShifted ./ double(thisParEvents.analogInfo.Fs);
                     timeLims = timeStampsShifted(1) + thisParEvents.Events.trStart([1 end]) + [-1 1]*20;
@@ -164,6 +175,12 @@ for n = 1:length(currentFolderList)
             
         end
     end
+    catch
+        fprintf('Something not working, possibly file not found for %s...',currentFolderList{n})
+        continue
+    end
+        
+%     dataCell{sess}.paradigms = fieldnames(dataCell{sess}.data);
 end
 
 
@@ -185,5 +202,4 @@ if 0
 end
 
 
-fprintf('Saving data cell...\n');
-save(
+fprintf('SAVE DATA CELL!...\n');
