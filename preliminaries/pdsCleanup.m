@@ -24,13 +24,15 @@ if removeDotPositionData==1
 end
 
 fprintf(['\ncleaning up ' remoteFiles{n} '...']);
-try
-    load([localDir remoteFiles{n}],'-mat');
-catch me
-    warning(' Could not load! File may be corrupt. Skipping...');
-    return
-end
 
+if useSCP
+    try
+        load([localDir remoteFiles{n}],'-mat');
+    catch me
+        warning(' Could not load! File may be corrupt. Skipping...');
+        return
+    end
+end
 % SJ added 02/2022, to generate 3DMP dots offline from trialSeeds, no
 % need to save online for storage space reasons
 % need to validate this again

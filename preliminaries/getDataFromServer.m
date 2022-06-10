@@ -62,7 +62,14 @@ for n = 1:length(newlines)
         thisDate = remoteFiles{n}(dateStart(1):dateStart(1)+7); % dateStart(1) just in case '20' appears in a timestamp
     end
     
-    if any(strfind(dateStr,thisDate)) && contains(remoteFiles{n},paradigm)
+    % SJ 06-2022 added this to distinguish dots3DMPtuning from dots3DMP
+    % (and only get the files for the desired one)
+    parPos(2) = strfind(remoteFiles{n},'.')-5;
+    parPos(1) = dateStart(1)+8;
+    par = remoteFiles{n}(parPos(1):parPos(2));
+
+    
+    if any(strfind(dateStr,thisDate)) && contains(remoteFiles{n},paradigm) && strcmp(par,paradigm)
         currentFileList{m,1} = remoteFiles{n}; m=m+1;
 
         if ~contains(localFileList,remoteFiles{n}) || overwriteLocalFiles % always copy if overwrite option selected

@@ -68,17 +68,17 @@ for s = 1:length(subjs)+1
     end
     
     if conftask==1
-        tbl = table(abs(temp.heading),temp.RT,temp.conf,'VariableNames',{'Hdg','RT','Conf'});
-        lm = fitlm(tbl,'Conf~Hdg+RT');
-        lmHdgAll(s) = lm.Coefficients.pValue(3);
+        tbl = table(abs(temp.heading),temp.RT,temp.conf,temp.modality,'VariableNames',{'Hdg','RT','Conf','Mod'});
+        lm1 = fitlm(tbl,'interactions','ResponseVar','Conf','PredictorVars',{'Hdg','RT','Mod'},'CategoricalVar','Mod');
+        lmHdgAll(s) = lm1.Coefficients.pValue(3);
 
         for m=1:length(mods)
             for c=1:length(cohs)
                 if m==1 && c>1, continue,end
                 J = temp.modality==mods(m) & temp.coherence==cohs(c) & temp.delta==0;
                 tbl = table(abs(temp.heading(J)),temp.RT(J),temp.conf(J),'VariableNames',{'Hdg','RT','Conf'});
-                lm = fitlm(tbl,'Conf~Hdg+RT');
-                lmHdgModCoh(m,c,s) = lm.Coefficients.pValue(3);
+                lm2 = fitlm(tbl,'interactions','ResponseVar','Conf','PredictorVars',{'Hdg','RT'});
+                lmHdgModCoh(m,c,s) = lm2.Coefficients.pValue(3);
             end
         end
     elseif conftask==2
