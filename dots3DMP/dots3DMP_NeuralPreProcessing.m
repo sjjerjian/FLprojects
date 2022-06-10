@@ -30,12 +30,12 @@
 % spktimes    = dataCell{s}.data.dots3DMP.spiketimes{u};
 
 
-
 % TODO 
 % - add option to append to existing dataCell
-% - check that info contains all useful information
+% - add more useful metadata to info
 % - exclusion criteria for cells
-%   - cluster_type, but also numSpikes/spikerate, presence in all paradigms
+%   - cluster_type, but also numSpikes/spikerate, presence in all
+%   paradigms?
 %
 %
 
@@ -48,11 +48,12 @@ addpath(genpath('/Users/stevenjerjian/Desktop/FetschLab/Analysis/codes/'))
 % which paradigms do we care about
 paradigms = {'dots3DMPtuning','dots3DMP','RFMapping','VesMapping'};
 % paradigms = {'RFMapping'};
+% paradigms = {'dots3DMP'};
 
 subject = 'lucio';
 
-% dateRange = 20220218;
-dateRange = 20220512:20220531;
+dateRange = [20220223:20220331 20220512:20220531];
+% dateRange = 20220512:20220531;
 
 dateStr = num2str(dateRange(1));
 for d = 2:length(dateRange)
@@ -62,7 +63,7 @@ end
 %%
 useSCP = 1;
 useVPN = 0;
-overwriteLocalFiles = 1; % set to 1 to always use the server copy
+overwriteLocalFiles = 0; % set to 1 to always use the server copy
 
 % SJ 04-2022
 % download associated PDS data files (we'll need this for some cleanup)

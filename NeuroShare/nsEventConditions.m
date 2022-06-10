@@ -9,6 +9,9 @@ function [nsEvents] = nsEventConditions(nsEvents,PDS)
 % if so, we only want the recording trials corresponding to the desired PDS
 % file
 
+% SJ 06/08/2022 ah, but what about if PLDAPS file started before Trellis
+% file, so iTrial does not match up
+
 clear PDSutn
 for t=1:length(PDS.data)
     PDSutn(t,:) = PDS.data{t}.unique_number;
@@ -19,16 +22,16 @@ if iscell(NSutn)
 end
 
 matchTrials = ismember(NSutn,PDSutn,'rows');
-fprintf('%d trials found in NSevents for this paradigm\n',sum(matchTrials))
+% fprintf('%d trials found in NSevents for this paradigm\n',sum(matchTrials))
 
 
 % if sum(matchTrials)<length(matchTrials)
 %     fprintf('%d trials did not match between PDS and NS, removing these...\n',sum(~matchTrials))
 % end
 
-% this is still a problem for RFMapping with the HeadingTheta and
-% HeadingPhi! should these just be cells to make things simpler? and same
-% with unique_trial_number
+% breakfix is sometimes missing, ignore it for now
+try nsEvents.Events = rmfield(nsEvents.Events,'breakfix'); catch; end
+
 fnames = fieldnames(nsEvents.Events);
 for f = 1:length(fnames)
     nsEvents.Events.(fnames{f}) = nsEvents.Events.(fnames{f})(matchTrials);
@@ -47,9 +50,16 @@ PDSconditions = PDS.conditions;
 
 NSutn=NSutn(matchTrials,:);
 
+% in case PDS started before Trellis
+matchTrials2 = ismember(PDSutn,NSutn,'rows');
+PDSutn=PDSutn(matchTrials2,:);
+
 if ~isequal(PDSutn,NSutn)
     disp('unique tr nums still do not match between PDS and NS...something more serious is wrong!\n'); keyboard
 end
+
+PDSconditions = PDSconditions(matchTrials2);
+PDSdata = PDSdata(matchTrials2);
 
 %% 
 

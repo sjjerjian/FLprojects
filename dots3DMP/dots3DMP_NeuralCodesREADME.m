@@ -100,7 +100,7 @@ The alternative is to just run the Trellis recording for the whole duration of r
 events offline. In this case, pipeline will still create one binary file for a given recording set for
 Kilosort purposes, and for creating the neural data cell we just sub-select which segments of task events and spike times we are interested in.
 
-As of ~May 2022, the typical procedure is to run one long Trellis
+As of May 2022, the typical procedure is to run one long Trellis
 recording. nsEvents creation can now handle multiple paradigms. Binary file creation for Kilosort requires sequential writing to
 file of the .ns5 raw data because the files are too large to load into
 Matlab memory. Post-processing in createSessionData sub-selects the task
