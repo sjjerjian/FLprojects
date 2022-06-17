@@ -71,8 +71,8 @@ generate a cell containing neural info. See these codes for more info on
 neural data organization. 
 Briefly, getNeuralEventsInfo locally downloads the info and RippleEvents
 files, createSessionData uses these and the sorted spike files (e.g .npy from
-Kilosort) to create a cell array containing neural data from desired
-sessions.
+Kilosort, waveforms_[ch].mat from MKsort) to create a struct containing neural Data and metadata for each
+recording session/set.
 
 *** NOTE ON SPIKE SORTING ***
 

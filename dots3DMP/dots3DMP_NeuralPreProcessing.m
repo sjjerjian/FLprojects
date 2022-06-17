@@ -1,14 +1,14 @@
 % last updated June 2022
 % SJ
-
-% this creates a big cell containing neural activity and information from
-% rigB
-% specify the subject, dateRange, and paradigms to draw from
-
+%
+% this creates a big struct containing neural activity and information from
+% rigB (dots3DMP recordings)
+% user should specify the subject, dateRange, and paradigms to draw from
+%
 % organization of dataCell is as follows:
-
-% 1 - each cell in dataCell pertains to one recording 'session' (block/set) (in practice, this means each day)
-% 2 - within a cell, 
+%
+% 1 - each row in dataCell pertains to one recording 'session' (block/set) (in practice, this means each day)
+% 2 - within a row, 
 %       info field, with header information, 
 %       data field
 % data field is further split into fields for each paradigm, with each
@@ -20,24 +20,35 @@
 %   will also be skipped if keepMU below == 0)
 %   'spiketimes' 1 x N cell array containing spike times in seconds for
 %   each cluster, within the range of the given paradigm
-
-% example
-% select the motionStartTimes for dots3DMP task in session 1, and
-% spiketimes for first neuron
-
-% s=1; u=1;
-% motionStart = dataCell{s}.data.dots3DMP.events.stimOn;
-% spktimes    = dataCell{s}.data.dots3DMP.spiketimes{u};
-
-
+%
+% Note that each unique row of dataCell pertains to an individual 'set' of
+% recordings - there could be more than one for a given day.
+% Recordings are grouped by set, so multiple dots3DMP paradigms recorded in
+% one set will be combined, whether the actual recording was done in
+% multiple Trellis files or a single one - rec_group in info is therefore
+% critical!
+% The timestamps for concatenated recordings are shifted according to the
+% length of the overall data so that the range of events and spikes is
+% matched for a given recording (nsEvents.analogData.timeStamps).
+% i.e. if a recording is the first in the set, it's timestamps should start
+% from near 0, if it is later in the set they will start from some other
+% time.
+%
+%
 % TODO 
 % - add option to append to existing dataCell
-% - add more useful metadata to info
+% - add more useful metadata to info?
+% - key fields from info should get their own field in dataCell rows?
 % - exclusion criteria for cells
 %   - cluster_type, but also numSpikes/spikerate, presence in all
-%   paradigms?
+%   paradigms if selected for?
 %
 %
+%
+% SJ 06-2022 significant updates
+%           Fixed issues with processing of mksort data, timestamps of
+%           multiple recordings. 
+%           Switched dataCell from {} to () struct format.
 
 clear all
 close all
@@ -50,10 +61,14 @@ paradigms = {'dots3DMPtuning','dots3DMP','RFMapping','VesMapping'};
 % paradigms = {'RFMapping'};
 % paradigms = {'dots3DMP'};
 
+% currently, units will be included if they are recorded in *any* of
+% paradigms, future version will provide the option to only include units
+% that are in *all* paradigms selected for
+
 subject = 'lucio';
 
-dateRange = [20220223:20220331 20220512:20220531];
-% dateRange = 20220512:20220531;
+% dateRange = [20220223:20220331 20220512:20220531];
+dateRange = 20220615;
 
 dateStr = num2str(dateRange(1));
 for d = 2:length(dateRange)
@@ -61,6 +76,9 @@ for d = 2:length(dateRange)
 end
 
 %%
+% set to 0 for testing, smaller size data, SU only
+% set to 1 to keep all MUs
+keepMU   = 1; 
 useSCP = 1;
 useVPN = 0;
 overwriteLocalFiles = 0; % set to 1 to always use the server copy
@@ -71,14 +89,14 @@ overwriteLocalFiles = 0; % set to 1 to always use the server copy
 % as my local mac is filling up with these files way too quickly
 % localDir = ['/Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data/' subject '/']; 
 % remoteDir = ['/var/services/homes/fetschlab/data/' subject '/'];
-mountDir  = ['/Volumes/homes/fetschlab/data/' subject '/'];
 % getDataFromServer;
-    
+
+mountDir  = ['/Volumes/homes/fetschlab/data/' subject '/'];    
 PDSdir = mountDir; % reassign for later
 
 localDir = ['/Users/stevenjerjian/Desktop/FetschLab/Analysis/data/' subject '_neuro/'];
 remoteDir = ['/var/services/homes/fetschlab/data/' subject '/' subject '_neuro/'];
 %     mountDir  = ['/Volumes/homes/fetschlab/data/' subject '/' subject '_neuro/'];
 
-getNeuralEventsInfo; % grab the task events in rec time, and info files
+getNeuralEventsInfo; % grab the task events and info files
 createSessionData;   % create the dataCell

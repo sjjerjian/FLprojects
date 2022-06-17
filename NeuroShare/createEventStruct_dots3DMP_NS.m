@@ -62,21 +62,28 @@ if strcmp(hdr.Ripple_filename,'lucio20220314dots3DMP0002.nev')
     nsEvents.data(1722:end) = [];
     nsEvents.time(1722:end) = [];
     nsEvents.sz(1722:end) = [];
+elseif strcmp(hdr.Ripple_filename,'lucio20220401dots3DMP0001.nev')
+    nsEvents.data(1204:end) = [];
+    nsEvents.time(1204:end) = [];
+    nsEvents.sz(1204:end) = [];
 end
 
 tr_start = strfind(nsEvents.data>=2^9,[1 1 1 1 1 1 1]); % find clocktime for trial delimiter
 ntrs = length(tr_start);
 
-switch par
-    case 'VesMapping'
-        hdr.infolabels = {};
-    case 'RFMapping'
-        hdr.infolabels = {'coherenceInd','numDirs'};
-    case 'dots3DMP'
-        hdr.infolabels = {'headingInd','modality','coherenceInd','deltaInd','choice','correct','PDW'};
-    case 'dots3DMPtuning'
-        hdr.infolabels = {'headingInd','modality','coherenceInd','deltaInd'}; % no behavioral task here
-end
+% switch par
+%     case 'VesMapping'
+%         hdr.infolabels = {};
+%     case 'RFMapping'
+%         hdr.infolabels = {'coherenceInd','numDirs'};
+%     case 'dots3DMP'
+%         hdr.infolabels = {'headingInd','modality','coherenceInd','deltaInd','choice','correct','PDW'};
+%     case 'dots3DMPtuning'
+%         hdr.infolabels = {'headingInd','modality','coherenceInd','deltaInd'}; % no behavioral task here
+% end
+
+% allow for multiple paradigms in same file
+hdr.infolabels = {'headingInd','modality','coherenceInd','deltaInd','choice','correct','PDW','numDirs'};
 
 %%
 
@@ -116,13 +123,9 @@ for t=1:ntrs
     end
     
     % extract one trial's data
-
+ 
     tr_events = nsEvents.data(tr_start(t):t_en);
     tr_times  = nsEvents.time(tr_start(t):t_en);
-
-%     if strcmp(par,'RFMapping')
-%         keyboard
-%     end
 
     % tr_info contains stimulus information (hdgInd, mod, cohInd,
     % deltaInd), and behavior (choice, correct, PDW)
@@ -159,8 +162,7 @@ for t=1:ntrs
     tr_eventsN = tr_eventsN - (tr_eventsN>=2^5)*2^5;
     tr_events(tr_events<2^6) = tr_eventsN;
 
-    
-    %% a few checks...
+    % a few checks...
     % try to be sure that each tr_events only contains ONE trial's events,
     % i.e. there should only be two 1 strobes for start/end of PLDAPS trial
     % PLDAPS trial numbers should also be incrementing by 1
@@ -170,7 +172,8 @@ for t=1:ntrs
     % 07-16-2021 - see end of function for a posthoc fix for early tests, but should be ok from now on - changed strobe code to shift highWord to factor this in
     % if it's not fixed i.e. if pldaps.iTrial is not incrementing by 1 at any point, this will throw control to keyboard
     if ( t > 1 && (nsEvents.pldaps.iTrial(t)-nsEvents.pldaps.iTrial(t-1) ~= 1))  && str2double(filedate)>=20210716
-        keyboard
+        warning('PLDAPS iTrials not incrementing correctly, trial %d iTrial = %d, trial %d iTrial = %d',t-1,nsEvents.pldaps.iTrial(t-1),t,nsEvents.pldaps.iTrial(t));
+%         keyboard
     end
     
     % packet drop issue was resolved by switching to TCP, see main notes
@@ -192,7 +195,7 @@ for t=1:ntrs
         end
     end
     
-    %%
+    %
     
     % store trialInfo
     for i=1:length(tr_info)

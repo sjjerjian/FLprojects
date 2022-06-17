@@ -1,12 +1,10 @@
 %% create SessionData
 
-% create a cell with neural Data for each session, see
+% create a struct with neural Data for each session, see
 % dots3DMP_NeuralPreProcessing for explanation of dataCell structure
 
-% set to 0 for testing, smaller cells
-% set to 1 to keep all MUs, good for initial comparison of cluster PSTHs to
-% inform manual curation
-keepMU   = 1; 
+% fields in 'events' which are time-based
+tEvs   = {'trStart','fpOn','fixation','reward','stimOn','stimOff','saccOnset','targsOn','targHold','postTargHold','reward','breakfix'};
 
 % dataCell = {};
 dataCell = struct();
@@ -41,7 +39,12 @@ for n = 1:length(currentFolderList)
             mountDir = sprintf('/Volumes/homes/fetschlab/data/%s/%s_neuro/%d/%s%d_%d/',subject,subject,info.date,subject,info.date,unique_sets(u));
             try 
                 sp = loadKSdir(mountDir);
+                [spikeAmps, spikeDepths, templateDepths, tempAmps, tempsUnW, templateDuration, waveforms] = templatePositionsAmplitudes(sp.temps, sp.winv, sp.ycoords, sp.spikeTemplates, sp.tempScalingAmps);
+                [~,max_site] = max(max(abs(sp.temps),[],2),[],3);
+                chs = sp.ycoords(max_site);
+                depths = templateDepths;
             catch
+                fprintf('Could not load kilosort sp struct for %s, set %d',info.date,unique_sets(u));
                 continue
             end
         end
@@ -108,7 +111,7 @@ for n = 1:length(currentFolderList)
                 load(fullfile(localDir,NSfilename));
                 
                 % pull in relevant condition data from PLDAPS and sub-select trials from this paradigm
-                [thisParEvents] = nsEventConditions(nsEvents,allPDS);
+                [thisParEvents] = nsEventConditions(nsEvents,allPDS,lower(paradigms{par}));
                 
                 timeStampsShifted = thisParEvents.analogInfo.timeStampsShifted ./ double(thisParEvents.analogInfo.Fs);
 
@@ -116,10 +119,9 @@ for n = 1:length(currentFolderList)
                 % the same par+block is split over multiple files (unlikely)
                 nTr    = length(thisParEvents.Events.trStart);
                 fnames = fieldnames(thisParEvents.Events);
-                tEvs = fnames(1:12);
                 for f=1:length(fnames)
                     
-                    if f<=12
+                    if ismember(fnames{f},tEvs)
                         %                     dataCell{sess}.data.(paradigms{par}).events.(fnames{f})(currPos+1:currPos+nTr) = thisParEvents.Events.(fnames{f}) + timeStampsShifted(1);
                         dataCell(sess).data.(paradigms{par}).events.(fnames{f})(currPos+1:currPos+nTr) = thisParEvents.Events.(fnames{f})  + timeStampsShifted(1);
                     else
@@ -171,16 +173,18 @@ for n = 1:length(currentFolderList)
                     
                     % concatenate spike times across recordings of the same
                     % paradigm within a set (we will shift the times below)
-                    sp.st   = [sp.st; (waveforms.spikeTimes')/1000]; % waveform times are in ms I think...
+                    sp.st   = [sp.st; (waveforms.spikeTimes')/1000]; % mksort waveform times are in ms it seems
                     sp.clu  = [sp.clu; waveforms.units'];
                     
-                    sp.cids = unique(sp.clu);
-                    sp.cgs  = zeros(size(sp.cids));
-                    
-                    % manual ratings as SU/MU/noise (4 or 3 --> 2 for SU, 2 or 1 --> 1 for MU)
-                    sp.cgs(sp.cids>0) = ceil(waveforms.ratings.ratings(sp.cids(sp.cids>0)) / 2);
-                    sp.cgs(sp.cgs==0) = 3;
-        
+                    % for mksort, assume that clustering is consistent
+                    % throughout!
+                    if utf==1 
+                        sp.cids = unique(sp.clu(sp.clu>0));
+                        
+                        % manual ratings as SU/MU/noise (4 or 3 --> 2 for SU, 2 or 1 --> 1 for MU, 0 as noise clusters --> 3)
+                        sp.cgs  = ceil(waveforms.ratings.ratings(sp.cids) / 2);
+                        sp.cgs(sp.cgs==0) = 3;
+                    end
                     thisParSpikes  = true(size(sp.st));
                     shiftSpikeTime = [shiftSpikeTime; timeStampsShifted(1)*ones(size(waveforms.spikeTimes'))];
         
@@ -232,6 +236,9 @@ for n = 1:length(currentFolderList)
             dataCell(sess).data.(paradigms{par}).cluster_id = cids;
             dataCell(sess).data.(paradigms{par}).cluster_type = cgs;
 
+            % SJ 06/13/2022 
+%             dataCell(sess).data.(paradigms{par}).chs = chs;
+%             dataCell(sess).data.(paradigms{par}).depths = depths;
 
             for unit=1:sum(inds)
                 
@@ -248,10 +255,8 @@ for n = 1:length(currentFolderList)
 %         continue
 %     end
         
-%     dataCell{sess}.paradigms = fieldnames(dataCell{sess}.data);
 end
 
-% replace this with autosave to an appropriate folder!
 file = [subject '_' num2str(dateRange(1)) '-' num2str(dateRange(end)) '_neuralData.mat'];
 disp('saving...');
 save([localDir(1:length(localDir)-length(subject)-7) file], 'dataCell');
