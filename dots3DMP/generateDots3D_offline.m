@@ -1,29 +1,33 @@
-function [dotX_3D,dotY_3D,dotZ_3D,dotSize] = generateDots3D_offline(PDS)
-% [dotX_3D,dotY_3D,dotZ_3D,dotSize] = GENERATEDOTS3D_OFFLINE(PDS)
+function [dotX_3D,dotY_3D,dotZ_3D,dotSize,dotX,dotY] = generateDots3D_offline(PDS)
+
 % generate 3D motion dots offline, using random seed from trials
+
 % requires CreateUniformDotsIn3DFrustum and RandLim, and access to PDS
 % struct fields
 
-% presumably this would be an intermediate step to running some kind of
-% analysis on the dots e.g. ME, and the summary statistics from this would be saved to the cleaned data Struct.
-% we don't want to save this back into the PDS struct on the server,
-% because that mostly defeats the point of removing the dots in the first place.
-% but we should save it to the local copy, so that this code doesn't need to get
-% run every time a data struct is created, but just once during the
-% download/clean-up process.
-
-% obviously, any changes to the online generation of the dots should be
-% duplicated here!!
-% code is essentially identical, except for replacements of p.trial with
-% PDS field, and the skipping of vestibular condition within this function
-
 %  SJ 01-2022 
 
+% is passing in the entire PDS struct the most useful way to do it?
 
-%% Set some important params
+% presumably this would be an intermediate step to running some kind of
+% analysis on the dots e.g. ME, which would then get saved to parallel the
+% cleaned data Struct.
+% we don't want to save this back into the PDS struct on the server,
+% because that defeats the point of removing the dots in the first place.
+
+% make the worker function do just one trial, and then wrapper loops over trials,
+% skipping vestib ones and storing dots data in file corresponding to main PDS one which can then be
+% merged into dataStruct later if desired?
+
+% then test that all trials from recording are recoverable
+% test with mixed mods (including handling vestib trials)
+
+
+%  dotsInPlaneOfScreen=0;
 
 viewdist = PDS.initialParameters{3}.display.viewdist;
 dist = viewdist*10; % convert to mm
+
 
 if isempty(PDS.initialParameters{3}.stimulus.eyeHeight) %|| p.trial.stimulus.eyeHeight==0
     tempEyeHeight = [];
@@ -35,8 +39,13 @@ end
 %%
 for t = 1:length(PDS.data)
     
-    if PDS.conditions{t}.stimulus.modality~=1 % skip vestibular
-        
+    if PDS.conditions{t}.stimulus.modality==1
+        % allocate memory for dot positions and sizes
+        dotX_3D = nan;
+        dotY_3D = nan;
+        dotZ_3D = nan;
+        dotSize = nan;
+    else
     
     traj = PDS.data{t}.stimulus.visTraj;
 
@@ -159,21 +168,23 @@ for t = 1:length(PDS.data)
         %     distToEyePlane = sqrt((x+tx).^2 + (y+ty).^2 + ((z+tz)-p.trial.display.viewdist*10).^2); % mm
         distToEyePlane = abs((z+tz)-dist); % mm
         dotSize{t}(f,:) = viewdist./(distToEyePlane/10) *  PDS.initialParameters{3}.stimulus.dotSizeInWorld * PDS.initialParameters{4}.display.ppcm;
-                
+        
     end
     
-%     % screen coords of dots, this isn't quite right
-%     dotX{t} = bsxfun(@plus,dotX_3D{t}, -traj(:,4));
-%     dotY{t} = bsxfun(@plus,dotY_3D{t}, traj(:,3));
-%     dotZ{t} = bsxfun(@plus,dotZ_3D{t}, -traj(:,5));
+    % screen coords of dots SJ 06-2022
+    
+    X = bsxfun(@plus,dotX_3D, -traj(:,4));
+    Y = bsxfun(@plus,dotY_3D, traj(:,3));
+    Z = bsxfun(@plus,dotZ_3D, -traj(:,5));
+    
+    % Z minus dist so that z is relative to the eye again!
+    dotX{t} = dist * (X./-(Z-dist)) * PDS.initialParameters{4}.display.ppcm/10;
+    dotY{t} = dist * (Y./-(Z-dist)) * PDS.initialParameters{4}.display.ppcm/10;
+    
+    % add display center to get to raw screen pixels?
+    dotX{t} = dotX{t} + PDS.initialParameters{4}.display.ctr(1);
+    dotY{t} = -dotY{t} + PDS.initialParameters{4}.display.ctr(2); % negate y to get to screen co-ords
 
-    else % vestibular condition
-        dotX_3D = NaN;
-        dotY_3D = NaN;
-        dotZ_3D = NaN;
-        dotSize = NaN;
-    
     end
-    
     
 end
