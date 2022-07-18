@@ -4,7 +4,7 @@ function [err,fit,parsedFit] = errfcn_DDM_2D_wConf_noMC(param, guess, fixed, dat
 % SJ 10-11-2021 no Monte Carlo simulation for fitting, it's redundant!
 % just use model predictions directly
 
-% uses unsigned cohs for MOI calculation
+% uses UNSIGNED cohs for MOI calculation
 
 tic
 
@@ -13,7 +13,7 @@ global call_num
 % retrieve the full parameter set given the adjustable and fixed parameters 
 param = getParam(param, guess, fixed);
 
-maxdur = 2; % max stimulus duration (s)
+maxdur = 3; % max stimulus duration (s)
 
 k = param(1);
 B = abs(param(2)); % don't accept negative bound heights
@@ -22,15 +22,16 @@ alpha = param(4); % base rate of low-conf choices
 Tnd = param(5); % fixed Tnd, can't see any other way in this model
 
 % % % sigma = 0.1; % make this a free param? RK didn't need to
-% it's not a param at all! hard coded in images_dtb
+% param!? it's not even a variable! hard coded in images_dtb.. (0.1? 0.05?)
 
 % use method of images to calculate PDFs of DV and mapping to log odds corr
 R.t = 0.001:0.001:maxdur;
-R.Bup = B;
+% R.Bup = B/1.711; % kluge, super weird: B is not really B
+R.Bup = B; % nope; see comment in images_dtb
 R.drift = k * unique(data.coherence); % takes only unsigned drift rates
 R.lose_flag = 1; % we always need the losing densities
 R.plotflag = options.plot; % 1 = plot, 2 = plot nicer and export_fig (eg for talk)
-% R.plotflag = 1; % manual override
+%     R.plotflag = 1; % manual override
 P = images_dtb_2d(R); % /WolpertMOI
 
 
@@ -41,6 +42,8 @@ usetrs_data  = data.correct | data.coherence<1e-6; % use only correct (OR ~0 hdg
 % trialwise vars
 pRight_model_trialwise = nan(length(data.coherence),1);
 pHigh_model_trialwise  = nan(length(data.coherence),1);
+pRightHigh_model_trialwise  = nan(length(data.coherence),1);
+pRightLow_model_trialwise  = nan(length(data.coherence),1);
 conf_model_trialwise = nan(length(data.coherence),1);
 sigmaConf_data_trialwise = nan(length(data.coherence),1);
 RT_model_trialwise = nan(length(data.coherence),1);
@@ -49,12 +52,19 @@ sigmaRT_data_trialwise = nan(length(data.coherence),1);
 % coh-wise vars (for parsedFit, and some likelihood calculations)
 cohs = unique(data.scoh);
 n = nan(length(cohs),1);
-pRight_model = n;   pHigh_model = n;
-meanRT_model = n;   meanRT_data = n;   sigmaRT_data = n;
-meanConf_model = n; meanConf_data = n; sigmaConf_data = n;
+pRight_model = n;
+pHigh_model = n;
+pRightHigh_model = n;
+pRightLow_model = n;
+meanRT_model = n;
+meanRT_data = n;
+sigmaRT_data = n;
+meanConf_model = n;
+meanConf_data = n;
+sigmaConf_data = n;
 nCor = n;
 
-for c = 3:length(cohs)
+for c = 1:length(cohs)
     % *** marking differences in signed vs. unsigned ver ***
     uc = abs(cohs(c))==(cohs(cohs>=0));
 
@@ -80,8 +90,8 @@ for c = 3:length(cohs)
             % is crossed? Maybe not, because that prob is given by P.lo.p.
             % E.g. at highest coh, P.lo.p is zero, *also across the 2 sec*,
             % so the P(right) is legitimately 1 in that case. The same
-            % logic applies at lower cohs:
-    end
+            % logic applies at lower cohs...
+    end    
     pRight_model_trialwise(Jdata) = pRight_model(c);
 
     % RT
@@ -111,20 +121,21 @@ for c = 3:length(cohs)
         % OR split by dir
         if cohs(c)<0
             Pxt = squeeze(P.lo.distr_loser(uc,:,:))'; % density of DV for this condition
-            PrightHigh = sum(Pxt.*(P.logOddsCorrMapL>=theta)); % sum of density above theta [but still is a function of time!]
-            PrightLow = sum(Pxt.*(P.logOddsCorrMapL<theta)); % sum of density above theta [but still is a function of time!]
+            pRightHigh = sum(Pxt.*(P.logOddsCorrMapL>=theta)); % sum of density above theta [but still is a function of time!]
+            pRightLow = sum(Pxt.*(P.logOddsCorrMapL<theta)); % sum of density above theta [but still is a function of time!]
         else
             Pxt = squeeze(P.up.distr_loser(uc,:,:))'; % density of DV for this condition
-            PrightHigh = sum(Pxt.*(P.logOddsCorrMapR>=theta)); % sum of density above theta [but still is a function of time!]
-            PrightLow = sum(Pxt.*(P.logOddsCorrMapR<theta)); % sum of density above theta [but still is a function of time!]            
+            pRightHigh = sum(Pxt.*(P.logOddsCorrMapR>=theta)); % sum of density above theta [but still is a function of time!]
+            pRightLow = sum(Pxt.*(P.logOddsCorrMapR<theta)); % sum of density above theta [but still is a function of time!]            
         end  
-        PrightHigh_model(c) = sum(PrightHigh); % marginalize over time [OR use each cond's mean RT??]
-        PrightHigh_model_trialwise(Jdata) = PrightHigh_model(c); % copy to trials
-        PrightLow_model(c) = sum(PrightLow); % marginalize over time [OR use each cond's mean RT??]
-        PrightLow_model_trialwise(Jdata) = pHigh_model(c); % copy to trials
+        pRightHigh_model(c) = sum(pRightHigh); % marginalize over time [OR use each cond's mean RT??]
+        pRightHigh_model_trialwise(Jdata) = pRightHigh_model(c); % copy to trials
+        pRightLow_model(c) = sum(pRightLow); % marginalize over time [OR use each cond's mean RT??]
+        pRightLow_model_trialwise(Jdata) = pRightLow_model(c); % copy to trials
     end
-   
     
+    
+    % this is from 1D
 % %     % find out which combination of DV and time is associated with high/low wager based on theta
 % %     %if bound crossing does not happen
 % %     bet_high_xt = nan(length(xmesh), max_dur);
@@ -159,8 +170,9 @@ for c = 3:length(cohs)
     
     
 end
-    
-figure; plot(cohs,PrightHigh_model,'b',cohs,PrightLow_model,'r');
+   
+% TEMP debugging
+% figure; plot(cohs,pRightHigh_model,'b',cohs,pRightLow_model,'r');
 
 % adjust the probabilities for the base rate of low-conf bets
 pHigh_model = pHigh_model - alpha;
@@ -195,9 +207,11 @@ if options.conftask==1 % SEP
     parsedFit.confMean = meanConf_model;
 elseif options.conftask==2 % PDW
     parsedFit.pHigh = pHigh_model;
+    parsedFit.pRightHigh = pRightHigh_model;
+    parsedFit.pRightLow = pRightLow_model;
 end
 if options.RTtask
-    parsedFit.RT = meanRT_model;
+    parsedFit.RTmean = meanRT_model;
 end
 
 
@@ -264,6 +278,7 @@ if options.feedback==2 && strcmp(options.fitMethod,'fms')
 end
 call_num = call_num + 1;
 toc
+
 
 end
 

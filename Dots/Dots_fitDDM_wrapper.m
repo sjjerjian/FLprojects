@@ -8,27 +8,27 @@
 
 % CF updated 12/2021
 
+% % if running this standalone, load a data file, parse and plot it
+clear all; close all;
 
-%% if running this standalone, load a data file, parse and plot it
-clear
-load Hanzo_data_fall2020.mat
+% load Hanzo_data_fall2020.mat
+load tempsim.mat
 
 options.RTtask = 1;
 options.conftask = 2;
 cohs = unique(data.scoh);
 
-% weirdly, unsigned coh has two vals, exactly 0 and slightly greater...
-% TEMP KLUGE
+% assign nearly-zero coh to exactly zero
 data.coherence(data.coherence<1e-10) = 0;
-
 
 % parse trial data into aggregated and other support vars
 RTCorrOnly = 0;
-parsedData = Dots_parseData(data,options.conftask,options.RTtask,RTCorrOnly);
-
+if ~exist('parsedData','var')  % e.g., if simulation was run
+    parsedData = Dots_parseData(data,options.conftask,options.RTtask,RTCorrOnly);
+end
 
 % optional [data will be plotted below regardless, along with the fits]
-% Dots_plot(parsedData,cohs,options.conftask,options.RTtask)
+Dots_plot(parsedData,cohs,options.conftask,options.RTtask)
 
 
 
@@ -36,10 +36,11 @@ parsedData = Dots_parseData(data,options.conftask,options.RTtask,RTCorrOnly);
 
 
 %****** first select which model to fit ********
-% options.errfcn = @errfcn_DDM_1D_wConf; modelID=1; % 1D DDM with threshold on log odds, usually for var dur [Kiani 09 (FP4)]
-options.errfcn = @errfcn_DDM_2D_wConf_noMC; modelID=2; % 2D DDM aka anticorrelated race, for RT+conf [Kiani 14 / van den Berg 16 (WolpertMOI)]
-%***********************************************
+% modelID=1; options.errfcn = @errfcn_DDM_1D_wConf;      % 1D DDM with threshold on log odds, usually for var dur [Kiani 09 (FP4)]
+modelID=2; options.errfcn = @errfcn_DDM_2D_wConf_noMC; % 2D DDM aka anticorrelated race, for RT+conf [Kiani 14 / van den Berg 16 (WolpertMOI)]
 
+% options.errfcn = @errfcn_DDM_2D_wConf_noMC_signed; modelID=2; % as above, but with signed cohs
+%***********************************************
 
 options.feedback = 1; % 1 = text output to cmd window, 2 = that, plus plot LL across runs
 options.plot = 0; % plot the marginal PDFs, logOddsCorr map, and high/low bet regions (only makes sense for fixed(:)=1)
@@ -56,28 +57,44 @@ switch modelID
     case 1 %errfcn_DDM_1D_wConf
         
         % initial guess (or hand-tuned params)
-        k = 0.6; % sensitivity parameter
-        B = 15; % bound height
-        theta = 1.2; % criterion (in log odds correct) for betting high
-        alpha = 0.1; % base rate of low-bet choices
-
+        if exist('origParams','var') % simulation
+            k = origParams.k;
+            B = origParams.B;
+            theta = origParams.theta;
+            alpha = origParams.alpha;
+        else
+            k = 0.6; % sensitivity parameter
+            B = 15; % bound height
+            theta = 0.8; % criterion (in log odds correct) for betting high
+            alpha = 0.1; % base rate of low-bet choices
+        end
         guess = [k B theta alpha];
         fixed = [0 0 0     0]; % can fix some params and fit the others, or fix all to hand-tune
-
         data.dur = round(data.duration*1000); % dur must be integer valued (in ms)
+                             %^ same as RT for RT task
         
     case 2 %errfcn_DDM_2D_wConf
-         
-        k = 17.06;
-        B = 1.86;
-        theta = 2.04;
-        alpha = 0.105; % base rate of low-bet choices
-        Tnd = 0.199; % non-decision time (s)
-
+        
+        if exist('origParams','var') % simulation
+            k = origParams.k;
+            B = origParams.B;
+            sigma = origParams.sigma;
+            theta = origParams.theta;
+            alpha = origParams.alpha;
+            Tnd = origParams.TndMean/1000; % convert to s
+        else
+            k = 20;
+            B = 1;
+            sigma = 0.05;
+            theta = 2.0;
+            alpha = 0; % base rate of low-bet choices
+            Tnd = 0.3; % non-decision time (s)
+        end
+        
         guess = [k B theta alpha Tnd];
         fixed = [0 0 0     0     0];
         
-%    case [others yet to be written: extrema, snapshot, SDT models,...]
+%    case [others yet to be written: extrema, snapshot, SDT models?,...]
 
 end
 
@@ -90,15 +107,8 @@ fixed(:)=1;
 [X, err_final, fit, parsedFit] = Dots_fitDDM(guess,fixed,data,options);
 
 
-
-
 %% plot it!
 Dots_plot_fit(parsedData,parsedFit,cohs,options.conftask,options.RTtask);
-
-
-
-
-
 
 
 %% OLD:

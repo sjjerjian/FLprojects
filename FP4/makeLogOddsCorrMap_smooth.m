@@ -1,17 +1,15 @@
-function [logOddsMapR, logOddsMapL, logOddsCorrMap, tAxis, vAxis] = makeLogOddsCorrMap_smooth(k,B,sigma,theta,tAxis,plotflag)
+function [logOddsMapR, logOddsMapL, logOddsCorrMap, tAxis, vAxis] = makeLogOddsCorrMap_smooth(k,B,sigma,theta,cohs,tAxis,plotflag)
 
-% % to run as script, uncomment:
-% % clear;
-% % close all;
-% % plotflag=2;
-% % k=0.4; % sensitivity parameter (mean drift rate = k*Coherence)
-% % B=40; % bound height
-% % sigma=1; % standard deviation of momentary evidence
-% % theta=0.8; % threshold, in log odds correct, for making a direction choice as opposed to sure-bet
+if nargin<1
+    k=0.4; % sensitivity parameter (mean drift rate = k*Coherence)
+    B=40; % bound height
+    sigma=1; % standard deviation of momentary evidence
+    theta=0.8; % threshold, in log odds correct, for making a direction choice as opposed to sure-bet
+    cohs = [-0.512 -0.256 -0.128 -0.064 -0.032 -eps eps 0.032 0.064 0.128 0.256 0.512];
+    tAxis = 0:1000;
+    plotflag=2;
+end    
 
-% keyboard
-
-cohs = [-0.512 -0.256 -0.128 -0.064 -0.032 -eps eps 0.032 0.064 0.128 0.256 0.512];
 uvect = k*cohs; % vector of mean drift rates
 buf = 4*sigma; % buffer for bound crossings
 if isempty(tAxis)
@@ -83,10 +81,12 @@ if plotflag
     colorbar; set(h,'LineColor','none');
 %     figure; [c,h] = contourf(tAxis,vAxis,logOddsMapL,n);
 %     figure; [c,h] = contourf(tAxis,vAxis,logOddsMapR,n);
-    caxis([0 round(B*k/2.2)]);
+%     caxis([0 round(B*k/2.2)]); % B*k/2.2 fails for simMT, where k and sigma and B are all higher than the classic vals
+    caxis([0 3]);
     [~,hh] = contour(tAxis,vAxis,logOddsCorrMap,[theta -theta]);
     set(hh,'LineColor','k','LineWidth',2);
-    colorbar('YTick',linspace(0,round(B*k/2.2),6)); 
+%     colorbar('YTick',linspace(0,round(B*k/2.2),6)); % B*k/2.2 fails for simMT, where k and sigma and B are all higher than the classic vals
+    colorbar('YTick',linspace(0,3,6)); 
     xlabel('Time (ms)'); ylabel('DV');
     set(gca,'XTick',0:200:1000,'YTick',-B:round(B/2):B,'XTickLabel',0:200:1000,'TickDir','out');
 %     changeAxesFontSize(gca,24,24); % for paper fig

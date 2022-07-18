@@ -1,4 +1,4 @@
-function [b,err] = fitDDM_simple(stimval,choice,rt)
+function [b,err] = Dots_fitDDM_1D_noConf(guess,stimval,choice,rt)
 
 % fit choice+RT data to simple 1D DDM
 % CF circa 2013
@@ -7,14 +7,14 @@ function [b,err] = fitDDM_simple(stimval,choice,rt)
 % stimval: stimulus strength (eg coh), on a signed axis
 % choice: 0 (left) or 1 (right)
 
-% the model has three free parameters:
+% guess: initial values for the three params, i.e.:
 % k : coefficient converting stimulus strength to units of momentary evidence
 % B : height of the bound, or threshold, for decision termination
 % Tnd : non-decision time (ms)
 
+
 % mean of momentary evidence is k*stimval
-% standard deviation of momentary evidence is assumed to be 1
-    
+% standard deviation of momentary evidence is assumed to be 1    
 us = unique(stimval);
 pRight = nan(length(us),1);
 pRight_se = nan(length(us),1);
@@ -48,33 +48,18 @@ stimval(removeTrials) = [];
 rt(removeTrials) = [];
 
 
-% params: initial guess
-    % when stimval is coherence from -0.5..0.5, k is around 0.4
-    % so to estimate k for a different X variable, say heading, 
-    % simply scale it down by a factor of max(stimval)
-    % (this is tricky though because it trades off w the bound)
-x = [max(stimval) 20 225]; % k, B, Tnd
-
 % for debugging/teaching:
 % initialErr = err_fcn_combined(x,choice,stimval,RTmean,RTse);
 
 
-% fitting
-[b,err,~,~] = fminsearch(@(x) err_fcn_combined(x,choice,stimval,RTmean,RTse), x);
+%% fitting
+[b,err,~,~] = fminsearch(@(x) err_fcn_combined(x,choice,stimval,RTmean,RTse), guess);
 
 
-% plot the fits vs the data
+%% plot the fits vs the data
 
-% **********
-% % to hand-tune params and see their effect on the model curves, just replace b here:
-% b = [0.4 16 300];
-% b = [0.4088   16.1165  318.9666]; % best fit with sigmaRT from eqn
-% b = [0.4003   24.2879  260.0121]  % best fit with sigmaRT from data --> prioritizes choice way too much!
-% b = [0.3655   19.0876  226.2639]; % maybe better fit by eye, but where'd these come from?
-
-% % and make sure error makes sense given by-eye goodness of fit:
-% hand_tune_err = err_fcn_combined(b,choice,stimval,RTmean,RTse)
-% **********
+% temp, no actual fitting, just plot w a given set of params:
+% b = guess;
 
 % to generate smooth curves, make a new stimval axis:
 g_stimval = us(1):0.01:us(end);

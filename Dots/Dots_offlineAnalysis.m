@@ -17,7 +17,7 @@ folder = '/Users/chris/Documents/MATLAB/PLDAPS_data/';
 
 % Hanzo for R01
 % dateRange = 20200728:20200930; % great PDW; misnamed (not really up to 9/30)
-% dateRange = 20200820:20200922; % nice RT, but PDW kinda flat
+dateRange = 20200820:20200922; % nice RT, but PDW kinda flat
 % dateRange = 20200901:20200922; % good for both, with TrNo<600 or even 800
 
 % some indiv months
@@ -25,7 +25,7 @@ folder = '/Users/chris/Documents/MATLAB/PLDAPS_data/';
 % dateRange = 20201101:20201130; % RT example
 
 % should be best!
-dateRange = 20200801:20201130;
+% dateRange = 20200801:20201130;
 
 % dateRange = 20210208:20210212; % last week
 
@@ -107,17 +107,20 @@ for F = 1:length(fnames)
 end
 
 %% parse data
-
-Dots_parse
+conftask = 2; % pdw
+RTtask = 1;
+RTCorrOnly = 0;
+parsedData = Dots_parseData(data,conftask,RTtask,RTCorrOnly);
+ 
 
 
 %% some basic stats
 
 % t test on slopes (is sensitivity greater on high-bet trials?):
-mu = abs(B2(2)-B3(2));
-se = sqrt(stats2.se(2)^2 + stats3.se(2)^2);
+mu = abs(parsedData.B2(2)-parsedData.B3(2));
+se = sqrt(parsedData.stats2.se(2)^2 + parsedData.stats3.se(2)^2);
 t = mu/se;
-df = sum(~isnan(data.PDW))-length(B2); 
+df = sum(~isnan(data.PDW))-length(parsedData.B2); 
 pval_ttest_slopes = 2*(1-tcdf(t,df)) % two-tailed
 
 
@@ -133,7 +136,7 @@ pHighSEerr_all = sqrt( (pHighErr_all.*(1-pHighErr_all)) ./ sum(MM) );
 mu = abs(pHighCorr_all-pHighErr_all);
 se = sqrt(pHighSEcorr_all^2 + pHighSEerr_all^2);
 t = mu/se; 
-df = sum(~isnan(data.PDW))-length(B2); 
+df = sum(~isnan(data.PDW))-length(parsedData.B2); 
 pval_ttest_pHighCorrErr = 2*(1-tcdf(t,df)) % two-tailed
 % [should really use a two-sample Z test for proportions?]
 
@@ -141,12 +144,9 @@ pval_ttest_pHighCorrErr = 2*(1-tcdf(t,df)) % two-tailed
 
 %% plot
 
-Dots_plot
-
-
-%% for nicer looking graphs:
-Dots_plot_forTalk
-
+forTalk = 1;
+cohs = unique(data.scoh);
+Dots_plot(parsedData,cohs,conftask,RTtask,0,forTalk);
 
 % %% if var dur, check conf/accuracy vs. dur
 % if sum(isnan(data.RT))>0.8*length(data.RT) % arbitrary minimum proportion of non-RT trials; eventually make it a flag
@@ -160,9 +160,25 @@ Dots_plot_forTalk
 % for RT data, can start here (ignores PDW, but a decent tutorial, based on
 % Shadlen et al. 2006 and Palmer et al. 2005)
 if sum(isnan(data.RT))<0.8*length(data.RT) % arbitrary minimum proportion of RT trials; eventually make it a flag
-    [b,~] = fitDDM_simple(data.scoh,data.choice,round(data.RT*1000));
+    % % params: initial guess
+    %     % when stimval is coherence from -0.5..0.5, k is around 0.4
+    %     % so to estimate k for a different X variable, say heading, 
+    %     % simply scale it down by a factor of max(stimval)
+    %     % (this is tricky though because it trades off w the bound)
+    % k = max(data.scoh); % 'drift rate' or sensitivity term: a constant converting stimulus
+    %                      % strength into units of momentary evidence
+    % B = 20; % height of the bound, or threshold, for decision termination
+    % Tnd = 225; %?
+
+    % or just take vals from sim
+    k = 0.3; % 'drift rate' or sensitivity term: a constant converting stimulus
+             % strength into units of momentary evidence
+    B = 25; % height of the bound, or threshold, for decision termination
+    Tnd = 300;
+
+    guess = [k B Tnd];
+    [b,~] = Dots_fitDDM_1D_noConf(guess,data.scoh,data.choice,round(data.RT*1000));
 end
-% seems to find local minima often -- may need multiple starting points
 
 
 

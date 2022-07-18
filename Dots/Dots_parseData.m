@@ -6,6 +6,18 @@ if nargin < 4, RTCorrOnly = 0; end
 if nargin < 3, RTtask = 0; end
 if nargin < 2, conftask = 0; end
 
+if RTtask==0
+    data.RT = nan(size(data.choice));
+end
+switch conftask
+    case 0
+        data.PDW = nan(size(data.choice));
+        data.conf = nan(size(data.choice));
+    case 1
+        data.PDW = nan(size(data.choice));
+    case 2
+        data.conf= nan(size(data.choice));
+end
 
 cohs = unique(data.scoh);
 if cohs(end)==1; cohs(end)=[]; end % one or more files had a few stray 100% coh trials in there by mistake
@@ -15,28 +27,38 @@ n = nan(length(cohs),1);
 n1 = n; % all
 n2 = n; % high
 n3 = n; % low
+pRight = n;
+pCorrect = n;
+pRightHigh = n;
+pRightLow = n;
+
 nRT1 = n; % all
 nRT2 = n; % high
 nRT3 = n; % low
+RTmean = n;
+RTse = n;
+RTmeanHigh = n;
+RTseHigh = n;
+RTmeanLow = n;
+RTseLow = n;
+
 nPDW1 = n; % all
 nPDW2 = n; % corr
 nPDW3 = n; % err
+pHigh = n;
+pHighCorr = n;
+pHighErr = n;
 
-pRight = n1;
-pCorrect = n1;
-pRightHigh = n2;
-pRightLow = n3;
+nConf1 = n; % all
+nConf2 = n; % corr
+nConf3 = n; % err
+confMean = n;
+confSE = n;
+confMeanCorr = n;
+confSEcorr = n;
+confMeanErr = n;
+confSEerr = n;
 
-RTmean = nRT1;
-RTse = nRT1;
-RTmeanHigh = nRT2;
-RTseHigh = nRT2;
-RTmeanLow = nRT3;
-RTseLow = nRT3;
-
-pHigh = nPDW1;
-pHighCorr = nPDW2;
-pHighErr = nPDW3;
 
 % for logistic regression (or whatever)
 xVals = linspace(cohs(1),cohs(end),100);
@@ -73,7 +95,7 @@ for c = 1:length(cohs)
     RTmeanLow(c) = mean(data.RT(JJJ & K));
     RTseLow(c) = std(data.RT(JJJ & K))/sqrt(nRT3(c));
     
-    % conf
+    % pdw
     L = ~isnan(data.PDW);
     nPDW1(c) = sum(J & L);
     pHigh(c) = sum(J & L & data.PDW==1) / nPDW1(c); % 1 is high-bet
@@ -85,6 +107,24 @@ for c = 1:length(cohs)
     LLL = ~isnan(data.PDW) & data.correct==0;
     nPDW3(c) = sum(J & LLL);
     pHighErr(c) = sum(J & LLL & data.PDW==1) / nPDW3(c);
+    
+    
+    % conf
+    M = ~isnan(data.conf);
+    nConf1(c) = sum(J & M);
+    confMean(c) = mean(data.conf(J & M));
+    confSE(c) = std(data.conf(J & M))/sqrt(nConf1(c));
+    
+    MM = ~isnan(data.conf) & data.correct==1;
+    nConf2(c) = sum(J & MM);
+    confMeanCorr(c) = mean(data.conf(J & MM));
+    confSEcorr(c) = std(data.conf(J & MM))/sqrt(nConf2(c));
+
+    MMM = ~isnan(data.conf) & data.correct==0;
+    nConf3(c) = sum(J & MMM);
+    confMeanErr(c) = mean(data.conf(J & MMM));
+    confSEerr(c) = std(data.conf(J & MMM))/sqrt(nConf3(c));
+    
 end
 
 pRightSE = sqrt( (pRight.*(1-pRight)) ./ n1 );
@@ -104,19 +144,23 @@ y = data.choice==1; % 1 is right
 [B1, ~, stats1] = glmfit(X, y, 'binomial');
 yVals1 = glmval(B1,xVals,'logit');
 
-% high bet only
-I = data.PDW==1;
-X = data.scoh(I);
-y = data.choice(I)==1;
-[B2, ~, stats2] = glmfit(X, y, 'binomial');
-yVals2 = glmval(B2,xVals,'logit');
+if conftask==2
+    % high bet only
+    I = data.PDW==1;
+    X = data.scoh(I);
+    y = data.choice(I)==1;
+    [B2, ~, stats2] = glmfit(X, y, 'binomial');
+    yVals2 = glmval(B2,xVals,'logit');
 
-% low bet only
-I = data.PDW==0;
-X = data.scoh(I);
-y = data.choice(I)==1;
-[B3, ~, stats3] = glmfit(X, y, 'binomial');
-yVals3 = glmval(B3,xVals,'logit');
+    % low bet only
+    I = data.PDW==0;
+    X = data.scoh(I);
+    y = data.choice(I)==1;
+    [B3, ~, stats3] = glmfit(X, y, 'binomial');
+    yVals3 = glmval(B3,xVals,'logit');
+else
+    B2 = NaN; yVals2 = NaN; stats2 = NaN; B3 = NaN; yVals3 = NaN; stats3 = NaN;
+end
 
 parsedData = struct();
 parsedData.n = n;
@@ -145,12 +189,16 @@ parsedData.yVals3 = yVals3;
 if conftask==1
     parsedData.confMean = confMean;
     parsedData.confSE = confSE;
+    parsedData.confMeanCorr = confMeanCorr;
+    parsedData.confSEcorr = confSEcorr;
+    parsedData.confMeanErr = confMeanErr;
+    parsedData.confSEerr = confSEerr;
 elseif conftask==2
     parsedData.pHigh = pHigh;
-    parsedData.pHighCorr = pHighCorr;
-    parsedData.pHighErr = pHighErr;
     parsedData.pHighSE = pHighSE;
+    parsedData.pHighCorr = pHighCorr;
     parsedData.pHighSEcorr = pHighSEcorr;
+    parsedData.pHighErr = pHighErr;
     parsedData.pHighSEerr = pHighSEerr;
 end
 

@@ -29,7 +29,7 @@ subplot(nplots,1,1); hold on;
 plot(cohs, parsedFit.pRight,'k-'); hold on;
 if RTtask
     subplot(nplots,1,2); hold on;
-    plot(cohs, parsedFit.RT, 'b-');
+    plot(cohs, parsedFit.RTmean, 'b-');
     if conftask
         subplot(nplots,1,3); hold on;
         plot(cohs, parsedFit.pHigh, 'r-');
@@ -37,7 +37,7 @@ if RTtask
 else 
     if conftask
         subplot(nplots,1,2); hold on;
-        plot(cohs, parsedFit.RT, 'b-');
+        plot(cohs, parsedFit.RTmean, 'b-');
     end
 end
 
