@@ -7,7 +7,7 @@
 
 clear all; close all;
 
-ntrials = 5000;
+ntrials = 50000;
 
 dbstop if error
 
@@ -15,23 +15,36 @@ cohs = [-0.512 -0.256 -0.128 -0.064 -0.032 -eps eps 0.032 0.064 0.128 0.256 0.51
 coh = randsample(cohs,ntrials,'true')';
 
 dT = 1; % ms
-maxdur = 2000;
-timeAxis = 0:dT:maxdur;
+max_dur = 2000;
+tAxis = dT:dT:max_dur;
 
 % params
-k = 0.25; % drift rate coeff (conversion from %coh to units of DV)
-B = 25; % bound height
+% k = 0.4; % drift rate coeff (conversion from %coh to units of DV)
+% B = 25; % bound height
+% mu = k*coh; % mean of momentary evidence (drift rate)
+% sigma = 1; % SD of momentary evidence
+% theta = 1.3; % threshold for high bet in units of log odds correct (Kiani & Shadlen 2009)
+
+k = 0.6; % drift rate coeff (conversion from %coh to units of DV)
+B = 40; % bound height
 mu = k*coh; % mean of momentary evidence (drift rate)
 sigma = 1; % SD of momentary evidence
-theta = 1.1; % threshold for high bet in units of log odds correct (Kiani & Shadlen 2009)
-TndMean = 300; % non-decision time
-TndSD = 50; 
+theta = 1; % threshold for high bet in units of log odds correct (Kiani & Shadlen 2009)
+
+
+
+theta2 = theta; % optional, a separate bet criterion for left v right
+alpha = 0; % base rate of low bets (offset to PDW curve, as seen in data)
+TndMean = 300; % non-decision time (ms)
+TndSD = 0; 
 TndMin = TndMean/2;
 TndMax = TndMean+TndMin;
 
 origParams.k = k;
 origParams.B = B;
 origParams.sigma = sigma;
+origParams.theta = theta;
+origParams.alpha = alpha;
 origParams.TndMean = TndMean;
 origParams.TndSD  = TndSD;
 origParams.TndMin = TndMin;
@@ -41,10 +54,14 @@ origParams.TndMax  = TndMax;
 
 %% calculate log odds corr maps using Kiani 09 (FP4, Chang-Cooper) method
 
-[logOddsMapR, logOddsMapL, logOddsCorrMap, tAxis, vAxis] = makeLogOddsCorrMap_smooth(k,B,sigma,theta,cohs,timeAxis,0);
+% % % [logOddsMapR, logOddsMapL, logOddsCorrMap, tAxis, vAxis] = makeLogOddsCorrMap_smooth(k,B,sigma,theta,cohs,t,xmesh,2);
+
+% INSTEAD, use exact same code used for fitting (errfcn_DDM_1D_wConf)
+options.plot = 0; % plot marginal PDFs and LO map
+makeLogOddsMap_1D
 
 
-%%
+%% simulate drift-diffusion
 
 % preallocate
 choice = nan(ntrials,1); % choices (left = -1, right = 1);
@@ -60,11 +77,12 @@ tic
 for n = 1:ntrials
     
     % the diffusion process
-    dv = [0, cumsum(normrnd(mu(n),sigma,1,maxdur))];
+%     dv = [0, cumsum(normrnd(mu(n),sigma,1,max_dur))];
+    dv = cumsum(normrnd(mu(n),sigma,1,max_dur));
 
     cRT = find(abs(dv)>=B, 1, 'first');
     if isempty(cRT)
-        RT(n) = maxdur;
+        RT(n) = max_dur;
         dvEnd = dv(RT(n));
         hitBound(n) = 0;
     else
@@ -74,30 +92,52 @@ for n = 1:ntrials
     end
    
     % choice
-    if dvEnd==0
-        choice(n) = sign(rand-0.5);
+    if dvEnd==0 % if by some miniscule chance DV ends at zero, flip a coin
+        choice(n) = sign(randn);
     else
         choice(n) = sign(dvEnd);
     end
-    
-    % look up the expected log odds corr for this trial's V and T
-    whichV = find(abs(vAxis-dvEnd)==min(abs(vAxis-dvEnd)));
-    whichT = find(abs(tAxis-RT(n))==min(abs(tAxis-RT(n))));   
-    logOddsCorr(n) = logOddsCorrMap(whichV(1), whichT(1));
 
+    if hitBound(n)==0
+        % look up the expected log odds corr for this trial's V and T
+        thisV = find(abs(vAxis-dvEnd)==min(abs(vAxis-dvEnd)));
+        thisT = find(abs(tAxis-RT(n))==min(abs(tAxis-RT(n))));
+        if isnan(logOddsCorrMap(thisV(1), thisT(1))) % unfortunate rounding error: if dv gets very close to bound exactly at max_dur, but doesn't hit, it's effectively rounded up to the bound by thisV, but LO map is not defined at the bound
+            if dvEnd>0
+                logOddsCorr(n) = logOddsCorrMap(thisV(1)-1, thisT(1));
+            else
+                logOddsCorr(n) = logOddsCorrMap(thisV(1)+1, thisT(1));
+            end
+        else
+            logOddsCorr(n) = logOddsCorrMap(thisV(1), thisT(1));
+        end
+        
+        % post-decision wager:
+        if logOddsCorr(n) >= theta % bet high
+            pdw(n) = 1;
+        elseif logOddsCorr(n) < theta % bet low
+            pdw(n) = 0;
+        else
+            keyboard 
+        end
+        
+        pdw2(n) = bet_high_xt(thisV(1), thisT(1)); % TEMP: SANITY
+        if pdw(n)~=pdw2(n); keyboard; end % TEMP: SANITY
+        
+    elseif hitBound(n)==1 % hit bound, no need for Pxt lookup
+        if choice(n)==-1
+            logOddsCorr(n) = log(Ptb_marginal(RT(n),1,1)./Ptb_marginal(RT(n),1,2));
+            pdw(n) = bet_high_tb(RT(n),1);
+        elseif choice(n)==1
+            logOddsCorr(n) = log(Ptb_marginal(RT(n),2,2)./Ptb_marginal(RT(n),2,1));
+            pdw(n) = bet_high_tb(RT(n),2);
+        end        
+    end
+    
     % confidence rating
     expectedPctCorr(n) = logistic(logOddsCorr(n)); % convert to pct corr
     conf(n) = 2*expectedPctCorr(n) - 1; % convert to 0..1
-    
-    % post-decision wager:
-    if logOddsCorr(n) >= theta % bet high
-        pdw(n) = 1;
-    elseif logOddsCorr(n) < theta % bet low
-        pdw(n) = 0;
-    else
-        keyboard
-    end
-    
+        
 end
 toc
 
@@ -125,7 +165,7 @@ data.correct = choice==sign(coh);
 data.direction = nan(ntrials,1);
 data.direction(coh>0) = 0;
 data.direction(coh<0) = 180;
-coh(abs(coh)<1e-6) = 0; % now go back to one 'zero'
+% coh(abs(coh)<1e-6) = 0; % now go back to one 'zero' [OR NOT!]
 data.coherence = abs(coh);
 data.scoh = coh;
 
@@ -142,6 +182,12 @@ parsedData = Dots_parseData(data,conftask,RTtask,RTCorrOnly);
 % plot
 cohs = unique(coh); wFit = 0; forTalk = 0;
 Dots_plot(parsedData,cohs,conftask,RTtask,wFit,forTalk)
+
+
+%% temp: save data for param recovery [warning, large file size]
+
+save tempsim.mat
+
 
 
 

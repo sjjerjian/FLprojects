@@ -6,13 +6,14 @@
 % requires a struct data with at minimum a variable for choice and one for
 % signed coherence
 
-% CF updated 12/2021
+% CF updated 12/2021, again in 07/2022
 
 % % if running this standalone, load a data file, parse and plot it
 clear all; close all;
 
 % load Hanzo_data_fall2020.mat
-load tempsim.mat
+load tempsim.mat % temp, for param recovery
+
 
 options.RTtask = 1;
 options.conftask = 2;
@@ -31,13 +32,12 @@ end
 Dots_plot(parsedData,cohs,options.conftask,options.RTtask)
 
 
-
 %% now the fitting itself
 
 
 %****** first select which model to fit ********
-% modelID=1; options.errfcn = @errfcn_DDM_1D_wConf;      % 1D DDM with threshold on log odds, usually for var dur [Kiani 09 (FP4)]
-modelID=2; options.errfcn = @errfcn_DDM_2D_wConf_noMC; % 2D DDM aka anticorrelated race, for RT+conf [Kiani 14 / van den Berg 16 (WolpertMOI)]
+modelID=1; options.errfcn = @errfcn_DDM_1D_wConf;      % 1D DDM with threshold on log odds, usually for var dur [Kiani 09 (FP4)]
+% modelID=2; options.errfcn = @errfcn_DDM_2D_wConf_noMC; % 2D DDM aka anticorrelated race, for RT+conf [Kiani 14 / van den Berg 16 (WolpertMOI)]
 
 % options.errfcn = @errfcn_DDM_2D_wConf_noMC_signed; modelID=2; % as above, but with signed cohs
 %***********************************************
@@ -57,38 +57,40 @@ switch modelID
     case 1 %errfcn_DDM_1D_wConf
         
         % initial guess (or hand-tuned params)
-        if exist('origParams','var') % simulation
+        if exist('origParams','var') % i.e., from simulation
             k = origParams.k;
             B = origParams.B;
             theta = origParams.theta;
             alpha = origParams.alpha;
+            Tnd = origParams.TndMean/1000; % convert to s
         else
             k = 0.6; % sensitivity parameter
             B = 15; % bound height
             theta = 0.8; % criterion (in log odds correct) for betting high
             alpha = 0.1; % base rate of low-bet choices
+            Tnd = 0.3; % non-decision time (s)
         end
-        guess = [k B theta alpha];
-        fixed = [0 0 0     0]; % can fix some params and fit the others, or fix all to hand-tune
-        data.dur = round(data.duration*1000); % dur must be integer valued (in ms)
-                             %^ same as RT for RT task
+        guess = [k B theta alpha Tnd];
+        fixed = [0 0 0     0     0  ]; % can fix some params and fit the others, or fix all to hand-tune
+%         data.dur = round(data.duration*1000); % dur must be integer valued (in ms)
+%                              %^ same as RT for RT task, but that's wrong!
+%                              % all our data/sims are RT, so dur should be max_dur(?) 
+        data.dur = ones(size(data.coherence))*max_dur;
         
     case 2 %errfcn_DDM_2D_wConf
         
         if exist('origParams','var') % simulation
             k = origParams.k;
             B = origParams.B;
-            sigma = origParams.sigma;
             theta = origParams.theta;
             alpha = origParams.alpha;
-            Tnd = origParams.TndMean/1000; % convert to s
+            Tnd = origParams.TndMean/1000;
         else
             k = 20;
             B = 1;
-            sigma = 0.05;
             theta = 2.0;
-            alpha = 0; % base rate of low-bet choices
-            Tnd = 0.3; % non-decision time (s)
+            alpha = 0;
+            Tnd = 0.3;
         end
         
         guess = [k B theta alpha Tnd];
@@ -107,11 +109,13 @@ fixed(:)=1;
 [X, err_final, fit, parsedFit] = Dots_fitDDM(guess,fixed,data,options);
 
 
-%% plot it!
+% plot it!
 Dots_plot_fit(parsedData,parsedFit,cohs,options.conftask,options.RTtask);
 
 
-%% OLD:
+
+
+%% OLD, ON ITS WAY OUT, IGNORE
 
 % to generate smooth curves, call errfcn again with interpolated
 % coh axis (and resampled durs if var dur task)

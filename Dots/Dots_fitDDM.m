@@ -6,7 +6,6 @@ function [X, LL_final, fit, parsedFit] = Dots_fitDDM(guess,fixed,data,options)
 %   guess: initial guess of params
 %   fixed: which params are fixed versus vary in the optimization
 
-
 disp('fitting...');
 
 if options.feedback==2
