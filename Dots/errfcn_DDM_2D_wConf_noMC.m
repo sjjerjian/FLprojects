@@ -78,7 +78,7 @@ for c = 1:length(cohs) % loop through signed cohs, because that is what defines 
         pRight = P.lo.p(uc)/(P.up.p(uc)+P.lo.p(uc));
         pLeft = 1-pRight;
 
-        % by the definition of conditional probability, P(A|B) = P(A U B) / P(B)
+        % by the definition of conditional probability, P(A|B) = P(A n B) / P(B)
         % (evidently, the Pxts give us the intersections, not conditionals)
         pHigh_Right = sum(sum(Pxt2.*(P.logOddsCorrMap>=theta))) / pRight;
         pHigh_Left = sum(sum(Pxt1.*(P.logOddsCorrMap>=theta))) / pLeft;
@@ -108,22 +108,13 @@ for c = 1:length(cohs) % loop through signed cohs, because that is what defines 
     pLeft_High = pHigh_Left * pLeft / pHigh;
 % % %     pLeft_Low = pLow_Left * pLeft / pLow; % unused
 
-% % %     % Lastly, the PDW split
-% % %     if cohs(c)<0 % for leftward,
-% % %         pHigh_Corr = pHigh_Left;
-% % %         pHigh_Err = pHigh_Right;
-% % %     else % for rightward,
-% % %         pHigh_Corr = pHigh_Right;
-% % %         pHigh_Err = pHigh_Left;    
-% % %     end
-
     % adjust the probabilities for the base rate of low-conf bets:
     % the idea is that Phigh and Plow each get adjusted down/up in
     % proportion to how close they are to 1 or 0, respectively
     pHigh_wAlpha = pHigh - alpha*pHigh;
 
     % Lastly, the PDW split; use Bayes to adjust P(H|R) and P(H|L)
-    pHigh_Right_wAlpha = pRight_High * pHigh_wAlpha / pRight; % Bayes
+    pHigh_Right_wAlpha = pRight_High * pHigh_wAlpha / pRight;
     pHigh_Left_wAlpha = pLeft_High * pHigh_wAlpha / pLeft;
     if cohs(c)<0 % for leftward,
         pHigh_Corr = pHigh_Left_wAlpha;
@@ -135,7 +126,7 @@ for c = 1:length(cohs) % loop through signed cohs, because that is what defines 
     
     % copy to vectors for parsedFit
     pRight_model(c) = pRight;
-    pHigh_model(c) = pHigh_wAlpha;
+    pHigh_model(c) = pHigh_wAlpha; % this is the only one that includes effect of alpha
     pRightHigh_model(c) = pRight_High;
     pRightLow_model(c) = pRight_Low;
     pHighCorr_model(c) = pHigh_Corr;
@@ -162,7 +153,8 @@ for c = 1:length(cohs) % loop through signed cohs, because that is what defines 
         pHB = P.up.p(uc)+P.lo.p(uc); % probability hit bound
         meanRT_model(c) = pHB.*P.up.mean_t(uc) + (1-pHB)*max_dur + Tnd; % weighted average
         
-        % what about RT conditioned on wager?
+        
+        % what about RT conditioned on wager? that's more of a challenge.
         
 %         % first lay out some basics. meanRT is dot product of its pdf and
 %         % the time axis vector. from images_dtb:
