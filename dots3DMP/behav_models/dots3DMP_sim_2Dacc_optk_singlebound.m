@@ -75,7 +75,7 @@ R.Bup = B;
 R.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
 R.lose_flag = 1;
 R.plotflag = 0; % 1 = plot, 2 = plot and export_fig
-P =  images_dtb_2d(R);
+P = images_dtb_2d(R);
 
 
 % create acceleration and velocity profiles (arbitrary for now)

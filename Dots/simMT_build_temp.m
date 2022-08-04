@@ -45,11 +45,10 @@ toc
 tic
 
 % nNeurons = 36;
-nNeurons = 180;
-% nNeurons = 360;
+% nNeurons = 180;
+nNeurons = 360;
 
-dirAxis = 0:360/nNeurons:360-360/nNeurons;
-
+dirAxis = 0:360;
 K = 3; % inverse variance term (will scale with coh)
 ampl = 60;  % actual peak FR will be about half of this, at 51.2% coh
 offset = 0; % this is not the same as spontaneous firing rate, which is of 
@@ -272,87 +271,45 @@ end
                % be higher than response to high-coh motion in antipreferred
                % (null) direction;
        % for now this is set above based on tuning{}               
-latency = 50; % ms
-risetime = 20; % ms
-dT = 1;
-tAxis = 1:dT:max(dur)+3*latency;
+latency = 60; % ms
+risetime = 30; % ms
+dt = 10;
+tAxis = 1:dt:max(dur)+3*latency;
                % it's 3x because 1x at the beginning, 2x at the end (ramp-down is slower than rise time)
-
-R = nan(nTrials, nNeurons, length(tAxis));
 disp('Generating spike trains, may take tens of seconds to minutes...');
 tic
-
-
-
+SDF = nan(nTrials, nNeurons, length(tAxis)); % spike density function
 for t = 1:nTrials
     for n = 1:nNeurons
-                
         meanrate = Rates(t,n);
+        sdf=[]; 
 
-        sdf=[]; % spike density function
-        
             % lay down some baseline rate, from t=1 to vis latency
-        sdf(1:latency) = baseline;
+        sdf(1:latency/dt) = baseline;
             % quick linear rise to mean
-        sdf(end+1 : latency+risetime) = linspace(baseline,meanrate,risetime);
+        sdf(end+1 : (latency+risetime)/dt) = linspace(baseline,meanrate,risetime/dt);
 %             % steady state with some decay*, like real MT
             decay = 1+0.2*sign(baseline-meanrate); % *up or down depending on whether mean rate is above or below baseline
-        sdf(end+1 : latency+dur(t)) = linspace(meanrate, meanrate*decay, dur(t)-risetime);
+        sdf(end+1 : (latency+dur(t))/dt) = linspace(meanrate, meanrate*decay, (dur(t)-risetime)/dt);
               % include die-down over 2x latency
-        sdf(end+1 : end+2*latency) = linspace(meanrate*decay, baseline, 2*latency);
-        
-% %         % check what it looks like, if you want
-% %         figure; plot(sdf); % CAREFUL! don't run entire loop when uncommented!
-                
-        % The Mazurek method (I think) assumes zero noise in the driving
-        % input (underlying 'rate' or mean of poisson process, see
-        % Churchland et al. 2011 Neuron paper "Variance as a Signature...")
-        % which is unrealistic even for MT. At the very least it is
-        % a function of motion energy, plus any noise added between retina
-        % and MT. So adding some ad hoc variability is easily justified
+        sdf(end+1 : end+(2*latency)/dt) = linspace(meanrate*decay, baseline, 2*latency/dt);
+
+        % Add some ad hoc variability if poissrnd isn't noisy enough
         sdfNoiseSD = 0.2 * sdf; % arbitrary, but scales with spike rate
-%         sdfNoiseSD = 0; % arbitrary, but scales with spike rate
-        
-            % make fluctuations on the time scale of frames (motion energy)?
-        % SDFnoise(1:8:dur(t)+2*latency) = SDFnoiseSD*randn(1,length(1:8:dur(t)+2*latency));
-        
-            % no, for now just every ms; could use actual trials' ME later
         sdf = sdf + sdfNoiseSD.*randn(1,length(sdf));
         sdf(sdf<0)=0;
         
-% %         % may also wish to inspect the noisy version
-% %         figure; plot(sdf); % CAREFUL! don't run entire loop when uncommented!
-                            
-        csdf = cumsum(sdf); % cumulative spike density
-        cspf = csdf / csdf(end); % cumulative spike probability
-            % now we simply draw nspikes uniform random numbers on [0 1] 
-            % and use the CSPF as a lookup table for where to place them in
-            % time*, redrawing any that fall within a refractory period
-            % [*see note below]
+        SDF(t,n,1:length(sdf)) = sdf;
+    end
+end
 
-            % interpolate to ensure intersect
-            % cspfI = interp1(1:length(cspf),cspf,1:0.1:length(cspf));  ??? don't remember what this was about
-        
-        R(t,n,1:length(sdf)) = 0; % initialize spike train
-        % ^ trial, neuron, time    
-
-        sptimes = nan(1,Counts(t,n));
-        for s = 1:Counts(t,n) % is there a faster way than spike by spike?
-            rnd = rand;
-            sp = find(abs(cspf-rnd)==min(abs(cspf-rnd)));
-            sp = sp(1); % avoid non-unique times
-            if s>1
-                while any(abs(sptimes-sp)<2)
-                % ^ enforce refractory period by redrawing rnd
-                    rnd = rand;
-                    sp = find(abs(cspf-rnd)==min(abs(cspf-rnd))); % 
-                    sp = sp(1); % avoid non-unique times
-                end
-            end
-            sptimes(s) = sp;
+R = nan(nTrials, nNeurons, length(tAxis)); % spike count matrix
+for t = 1:nTrials
+    for s = 1:length(tAxis)
+        for n = 1:nNeurons
+            lambda = SDF(t,n,s) / (1000/dt);
+            R(t,n,s) = poissrnd(lambda);            
         end
-        R(t,n,sptimes) = 1;
-        
     end
 end
 disp('done.');
@@ -421,19 +378,18 @@ title('spike raster: across neurons for a given trial');
 
 end
         
-% 
-% 
-% %% save the results
-% disp('saving...');
-% 
-% clearvars -except R tuning nNeurons nTrials prefDirs latency dir dur coh cohs poscohs tAxis
-% 
-% tic
-% save(sprintf('simMT_nNeu=%d_nTr=%d.mat', nNeurons, nTrials),'-v7.3');
-% toc
-% 
-% disp('done.');
-% 
+
+%% save the results
+disp('saving...');
+
+clearvars -except R tuning nNeurons nTrials prefDirs latency dir dur coh cohs poscohs tAxis
+
+tic
+save(sprintf('simMT_nNeu=%d_nTr=%d.mat', nNeurons, nTrials),'-v7.3');
+toc
+
+disp('done.');
+
 
 
 

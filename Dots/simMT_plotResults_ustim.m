@@ -1,3 +1,5 @@
+% simMT_plotResults_ustim.m (self-explanatory)
+% CF circa 2018-2020
 
 
 % calculate prob rightward, high bet

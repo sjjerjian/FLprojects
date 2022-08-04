@@ -1,9 +1,10 @@
 % very simple PPC/likelihood-based decoding
 
-dirAxis = 0:360;
+% % % dirAxis = 0:360;
+
 clr = {'k-','b-','g-','c-','m-','r-'};
 P = nan(nTrials,length(dirAxis));
-P_Kernel = nan(nTrials,length(dirAxis)-1);
+P_Kernel = nan(nTrials,length(dirAxis));
 choice = nan(nTrials,1);
 choice_Kernel = nan(nTrials,1); %For use with Kernel that takes into account correlation
 choice_Kernel_v2 = nan(nTrials,1);
@@ -18,7 +19,9 @@ var_Kernel_Time = nan(nTrials,1);
 
 
 %mvl: von mises original paramters
-dirAxis = 0:359;
+
+% % % dirAxis = 0:359;
+
 K = 3; % inverse variance term (will scale with coh)... mvl: Read Primer paper (might be in there, how to get K)
 ampl = 60;  % actual peak FR will be about half of this, at 51.2% coh
 offset = 0;
@@ -67,8 +70,10 @@ tmpCor(tmpCor>.9)=NaN; % for better color range when plotting
 %(g(c)*f'(s)), so that the underlying correlation or covariance is
 %independent of a gain (coherence in this case)... I think this is right.
 %But again in my case just using True Correlation (the one chris
-%constructed originally)
-dirAxis = 0:359;
+%constructed originally) -- MVL
+
+% % % dirAxis = 0:359;
+
 for c = 1:length(poscohs)
     kernelH_Der{c} = Cor\vonmises_Der{c}; %mvl: h'(s) = inv(Sigma)*f'(s)
     kernelH{c} = cumsum(kernelH_Der{c}, 2); %mvl: intergral-> integrate through Stimulus/row (there will errors since this is numerical estimate), 
@@ -220,10 +225,10 @@ for t = 1:nTrials
     %the factor format) gives rise to a gaussian. I believe it works for
     %mean of direction, but working with a circle makes it hard to computer
     %the second moment.
-    firstMoment_SS = ssNorm' * [cosd(0:359)' sind(0:359)'];%dirAXis
+    firstMoment_SS = ssNorm' * [cosd(dirAxis)' sind(dirAxis)']; 
     meanSS = atan2(firstMoment_SS(2), firstMoment_SS(1)); %simply equation for finding angle given Sin and Cos
     meanSS = rad2deg(mod(meanSS,2*pi)); %trick to convert to radiant in all 4 quadrants, then to angle
-    secondMoment_SS = ssNorm' * [cos(((0:359).*(pi./180)).^2)' sin(((0:359).*(pi./180)).^2)'];
+    secondMoment_SS = ssNorm' * [cos(((dirAxis).*(pi./180)).^2)' sin(((dirAxis).*(pi./180)).^2)'];
     secondMoment_SS = atan2(secondMoment_SS(2), secondMoment_SS(1));
     secondMoment_SS = rad2deg(mod(secondMoment_SS,2*pi));
     varSS = secondMoment_SS - meanSS.^2;

@@ -25,7 +25,7 @@ pHighSE = sqrt(pHigh.*(1-pHigh)./nc);
 % pCorrFromLogOdds = logistic(meanLogOddsCorr)
 
 
-figure;  clf; set(gcf,'Position',[900 320 480 920]);
+figure; clf; set(gcf,'Position',[900 320 480 920]);
 % choice
 subplot(3,1,1); errorbar(cohs,pRight,pRightSE,'o'); hold on;
 % logistic fit

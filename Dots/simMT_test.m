@@ -8,20 +8,19 @@ clear; close all;
 % and nTrials
 nNeurons = 360;
 nTrials = 1000;
-dirDist_sigma = 90;
 
 disp('loading...');
 tic
-load(sprintf('simMT_nNeu=%d_nTr=%d_sigma=%d.mat', nNeurons, nTrials,dirDist_sigma));
+load(sprintf('simMT_nNeu=%d_nTr=%d.mat', nNeurons, nTrials));
 disp('done.');
 toc
 
-ustim = zeros(size(coh));
 
 %% temp/optional: simulate microstimulation
 
 stimpool = prefDirs<=10 | prefDirs>=350; % within 10 deg of zero
 lambda = 0.02; % think of this as spikes added per ms [doesn't take much!]
+ustim = zeros(size(coh));
 tic
 for t = 1:nTrials
     if round(rand)==1 % random half of trials
@@ -47,8 +46,8 @@ if sum(ustim)>0; simMT_plotResults_ustim; end
 
 %% classic PPC or likelihood re/decoding (Ma et al., Jazayeri & Movshon)
 disp('running PPC...');
-% simMT_decode_PPC
-simMT_decode_PPC_orig
+simMT_decode_PPC
+% simMT_decode_PPC_orig
 disp('done');
 
 if sum(ustim)<10

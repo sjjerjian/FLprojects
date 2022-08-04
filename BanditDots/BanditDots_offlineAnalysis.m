@@ -110,7 +110,7 @@ sigma = 1; % SD of momentary evidence
 theta = 1; % threshold for Psure choice in units of log odds correct (Kiani & Shadlen 2009)
 
 % Kiani map [need to get 2014 version!]
-[logOddsMapR, logOddsMapL, logOddsCorrMap, PMap, tAxis, vAxis] = makeLogOddsCorrMap_smooth_hy(k,B,sigma,theta,timeAxis,0);
+[logOddsMapR, logOddsMapL, logOddsCorrMap, PMap, tAxis, vAxis] = makeLogOddsCorrMap_smooth_hy(k,B,sigma,theta,cohs,timeAxis,0);
 
 
 % define the grid resolution for time and decision variable

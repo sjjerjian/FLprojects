@@ -4,7 +4,7 @@ function [err,fit,parsedFit] = errfcn_DDM_2D_wConf_noMC_signed(param, guess, fix
 % SJ 10-11-2021 no Monte Carlo simulation for fitting, it's redundant!
 % just use model predictions directly
 
-% uses SIGNED cohs for MOI calculation
+% uses *signed* cohs for MOI calculation
 
 tic
 
@@ -21,13 +21,16 @@ theta = abs(param(3)); %or negative thetas
 alpha = param(4); % base rate of low-conf choices
 Tnd = param(5); % fixed Tnd, can't see any other way in this model
 
+% % % sigma = 0.1; % make this a free param? RK didn't need to
+% it's not a param at all! hard coded in images_dtb
+
 % use method of images to calculate PDFs of DV and mapping to log odds corr
 R.t = 0.001:0.001:maxdur;
 R.Bup = B;
 R.drift = k * unique(data.scoh); % signed drift rates
 R.lose_flag = 1; % we always need the losing densities
 R.plotflag = options.plot; % 1 = plot, 2 = plot nicer and export_fig (eg for talk)
-R.plotflag = 1; % manual override
+% R.plotflag = 1; % manual override
 P = images_dtb_2d(R); % /WolpertMOI
 
 
@@ -49,9 +52,70 @@ n = nan(length(cohs),1);
 pRight_model = n;   pHigh_model = n;
 meanRT_model = n;   meanRT_data = n;   sigmaRT_data = n;
 meanConf_model = n; meanConf_data = n; sigmaConf_data = n;
-nCor = n;
+nCor = n;   coh_set_freq = n;
+
+
+    % initialize:
+% probability of bound crossing as a function of time
+Ptb_coh = zeros(size(P.up.pdf_t,2), 2, length(cohs));                   % time * bound * signed_coh
+% probability density of decision variable (x) across time
+Pxt_coh = zeros(size(P.up.distr_loser,3), size(P.up.pdf_t,2), length(cohs)); % xmesh * time * signed_coh
+% marginal densities
+Ptb_marginal = zeros(size(P.up.pdf_t,2), 2, 2);                         % time * bound * motion_direction(1 right, 2 left)
+Pxt_marginal = zeros(size(P.up.distr_loser,3), size(P.up.pdf_t,2), 2);  % xmesh * time * motion_direction(1 right, 2 left)
+
+% % [~, ~, Ptb, ~, Pxt] = FP4(xmesh, uinit, mu, sigma, b_change, b_margin, dt);
+% % Ptb_coh(:,:,c) = [local_sum(Ptb(2:end,1),round(1/dt)), local_sum(Ptb(2:end,2),round(1/dt))];
+% % Pxt_coh(:,:,c) = Pxt(:,1/dt:1/dt:end);
 
 for c = 1:length(cohs)
+    Ptb_coh(:,1,c) = P.up.pdf_t(c,:); % time * bound * signed_coh
+    Ptb_coh(:,2,c) = P.lo.pdf_t(c,:); % [I don't *think* this needs separation by sign]
+    Pxt_coh(:,:,c) = squeeze(P.up.distr_loser(c,:,:))';
+end
+    
+for c = 1:length(cohs)
+    % calculate the marginals (marginalize over coherence, separately for
+    % each motion direction -- this depends on frequency of presentation)
+    F = sum(data.scoh==cohs(c))/length(data.scoh);    
+        %now use Ptb and Pxt to calculate/update the marginal. 
+    Pxt = Pxt_coh(:,:,c);
+    Ptb = Ptb_coh(:,:,c);
+    if cohs(c)>0         %rightward motion
+        Ptb_marginal(:,:,1) = Ptb_marginal(:,:,1) + F*Ptb; % time * bound
+        Pxt_marginal(:,:,1) = Pxt_marginal(:,:,1) + F*Pxt; % xmesh * time
+    elseif cohs(c)<0     %leftward motion
+        Ptb_marginal(:,:,2) = Ptb_marginal(:,:,2) + F*Ptb; % time * bound
+        Pxt_marginal(:,:,2) = Pxt_marginal(:,:,2) + F*Pxt; % xmesh * time
+    else                    %ambiguous motion
+        Ptb_marginal(:,:,1) = Ptb_marginal(:,:,1) + 0.5*F*Ptb;
+        Pxt_marginal(:,:,1) = Pxt_marginal(:,:,1) + 0.5*F*Pxt;
+        Ptb_marginal(:,:,2) = Ptb_marginal(:,:,2) + 0.5*F*Ptb;
+        Pxt_marginal(:,:,2) = Pxt_marginal(:,:,2) + 0.5*F*Pxt;
+    end        
+end
+
+    % find out which combination of DV and time is associated with high/low wager based on theta
+%if bound crossing does not happen
+bet_high_xt = nan(size(P.up.distr_loser,3), size(P.up.pdf_t,2));
+logPosteriorOddsRight = log(Pxt_marginal(:,:,1)./Pxt_marginal(:,:,2));
+bet_high_xt = logPosteriorOddsRight > theta;
+%if bound crossing happens 
+bet_high_tb = nan(size(P.up.pdf_t,2), 2); % time * bound
+bet_high_tb(:,1) = log(Ptb_marginal(:,1,2)./Ptb_marginal(:,1,1)) > theta;    %right bound crossing
+bet_high_tb(:,2) = log(Ptb_marginal(:,2,1)./Ptb_marginal(:,2,2)) > theta;    %left bound crossing
+
+% calculate probabilities of the four outcomes: right/left x high/low,
+% as a function of time
+Ptb = Ptb_coh(:,:,c); % time * bound
+Pxt = Pxt_coh(:,:,c); % xmesh * time
+PrightHigh = cumsum(Ptb(:,2).*(bet_high_tb(:,2)==1)) + sum(Pxt.*(bet_high_xt==1),1)';
+PrightLow = cumsum(Ptb(:,2).*(bet_high_tb(:,2)==0)) + sum(Pxt.*(bet_high_xt==0),1)';
+PleftHigh = cumsum(Ptb(:,1).*(bet_high_tb(:,1)==1)) + sum(Pxt.*(bet_high_xt==1),1)';
+PleftLow =  cumsum(Ptb(:,1).*(bet_high_tb(:,1)==0)) + sum(Pxt.*(bet_high_xt==0),1)';
+            
+
+for c = 6:length(cohs)
     
     Jdata = data.scoh==cohs(c);
 
@@ -91,75 +155,39 @@ for c = 1:length(cohs)
         sigmaConf_data(c) = std(data.conf(Jdata & usetrs_data)) / sqrt(nCor(c));
         sigmaConf_data_trialwise(Jdata) = sigmaConf_data(c);
     elseif options.conftask == 2 % PDW        
-
         Pxt = squeeze(P.up.distr_loser(c,:,:))' .* P.up.p(c);
         Pxt2= squeeze(P.lo.distr_loser(c,:,:))' .* P.lo.p(c);            
         pHigh = sum(Pxt.*(P.logOddsCorrMap>theta)) + sum(Pxt2.*(P.logOddsCorrMap>theta));
-        pHigh_model(c) = sum(pHigh);
+        pHigh_model(Jdata) = sum(pHigh);
         pHigh_model_trialwise(Jdata) = pHigh_model(c); % copy to trials
         
-        % no, probably need to split by dir in order to get PrightHigh/Low
+        % OR split by dir
         
-% % %             pRightHigh = cumsum(Ptb(:,2).*(bet_high_tb(:,2)==1)) + ...
-% % %                         sum(Pxt(xmesh>0,:).*(bet_high_xt(xmesh>0,:)==1),1)' + ...
-% % %                         0.5*(Pxt(xmesh==0,:).*(bet_high_xt(xmesh==0,:)==1))'; % half the probability of dv=0 (assuming a 50/50 guess when that happens)
-% % %             pRightLow = cumsum(Ptb(:,2).*(bet_high_tb(:,2)==0)) + ...
-% % %                         sum(Pxt(xmesh>0,:).*(bet_high_xt(xmesh>0,:)==0),1)' + ...
-% % %                         0.5*(Pxt(xmesh==0,:).*(bet_high_xt(xmesh==0,:)==0))';
-% % %             pLeftHigh = cumsum(Ptb(:,1).*(bet_high_tb(:,1)==1)) + ...
-% % %                         sum(Pxt(xmesh<0,:).*(bet_high_xt(xmesh<0,:)==1),1)' + ...
-% % %                         0.5*(Pxt(xmesh==0,:).*(bet_high_xt(xmesh==0,:)==1))';
-% % %             pLeftLow =  cumsum(Ptb(:,1).*(bet_high_tb(:,1)==0)) + ...
-% % %                         sum(Pxt(xmesh<0,:).*(bet_high_xt(xmesh<0,:)==0),1)' + ...
-% % %                         0.5*(Pxt(xmesh==0,:).*(bet_high_xt(xmesh==0,:)==0))';
         
-        % PrightHigh at time t is the the integral of the losing
-        % accumulator's density above the theta criterion up to time t,
-        % weighted by the cumulative probability that you've crossed the
-        % Correct bound by t
-        Pxt = squeeze(P.up.distr_loser(c,:,:))'; % density of losing accumulator for this condition
-        pRightHigh = P.up.cdf_t(c,:) .* sum(Pxt.*(P.logOddsCorrMap>=theta)); % bound crossing CDF * sum of Pxt above theta
-        pRightLow = P.up.cdf_t(c,:) .* sum(Pxt.*(P.logOddsCorrMap<theta));  % bound crossing CDF * sum of Pxt below theta
-        Pxt = squeeze(P.lo.distr_loser(c,:,:))';
-        pLeftHigh = P.lo.cdf_t(c,:) .* sum(Pxt.*(P.logOddsCorrMap>=theta));
-        pLeftLow = P.lo.cdf_t(c,:) .* sum(Pxt.*(P.logOddsCorrMap<theta));
+        % HERE'S WHERE TO REPLICATE THE 1D CASE
         
-        figure;
-        subplot(2,2,2); plot(pRightHigh); title('pRightHigh');
-        subplot(2,2,4); plot(pRightLow); title('pRightLow');
-        subplot(2,2,1); plot(pLeftHigh); title('pLeftHigh');
-        subplot(2,2,3); plot(pLeftLow); title('pLeftLow');
-
-        pRightHigh_model(c) = sum(pRightHigh); % marginalize over time [OR use each cond's mean RT??]
-        pRightLow_model(c) = sum(pRightLow); 
-        pLeftHigh_model(c) = sum(pLeftHigh);
-        pLeftLow_model(c) = sum(pLeftLow); 
         
-        pRightHigh_model_trialwise(Jdata) = pRightHigh_model(c); % copy to trials
-        pRightLow_model_trialwise(Jdata) = pRightLow_model(c);
-        pLeftHigh_model_trialwise(Jdata) = pLeftHigh_model(c);
-        pLeftLow_model_trialwise(Jdata) = pLeftLow_model(c);
-
-%         if cohs(c)<0
-%             Pxt = squeeze(P.lo.distr_loser(c,:,:))'; % density of DV for this condition
-%             pRightHigh = sum(Pxt.*(P.logOddsCorrMapL>=theta)); % sum of density above theta [but still is a function of time!]
-%             pRightLow = sum(Pxt.*(P.logOddsCorrMapL<theta)); % sum of density above theta [but still is a function of time!]
-%         elseif cohs(c)>0
-%             Pxt = squeeze(P.up.distr_loser(c,:,:))'; % density of DV for this condition
-%             pRightHigh = sum(Pxt.*(P.logOddsCorrMapR>=theta)); % sum of density above theta [but still is a function of time!]
-%             pRightLow = sum(Pxt.*(P.logOddsCorrMapR<theta)); % sum of density above theta [but still is a function of time!]
-%         else % ?
-%         end  
+        % old:
+        if cohs(c)<0
+            Pxt = squeeze(P.lo.distr_loser(c,:,:))'; % density of DV for this condition
+            PrightHigh = sum(Pxt.*(P.logOddsCorrMapL>=theta)); % sum of density above theta [but still is a function of time!]
+            PrightLow = sum(Pxt.*(P.logOddsCorrMapL<theta)); % sum of density above theta [but still is a function of time!]
+        else
+            Pxt = squeeze(P.up.distr_loser(c,:,:))'; % density of DV for this condition
+            PrightHigh = sum(Pxt.*(P.logOddsCorrMapR>=theta)); % sum of density above theta [but still is a function of time!]
+            PrightLow = sum(Pxt.*(P.logOddsCorrMapR<theta)); % sum of density above theta [but still is a function of time!]            
+        end  
+        PrightHigh_model(c) = sum(PrightHigh); % marginalize over time [OR use each cond's mean RT??]
+        PrightHigh_model_trialwise(Jdata) = PrightHigh_model(c); % copy to trials
+        PrightLow_model(c) = sum(PrightLow); % marginalize over time [OR use each cond's mean RT??]
+        PrightLow_model_trialwise(Jdata) = pHigh_model(c); % copy to trials
     end
-       
+   
+   
+    
 end
     
-figure; plot(cohs,pRightHigh_model,'b',cohs,pRightLow_model,'r');
-% this could be (almost) okay: remember pRightHigh(c) vs pRightLow(c) is
-% NOT what we show in the slope effect plots. It's Pright conditioned on
-% High vs. Low Bet; not the same thing. For that you need...?
-
-
+figure; plot(cohs,PrightHigh_model,'b',cohs,PrightLow_model,'r');
 
 % adjust the probabilities for the base rate of low-conf bets
 pHigh_model = pHigh_model - alpha;

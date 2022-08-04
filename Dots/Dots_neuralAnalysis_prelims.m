@@ -18,7 +18,7 @@ for n = 1:length(dataCell)
     mStart = dataCell{n}.Mapping.openEvents.motionStart';
     mEnd = dataCell{n}.Mapping.openEvents.motionEnd';
     dur = round((mEnd-mStart)*1000);
-    maxlen_map(n) = round(max(dur));
+% % %     maxlen_map(n) = round(max(dur));
     pct99_map(n) = ceil(prctile(dur,99)); % use this instead
     if pct99_map(n)>600; pct99_map(n) = ceil(prctile(dur,98)); end  % kluge one weird session
     

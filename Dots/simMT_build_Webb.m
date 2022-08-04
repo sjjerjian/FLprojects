@@ -4,14 +4,44 @@
 
 clear
 close all
+
+
+% 07/2020: modified to incorporate Webb & Ledgeway style
+% spatiotemporal flexibility (distribution of dot directions,
+% optionally varying across time). [still TBD: their version of temporal dynamics.]
+ 
+% Webb, Ledgeway, & McGraw
+% Cortical pooling algorithms for judging global motion direction.
+% Proc Natl Acad Sci U S A. 2007 Feb 27;104(9):3532-7.
+ 
+% Webb, Ledgeway, & Rocchi
+% Neural computations governing spatiotemporal pooling of visual motion signals in humans
+% J Neurosci. 2011 Mar 30;31(13):4917-25.
+ 
+Webb = 0;
+    % The way this works is we build the spike rates by taking a 
+    % weighted sum of the tuning curve evaluated at each dir (theta), where the
+    % weights equal the proportion of dot directions in the stimulus. This
+    % should generalize the transparent motion Miguel implemented, modulo a
+    % scaling factor.
+ 
+    % Unlike Webb, we can still use coherence: basically it just determines
+    % which family of tuning curves is used to construct the weighted sum.
+    % (i.e., lowering coherence does so in all directions equally)
+ 
+    % To implement the correlation matrix, the rate from the weighted sum
+    % becomes the equivalent of the tuning curve value, so in place of
+    % tuning{c}(:,dirAxis==dir(t)) we substitute the weighted sum (Webb et
+    % al. (2011)'s Ri(D), eq. 3)
+
     
 %% build an experiment
 
 tic
 
 % plot flags
-plotMT = 0;
-plotCorr = 0;
+plotMT = 1;
+plotCorr = 1;
 
 % noiseModel = 'indepPoisson';
 % noiseModel = 'corrMat_Mazurek02';
@@ -36,8 +66,8 @@ for n = 1:nTrials
     end
 end
 
-% OR set dur to 1s (or any fixed value) -- btw makes it easier to verify fano factor (below)
-dur(1:nTrials,1) = 1000;
+% % temp: set dur to 1s (or any fixed value) to verify fano factor (below)
+% dur(1:nTrials,1) = 1000;
 
 toc
 
@@ -45,11 +75,10 @@ toc
 tic
 
 % nNeurons = 36;
-nNeurons = 180;
-% nNeurons = 360;
+% nNeurons = 180;
+nNeurons = 360;
 
-dirAxis = 0:360/nNeurons:360-360/nNeurons;
-
+dirAxis = 0:360;
 K = 3; % inverse variance term (will scale with coh)
 ampl = 60;  % actual peak FR will be about half of this, at 51.2% coh
 offset = 0; % this is not the same as spontaneous firing rate, which is of 
@@ -106,7 +135,66 @@ toc
 
 %% assign spike counts based on tuning curve and noise model
 
-% create corr mat, if not independent poisson
+% Here is where we will bring in a distribution of directions like Webb et
+% al. The idea is to replace the occurences of tuning{c}(n,dirAxis==dir(t))
+% below with a rate generated as a weighted sum according to the desired
+% direction distribution (for now, assumed constant over time)
+
+% % TEMP: uncomment to test different sigmas and plot mean hill of activity
+% sigs = [eps 20 40 80];
+% for S = 1:length(sigs)
+% dirDist_sigma = sigs(S); % set to eps to mimic the old method, ie all dots in same dir
+
+if Webb
+    dirDist_sigma = 45;
+else
+    dirDist_sigma = eps; % set to eps to mimic the old method, ie all dots in same dir
+end
+
+dirDist_cutoff = 90; % truncate dist at presented dir plus and minus this value (must be <=180)
+dirDist_nModes = 1; % for bi/tri-modal ('transparent'), yet to be implemented
+
+dirDist{2} = normpdf(dirAxis,180,dirDist_sigma); % normal dist, one mode
+      % ^ start with mean of 180 to avoid having to wrap around 0/360
+dirDist{2}(dirAxis<=180-dirDist_cutoff | dirAxis>=180+dirDist_cutoff) = 0; % truncate
+dirDist{2} = dirDist{2}/sum(dirDist{2}); % renormalize
+
+% rotate for rightward (dir=0) trials
+dirDist{1}(1:180) = dirDist{2}(181:end);
+dirDist{1}(181:360) = dirDist{2}(1:180);
+
+RiD = cell(1,length(poscohs));
+for c = 1:length(poscohs)
+    RiD{c} = zeros(nNeurons,2); % only need the two directions being shown [1=right(0), 2=left(180)]
+    for n = 1:nNeurons
+        RiD{c}(n,1) = sum(tuning{c}(n,:).*dirDist{1}); % why does Webb need the Rmax term here?
+        RiD{c}(n,2) = sum(tuning{c}(n,:).*dirDist{2});
+    end
+end
+
+% % TEMP: uncomment to test different sigmas and plot mean hill of activity
+% % plot (mean) hill of activity
+% figure(12); plot(RiD{6}(:,2)); hold on;
+% 
+% % does sigma change the total mean FR?
+% % No.
+% meanFR(S) = mean(RiD{6}(:,2))
+% 
+% % what about separately for the two pools?
+% % this does change, but of course it does, and no amount of rescaling can
+% % fix that. The question is, does it also predict an effect on confidence
+% % beyond that.
+% meanFR_left(S) = mean(RiD{6}(leftpool,2))
+% meanFR_right(S) = mean(RiD{6}(rightpool,2))
+% 
+% pause
+% 
+% end
+
+
+
+
+% create corr mat, if needed below
 if ~strcmp(noiseModel,'indepPoisson')
     maxCorr = 0.2;
     % pairwise correlation varies linearly from maxCorr to zero based on
@@ -122,7 +210,7 @@ if ~strcmp(noiseModel,'indepPoisson')
         title('spike count correlation matrix: intended');
         xlabel('neuron ID (pref dir)'); ylabel('neuron ID (pref dir)');
     end
-%     plotCorr = 0;
+    plotCorr = 0;
 end
 
 switch noiseModel
@@ -134,8 +222,7 @@ switch noiseModel
         for t = 1:nTrials
             c = poscohs == abs(coh(t));
             for n = 1:nNeurons
-%                 lambda = RiD{c}(n,dir(t)==[0 180]) / 1000; % /1000 because tuning is in spikes/s and we're sampling every 1 ms
-                lambda = tuning{c}(n,dirAxis==dir(t)) / 1000; % /1000 because tuning is in spikes/s and we're sampling every 1 ms
+                lambda = RiD{c}(n,dir(t)==[0 180]) / 1000; % /1000 because tuning is in spikes/s and we're sampling every 1 ms
                 Counts(t,n) = sum(poissrnd(lambda, 1, dur(t)));
             end
         end
@@ -149,8 +236,7 @@ switch noiseModel
         for t = 1:nTrials
             i = dir(t);
             c = poscohs == abs(coh(t));
-%             m = RiD{c}(:,dir(t)==[0 180]); % mean
-            m = tuning{c}(:,dirAxis==dir(t));
+            m = RiD{c}(:,dir(t)==[0 180]); % mean
             T = dur(t)/1000;
                 % now we have a vector of mean counts and a correlation matrix based on
                 % tuning similarity. So to get a covariance matrix just multiply by the
@@ -179,8 +265,7 @@ switch noiseModel
         for t = 1:nTrials
             c = poscohs==abs(coh(t));
             T = dur(t)/1000;
-%             m = RiD{c}(:,dir(t)==[0 180]);
-            m = tuning{c}(:,dirAxis==dir(t));
+            m = RiD{c}(:,dir(t)==[0 180]);
             z = normrnd(0,1,nNeurons,1);
             y = rootQ * z;
             y = y.*sqrt(fano*m*T) + m*T; % variance is fano*mean, and SD is sqrt of that
@@ -191,8 +276,10 @@ switch noiseModel
 
 end
 
+
 % below we'll also need spike *rates*, since dur varies
 Rates = Counts./(dur/1000);
+
 
 %% check how well we achieved the intended corr mat & fano
 
@@ -281,9 +368,6 @@ tAxis = 1:dT:max(dur)+3*latency;
 R = nan(nTrials, nNeurons, length(tAxis));
 disp('Generating spike trains, may take tens of seconds to minutes...');
 tic
-
-
-
 for t = 1:nTrials
     for n = 1:nNeurons
                 
@@ -311,11 +395,8 @@ for t = 1:nTrials
         % a function of motion energy, plus any noise added between retina
         % and MT. So adding some ad hoc variability is easily justified
         sdfNoiseSD = 0.2 * sdf; % arbitrary, but scales with spike rate
-%         sdfNoiseSD = 0; % arbitrary, but scales with spike rate
-        
             % make fluctuations on the time scale of frames (motion energy)?
         % SDFnoise(1:8:dur(t)+2*latency) = SDFnoiseSD*randn(1,length(1:8:dur(t)+2*latency));
-        
             % no, for now just every ms; could use actual trials' ME later
         sdf = sdf + sdfNoiseSD.*randn(1,length(sdf));
         sdf(sdf<0)=0;
@@ -345,7 +426,7 @@ for t = 1:nTrials
                 while any(abs(sptimes-sp)<2)
                 % ^ enforce refractory period by redrawing rnd
                     rnd = rand;
-                    sp = find(abs(cspf-rnd)==min(abs(cspf-rnd))); % 
+                    sp = find(abs(cspf-rnd)==min(abs(cspf-rnd)));
                     sp = sp(1); % avoid non-unique times
                 end
             end
@@ -362,8 +443,7 @@ toc
 % check that we achieved the intended spike counts
 if plotMT
     Counts2 = nansum(R,3);
-    figure(7); plot(Counts(:),Counts2(:),'o',[0 max(max(Counts))+5],[0 max(max(Counts))+5],'k--');
-    axis square;
+    figure(7); plot(Counts(:),Counts2(:),'x');
     title('intended vs actual spike counts (should be identical)');
 end
 
@@ -421,19 +501,19 @@ title('spike raster: across neurons for a given trial');
 
 end
         
-% 
-% 
-% %% save the results
-% disp('saving...');
-% 
-% clearvars -except R tuning nNeurons nTrials prefDirs latency dir dur coh cohs poscohs tAxis
-% 
-% tic
-% save(sprintf('simMT_nNeu=%d_nTr=%d.mat', nNeurons, nTrials),'-v7.3');
-% toc
-% 
-% disp('done.');
-% 
+
+%% save the results
+disp('saving...');
+
+clearvars -except R tuning nNeurons nTrials prefDirs latency dir dur coh cohs poscohs tAxis dirDist_sigma
+if dirDist_sigma<1e-6; dirDist_sigma=0; end
+
+tic
+save(sprintf('simMT_nNeu=%d_nTr=%d_sigma=%d.mat', nNeurons, nTrials,dirDist_sigma),'-v7.3');
+toc
+
+disp('done.');
+
 
 
 

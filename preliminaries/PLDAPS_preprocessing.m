@@ -18,7 +18,8 @@ close all
 subject = 'hanzo';
 paradigm = 'Dots';
 
-dateRange = 20210208:20210212; % last week
+% dateRange = 20210208:20210212; % last week
+
 
 % % month by month
 % dateRange = 20190301:20190331; % skip, too early?
@@ -37,7 +38,7 @@ dateRange = 20210208:20210212; % last week
         % no data in april or may 2020
 % dateRange = 20200601:20200630; % small bias, good slope effect, but flat PDW
 % dateRange = 20200701:20200731; % bias is back, otherwise improving
-% dateRange = 20200801:20200831; % good. interesting RT separated by conf!
+dateRange = 20200801:20200831; % good. interesting RT separated by conf!
 % dateRange = 20200901:20200930; % good. that RT effect is now gone.
 % dateRange = 20201001:20201031; % good. RT effect back (modest). PDW pretty shallow
 % dateRange = 20201101:20201130; % beautiful
@@ -85,8 +86,8 @@ dateRange = 20210208:20210212; % last week
 % end
 
 
-% localDir = ['/Users/chris/Documents/MATLAB/PLDAPS_data/' subject '/'];
-localDir = ['/Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data/' subject '/'];
+localDir = ['/Users/chris/Documents/MATLAB/PLDAPS_data/' subject '/'];
+% localDir = ['/Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data/' subject '/'];
 
 remoteDir = ['/var/services/homes/fetschlab/data/' subject '_basic/'];
 % remoteDir = ['/var/services/homes/fetschlab/data/' subject 'dots3DMP_basic/'];

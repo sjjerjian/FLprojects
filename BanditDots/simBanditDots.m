@@ -163,7 +163,7 @@ sigma = 1; % SD of momentary evidence
 theta = 1; % threshold for Psure choice in units of log odds correct (Kiani & Shadlen 2009)
 
 % Kiani map [need to get 2014 version!]
-[logOddsMapR, logOddsMapL, logOddsCorrMap, tAxis, vAxis] = makeLogOddsCorrMap_smooth(k,B,sigma,theta,timeAxis,0);
+[logOddsMapR, logOddsMapL, logOddsCorrMap, tAxis, vAxis] = makeLogOddsCorrMap_smooth(k,B,sigma,theta,cohs,timeAxis,0);
 
 % non-decision time (truncated normal dist)
 TndMean = 300;

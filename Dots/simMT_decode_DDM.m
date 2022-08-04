@@ -1,11 +1,13 @@
-% Kiani-style DDM w confidence
+% Kiani-style DDM w confidence,
+% operating on simulated (or real!) MT data, eg from simMT
+% CF circa 2018-2020
 
-plotLOmap = 0; % plot log-odds corr map or not (set to 2 to see P(DV) also)
+plotLOmap = 2; % plot log-odds corr map or not (set to 2 to see P(DV) also)
 
 
 %% redefine pools if desired
-rightpool = prefDirs<60 | prefDirs>300; % within 60 deg of zero
-leftpool = prefDirs>120 & prefDirs<240; % within 60 deg of 180
+% rightpool = prefDirs<60 | prefDirs>300; % within 60 deg of zero
+% leftpool = prefDirs>120 & prefDirs<240; % within 60 deg of 180
 
 
 %% calculate pooled spike counts and their difference
@@ -73,8 +75,8 @@ Mu = nan(nTrials,1);
 
 % need to guess bound and sigmaPooling; experiment with these to see their
 % effect on choice+RT
-B = 90;
-sigmaPooling = 3;
+B = 100;
+sigmaPooling = 4;
 
 
 tic
@@ -100,12 +102,14 @@ for t = 1:nTrials
     Mu(t) = nanmean(diff);
     Sigma(t) = nanstd(diff);
 
-    % temp: diagnosing mismatch between fittedk*C and actual Mu (need to
-    % get a fittedk value (below) before trying this)
-% % %     figure(t);plot(dv(t,:)); hold on;
+%     % temp: diagnosing mismatch between fittedk*C and actual Mu (need to
+%     % get a fittedk value (below) before trying this)
+%     if t<10
+%     figure(t); plot(dv); title(num2str(coh(t))); 
+%     end
 % % %     dvAlt(t,1:dur(t)) = [0, cumsum(normrnd(fittedk*coh(t),Sigma(t),1,dur(t)-1))];
 % % % %     dvAlt(t,1:dur(t)) = [0, cumsum(normrnd(Mu(t),Sigma(t),1,dur(t)-1))];
-% % %     plot(dvAlt(t,:),'r-');
+% % %    hold on; plot(dvAlt(t,:),'r-');
     
     cRT = find(abs(dv)>=B, 1, 'first');
     if isempty(cRT)
@@ -140,7 +144,6 @@ yVals = glmval(beta,xVals,'logit');
 % beta = 2kB;
 % thus,
 fittedk = beta(2)/(2*B); % right?
-
 % ^ this doesn't work. gives mu values >1 order of magnitude smaller than
 % the actual (simulated) MT spikes would suggest. I leave this as an
 % exercise for the reader to figure out why. :)
@@ -180,9 +183,9 @@ subplot(2,1,2);
 errorbar(cohs,RTmean,RTse,'s-');
 title('RT');
 
-% REMEMBER: in variable duration task, RT won't reflect realistic RT range,
-% because:
-proportion_hit_bound = sum(hitBound)/nTrials % is <1
+% REMEMBER: in variable duration task, RT likely will not reflect realistic
+% RT range, because:
+proportion_hit_bound = sum(hitBound)/nTrials % is typically <1
 
 
 
@@ -201,9 +204,7 @@ logOddsCorr = nan(nTrials,1);
 I = abs(coh)> 0.01;
 k = median(Mu(I)./coh(I));
     % median seems to work fine
-
-% B = 30; % keep same as above
-sigma = mean(Sigma);
+sigma = median(Sigma(I));
 
 % threshold (in log odds) for high bet (% hand tuned to get reasonable PDW)
 theta = 1.5; 
@@ -214,7 +215,7 @@ theta = 1.5;
 
 % generate log odds corr map to implement PDW;
 % set last argument to 0 to skip plotting (faster)
-[logOddsMapR, logOddsMapL, logOddsCorrMap, tAxis, vAxis] = makeLogOddsCorrMap_smooth(k,B,sigma,theta,tAxis',plotLOmap);
+[logOddsMapR, logOddsMapL, logOddsCorrMap, tAxis, vAxis] = makeLogOddsCorrMap_smooth(k,B,sigma,theta,cohs,tAxis',plotLOmap);
 
 tic
 % parfor_progress(nTrials);
@@ -287,15 +288,13 @@ chooseright = I & choice==1; sum(chooseright);
 chooseleft = I & choice==0; sum(chooseleft);
 % first try based on full spike count
 spCount = squeeze(nansum(R,3));
-k=1;
+q=1;
 for g = find(rightpool)
-    CP(k,1) = rocN(spCount(chooseright,g), spCount(chooseleft,g), 50);
-    k = k+1;
+    CP(q,1) = rocN(spCount(chooseright,g), spCount(chooseleft,g), 50);
+    q = q+1;
 end
 meanCP = mean(CP)
-
-
-
+figure;hist(CP,50);
 
 
 

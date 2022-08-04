@@ -17,6 +17,10 @@ fieldExcludes = {'leftEarly','tooSlow','fixFP','FPHeld','eyeXYs','corrLoopActive
 
 % now search localDir again for matching files and extract the desired variables from PDS
 allFiles = dir(localDir);
+try
+    if addNexonarDataToStruct, allNexFiles = dir([localDirNex '/*.mat']); end
+catch
+end
 
 try if addNexonarDataToStruct, allNexFiles = dir([localDirNex '/*.mat']); end; catch, end
 
@@ -30,7 +34,7 @@ for d = 1:length(dateRange)
             disp(['loading ' allFiles(f).name]);
             
             try
-                
+
                 load([localDir allFiles(f).name],'-mat'); % load it. this is the time limiting step;
                                                           % will eventually change how data are saved to make this faster
                 if exist('PDS','var')
@@ -116,20 +120,21 @@ for d = 1:length(dateRange)
                     
                     % SJ 08-2021, adding Nexonar data in at this point
                     try
-                        if addNexonarDataToStruct
-                            matchingNexFile = cellfun(@(x) strcmp(x(1:25), allFiles(f).name(1:25)), {allNexFiles.name});
-                            if sum(matchingNexFile)==1
-                                load([localDirNex allNexFiles(matchingNexFile).name],'-mat'); % load the nexonar data
-                                
-                                nexPDS = dots3DMP_nexonarCleanUp(nex,PDS);
-                                data.nexonar = nexPDS';
-                                
-                            else
-                                % no matching nexonar data (not recorded?)
-                                % or more than one matching file (but this should be impossible)
-                                disp(['could not find matching nexonar data for ' allFiles(f).name '...skipping'])
-                            end
+                    if addNexonarDataToStruct
+                        matchingNexFile = cellfun(@(x) strcmp(x(1:25), allFiles(f).name(1:25)), {allNexFiles.name});
+                        if sum(matchingNexFile)==1
+                            load([localDirNex allNexFiles(matchingNexFile).name],'-mat'); % load the nexonar data
+                            
+                            nexPDS = dots3DMP_nexonarCleanUp(nex,PDS);
+                            data.nexonar = nexPDS';
+
+                        else
+                            % no matching nexonar data (not recorded?)
+                            % or more than one matching file (but this should be impossible)
+                            disp(['could not find matching nexonar data for ' allFiles(f).name '...skipping'])
                         end
+                    end
+                    catch
                     end
                     
                     clear PDS
