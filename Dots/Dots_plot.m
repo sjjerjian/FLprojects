@@ -186,7 +186,7 @@ if RTtask
     export_fig('dots_RT_split','-eps');
 end
 
-if confTask
+if conftask
     % PDW
     figure(109); set(gcf,'Color',[1 1 1],'Position',[50 20 360 320],'PaperPositionMode','auto'); clf;
     errorbar(cohs, conf, confSE, 'o-', 'Color', 'k', 'MarkerFaceColor', 'w', 'MarkerSize', 10, 'LineWidth', 2);
@@ -198,8 +198,8 @@ if confTask
         % PDW split
     figure(110); set(gcf,'Color',[1 1 1],'Position',[50 20 360 320],'PaperPositionMode','auto'); clf;
     errorbar(cohs, confCorr, confSEcorr, 'o-', 'Color', 'k', 'MarkerFaceColor', 'k', 'MarkerSize', 10, 'LineWidth', 2); hold on;
-% %     errorbar(cohs(2:end-1), confErr(2:end-1), confSEerr(2:end-1), 'o--', 'Color', 'k', 'MarkerFaceColor', 'w', 'MarkerSize', 10, 'LineWidth', 2);
-    errorbar(cohs, confErr, confSEerr, 'o--', 'Color', 'k', 'MarkerFaceColor', 'w', 'MarkerSize', 10, 'LineWidth', 2);
+    errorbar(cohs(2:end-1), confErr(2:end-1), confSEerr(2:end-1), 'o--', 'Color', 'k', 'MarkerFaceColor', 'w', 'MarkerSize', 10, 'LineWidth', 2);
+% %     errorbar(cohs, confErr, confSEerr, 'o--', 'Color', 'k', 'MarkerFaceColor', 'w', 'MarkerSize', 10, 'LineWidth', 2);
     set(gca,'xtick',-0.5:0.25:0.5,'tickdir','out','box','off');
     ylim([0.4 1]); xlim([-0.55 0.55]);
     xlabel('Motion strength (coh)'); ylabel('Proportion high bet');

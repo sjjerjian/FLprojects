@@ -9,11 +9,13 @@ function P =  images_dtb_2d(R)
 %
 % ~~~~~~~~~~~~~~~
 % Inputs is a structure R (all in SI units)
-% drift     vector of drift rates [length ndrift]
-% t         vector time series to simulate [length nt]
-% Bup       bound height [scalar]
-% lose_flag  whether we want the losing densities as well (slower)
-% plotflag  make some plots (or not) [1 = plot, 2 = plot and save] - CF
+% drift:      vector of drift rates [length ndrift]
+% t:          vector time series to simulate [length nt]
+% Bup:        bound height [scalar]
+% lose_flag:  whether we want the losing densities as well (slower)
+%
+% drift_freq: frequencies of each drift rate (stimulus strength) in the data, for calculation of marginals - CF
+% plotflag:   make some plots (or not) [1 = plot, 2 = plot and save] - CF
 
 % ~~~~~~~~~~~~~~~
 % Outputs:  a structure P (which includes the inputs as well)
@@ -25,7 +27,7 @@ function P =  images_dtb_2d(R)
 %       distr_loser: pdf of the losing race [ndrift x nt x ngrid ]
 % y:    dv values of grid (bounds are at zero and intial dv is -Bup) [ngrid]
 % dy:   grid spacing
-
+% 
 % logOddsCorrMap: log posterior odds of a correct response,
 % as a function of state of losing accumulator (Kiani 2014) -- CF
 
@@ -95,38 +97,38 @@ P.y=g;
 P.dy=dg;
 
 
-% % % may need to calculate the relative probability of R vs L for
-% unabsorbed DV.. (see disc in Slack)
-% % % the way to see the need for this is to compare "Pcorr" (subplot 2 below)
-% % % with actual Pcorr from the simulation.
-% % % the former is greater, so that means the unabsorbed DV contributes
-% % % to errors (I think)
-% % 
-% % % first visualize the 'loser' PDFs for the lowest cohs to see what we're
-% % % dealing with, in terms of unabsorbed probability:
-% % 
-% % Pup = squeeze(P.up.distr_loser(1,end,:));
-% % Plo = squeeze(P.lo.distr_loser(1,end,:));
-% % figure; plot(Pup,'b'); hold on; plot(Plo,'r'); plot(Pup-Plo,'g');
-% % title(num2str(R.drift(1)));
-% % 
-% % Pup = squeeze(P.up.distr_loser(2,end,:));
-% % Plo = squeeze(P.lo.distr_loser(2,end,:)); plot(Pup-Plo,'g');
-% % figure; plot(Pup,'b'); hold on; plot(Plo,'r');
-% % title(num2str(R.drift(2)));
-
-
 % CF: log posterior odds of a correct response (Eq. 3 in Kiani et al. 2014)
 I = R.drift>=0; % In case drift is signed, calculate only for positives,
                 % then the kluge with separate marginals (Pxt's) can be done elsewhere
+% unlike 1D code, here we'll marginalize over drift in one step               
 odds = (squeeze(sum(P.up.distr_loser(I,:,:),1)) / length(R.drift(I))) ./ ...
        (squeeze(sum(P.lo.distr_loser(I,:,:),1)) / length(R.drift(I)));
 odds(odds<1) = 1; % fix some stray negatives/zeros (what about infs?)
+odds(isinf(odds)) = nan;
 P.logOddsCorrMap = log(odds);
 P.logOddsCorrMap = P.logOddsCorrMap';
 
+
+% % alternative, modeled after 1D (Kiani09,certstim) code:
+% Pxt_marginal = zeros(ngrid, nt, 2); % xmesh * time * motion_direction
+% for id=1:ndrift %loop over drifts
+%     F = R.drift_freq(id);
+%     Pxt = squeeze(P.up.distr_loser(id,:,:))';
+%     Pxt_marginal(:,:,1) = Pxt_marginal(:,:,1) + F*Pxt; % xmesh * time
+% 
+%     Pxt = squeeze(P.lo.distr_loser(id,:,:))';
+%     Pxt_marginal(:,:,2) = Pxt_marginal(:,:,2) + F*Pxt; % xmesh * time
+% end
+% % odds = (Pxt_marginal(:,:,2)./Pxt_marginal(:,:,1));
+% odds = (Pxt_marginal(:,:,1)./Pxt_marginal(:,:,2));
+% odds(odds<1) = 1; % fix some stray negatives/zeros (what about infs?)
+% odds(isinf(odds)) = nan;
+% P.logOddsCorrMap = log(odds);
+%     %^ not strictly identical, off by a total of ~0.27, but close enough(?)
+
+
 % okay, well, maybe we need both R and L (even for unsigned?)
-% R/corr
+    % R/corr
 I = R.drift>=0; % In case drift is signed, calculate only for positives,
                 % then the kluge with separate marginals (Pxt's) can be done elsewhere
 odds = (squeeze(sum(P.up.distr_loser(I,:,:),1)) / length(R.drift(I))) ./ ...
@@ -134,7 +136,7 @@ odds = (squeeze(sum(P.up.distr_loser(I,:,:),1)) / length(R.drift(I))) ./ ...
 odds(odds<1) = 1; % fix some stray negatives/zeros (what about infs?)
 P.logOddsCorrMapR = log(odds);
 P.logOddsCorrMapR = P.logOddsCorrMapR';
-% L/incorr
+    % L/incorr
 odds = (squeeze(sum(P.lo.distr_loser(I,:,:),1)) / length(R.drift(I))) ./ ...
        (squeeze(sum(P.up.distr_loser(I,:,:),1)) / length(R.drift(I)));
 odds(odds<1) = 1; % fix some stray negatives/zeros (what about infs?)
@@ -163,26 +165,6 @@ if R.plotflag
     n = 100; % set n to 100+ for smooth plots, lower for faster plotting
     
     % (2) first an example PDF
-    
-%     BforPlots = R.Bup*1.711; % kluge, super weird: B is not really B
-    BforPlots = R.Bup; % looks like I was wrong! It looked like B needed an
-                       % offset, because without it, peak density at early
-                       % times was not at the intended start point (zero).
-                       % But if you look at Kiani14 that is also the case:
-                       % density of LOSING accumulator does not start with
-                       % delta function at zero and diffuse out from there;
-                       % instead the peak is below zero at early times
-                       % because it means evidence was strong for the
-                       % winner and the loser is anticorrelated!
-
-% %         %TEMP
-% %         c = length(R.drift);
-% %         Pmap = squeeze(P.up.distr_loser(c,:,:))';
-% %         Pmap(Pmap<eps) = eps;
-% % %         figure; [~,h] = contourf(R.t,P.y(230:end),log(Pmap(230:end,:)),n); colormap(jet);
-% %         figure; [~,h] = contourf(R.t,P.y,log(Pmap),n); colormap(jet);
-% %         set(h,'LineColor','none'); colorbar;
-    
     c = round(length(R.drift(I))/2) - 1 + sum(I==0); % pick an intermediate drift rate, or make a loop to see all of them
     q = 30; % exponent for log cutoff (redefine zero as 10^-q, for better plots)
     Pmap = squeeze(P.up.distr_loser(c,:,:))';
@@ -198,7 +180,7 @@ if R.plotflag
 %     colorbar('YTick',0:.2:1,'YTickLabel',{'10^-^5^0'; '10^-^4^0'; '10^-^3^0'; '10^-^2^0'; '10^-^1^0'; '1'}); 
     set(gca,'XLim',[0 R.t(end)],'XTick',0:0.5:floor(R.t(end)*2)/2,'TickDir','out');
 %     set(gca,'YLim',[-4*R.Bup 0],'YTick',floor(-4*R.Bup):round(R.Bup*2)/2:0); 
-    set(gca,'YLim',[-2*BforPlots 0],'YTick',-2*BforPlots:BforPlots/2:0,'YtickLabel',{num2str(-BforPlots) '' '0' '' num2str(BforPlots)});
+    set(gca,'YLim',[-2*Bup 0],'YTick',-2*Bup:Bup/2:0,'YtickLabel',{num2str(-Bup) '' '0' '' num2str(Bup)});
     set(h,'LineColor','none');
     xlabel('Time (s)'); ylabel('Accumulated evidence of losing accumulator');
     title('Probability density of losing accumulator');
@@ -221,7 +203,7 @@ if R.plotflag
     colorbar('YTick',0:0.5:3); 
     set(gca,'XLim',[0 R.t(end)],'XTick',0:0.5:floor(R.t(end)*2)/2,'TickDir','out');
 %     set(gca,'YLim',[-4*R.Bup 0],'YTick',floor(-4*R.Bup):round(R.Bup*2)/2:0); 
-    set(gca,'YLim',[-2*BforPlots 0],'YTick',-2*BforPlots:BforPlots/2:0,'YtickLabel',{num2str(-BforPlots) '' '0' '' num2str(BforPlots)});
+    set(gca,'YLim',[-2*Bup 0],'YTick',-2*Bup:Bup/2:0,'YtickLabel',{num2str(-Bup) '' '0' '' num2str(Bup)});
     set(h,'LineColor','none');
     xlabel('Time (s)'); ylabel('Accumulated evidence of losing accumulator');
     title('Log odds correct vs. state of losing accumulator');

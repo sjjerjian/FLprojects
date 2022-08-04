@@ -19,22 +19,21 @@ max_dur = 2000;
 tAxis = dT:dT:max_dur;
 
 % params
-% k = 0.4; % drift rate coeff (conversion from %coh to units of DV)
-% B = 25; % bound height
-% mu = k*coh; % mean of momentary evidence (drift rate)
-% sigma = 1; % SD of momentary evidence
-% theta = 1.3; % threshold for high bet in units of log odds correct (Kiani & Shadlen 2009)
-
-k = 0.6; % drift rate coeff (conversion from %coh to units of DV)
-B = 40; % bound height
+k = 0.4; % drift rate coeff (conversion from %coh to units of DV)
+B = 24; % bound height
 mu = k*coh; % mean of momentary evidence (drift rate)
 sigma = 1; % SD of momentary evidence
-theta = 1; % threshold for high bet in units of log odds correct (Kiani & Shadlen 2009)
+theta = 1.2; % threshold for high bet in units of log odds correct (Kiani & Shadlen 2009)
 
-
+% % a very different set of params/outcomes, just to prove we can reproduce it in model code 
+% k = 0.6;
+% B = 40;
+% mu = k*coh;
+% sigma = 1;
+% theta = 1;
 
 theta2 = theta; % optional, a separate bet criterion for left v right
-alpha = 0; % base rate of low bets (offset to PDW curve, as seen in data)
+alpha = 0.4; % base rate of low bets (compresses & shifts the PDW curve down; does not interact w RT or choice)
 TndMean = 300; % non-decision time (ms)
 TndSD = 0; 
 TndMin = TndMean/2;
@@ -54,9 +53,6 @@ origParams.TndMax  = TndMax;
 
 %% calculate log odds corr maps using Kiani 09 (FP4, Chang-Cooper) method
 
-% % % [logOddsMapR, logOddsMapL, logOddsCorrMap, tAxis, vAxis] = makeLogOddsCorrMap_smooth(k,B,sigma,theta,cohs,t,xmesh,2);
-
-% INSTEAD, use exact same code used for fitting (errfcn_DDM_1D_wConf)
 options.plot = 0; % plot marginal PDFs and LO map
 makeLogOddsMap_1D
 
@@ -121,9 +117,6 @@ for n = 1:ntrials
             keyboard 
         end
         
-        pdw2(n) = bet_high_xt(thisV(1), thisT(1)); % TEMP: SANITY
-        if pdw(n)~=pdw2(n); keyboard; end % TEMP: SANITY
-        
     elseif hitBound(n)==1 % hit bound, no need for Pxt lookup
         if choice(n)==-1
             logOddsCorr(n) = log(Ptb_marginal(RT(n),1,1)./Ptb_marginal(RT(n),1,2));
@@ -141,53 +134,5 @@ for n = 1:ntrials
 end
 toc
 
-% add non-decision time (truncated normal dist)
-Tnd = zeros(ntrials,1);
-for n = 1:ntrials
-    while Tnd(n)<=TndMin || Tnd(n)>=TndMax % simple trick for truncating
-        Tnd(n) = round(normrnd(TndMean,TndSD));
-    end
-end
-DT = RT; % rename this 'decision time'
-RT = DT+Tnd;
-
-% quick sanity check that params are reasonable
-pCorrect_total = sum(sign(choice)==sign(coh)) / ntrials
-
-% should be >0.95 or else maxDur isn't long enough (or need urgency)
-hitBoundPct = sum(hitBound)/length(hitBound)
-
-%% format data as in experimental data files and generate output structs
-
-coh(coh==0) = sign(randn)*eps; % should have no actual zeros, but if so, sign them randomly;
-                               % this is just to assign a direction and correct/error
-data.correct = choice==sign(coh);
-data.direction = nan(ntrials,1);
-data.direction(coh>0) = 0;
-data.direction(coh<0) = 180;
-% coh(abs(coh)<1e-6) = 0; % now go back to one 'zero' [OR NOT!]
-data.coherence = abs(coh);
-data.scoh = coh;
-
-data.choice = choice;
-data.choice(data.choice==-1) = 0; % code elsewhere assumes 0s and 1s
-data.RT = RT/1000; % convert to seconds
-data.PDW = pdw;
-data.conf = conf;
-
-conftask = 2; % pdw (2) for now, even though conf rating can be generated here
-RTtask = 1; RTCorrOnly = 0;
-parsedData = Dots_parseData(data,conftask,RTtask,RTCorrOnly);
-
-% plot
-cohs = unique(coh); wFit = 0; forTalk = 0;
-Dots_plot(parsedData,cohs,conftask,RTtask,wFit,forTalk)
-
-
-%% temp: save data for param recovery [warning, large file size]
-
-save tempsim.mat
-
-
-
+simDDM_postProcessing % standardized for 1D and 2D
 

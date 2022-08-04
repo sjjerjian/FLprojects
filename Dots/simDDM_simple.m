@@ -8,7 +8,7 @@ clear all; close all;
 ntrials = 5000;
 
 % different levels of motion strength ('coherence')
-cohs = [-0.512 -0.256 -0.128 -0.064 -0.032 0 0.032 0.064 0.128 0.256 0.512];
+cohs = [-0.512 -0.256 -0.128 -0.064 -0.032 -eps eps 0.032 0.064 0.128 0.256 0.512];
 
 % delta-T (time step, in ms)
 dT = 1;
@@ -20,12 +20,13 @@ timeAxis = 0:dT:maxdur;
 coh = randsample(cohs,ntrials,'true')';
 
 
+
 %% model parameters (play around with these to see their effects)
 k = 0.3; % 'drift rate' or sensitivity term: a constant converting stimulus
          % strength into units of momentary evidence
 sigma = 1; % standard deviation of momentary evidence; often fixed at 1
 B = 25; % height of the bound, or threshold, for decision termination
-
+Tnd = 300; %non-decision time
 
 %% simulate the diffusion process
 
@@ -64,7 +65,7 @@ for n = 1:ntrials
     tempRT = find(abs(dv(n,:))>=B, 1);
     if isempty(tempRT) % did not hit bound
         RT(n) = maxdur;
-        finalV(n) = dv(RT(n));
+        finalV(n) = dv(n,RT(n));
         hitBound(n) = 0;
     else % hit bound
         RT(n) = tempRT;
@@ -75,21 +76,34 @@ for n = 1:ntrials
 end
 toc
 
+RT = RT + Tnd;
+
 % quick sanity check to see if params give reasonable performance
-pCorrect_total = (sum(choice==1 & coh>0) + sum(choice==-1 & coh<0)) / ntrials
+pCorrect_total = sum(sign(choice)==sign(coh)) / ntrials
 
 
-%% plot proportion "rightward" (choice=1) and reaction time as a function of motion strength
+%% format data as in experimental data files and generate output structs
 
-for c = 1:length(cohs)
-    I = coh==cohs(c);
-    pRight(c,1) = sum(I & choice==1) / sum(I);
-    meanRT(c,1) = mean(RT(I));
-end
+coh(coh==0) = sign(randn)*eps; % should have no actual zeros, but if so, sign them randomly;
+                               % this is just to assign a direction and correct/error
+data.correct = choice==sign(coh);
+data.direction = nan(ntrials,1);
+data.direction(coh>0) = 0;
+data.direction(coh<0) = 180;
+coh(abs(coh)<1e-6) = 0; % now go back to one 'zero'
+data.coherence = abs(coh);
+data.scoh = coh;
 
-figure; plot(cohs,pRight(:,1),'bo-');
-xlabel('Motion strength (%coh)'); ylabel('Proportion rightward choices');
+data.choice = choice;
+data.choice(data.choice==-1) = 0; % code elsewhere assumes 0s and 1s
+data.RT = RT/1000; % convert to seconds
 
-figure; plot(cohs,meanRT(:,1),'go-');
-xlabel('Motion strength (%coh)'); ylabel('Reaction time (ms)');
+conftask = 0; RTtask = 1; RTCorrOnly = 0;
+parsedData = Dots_parseData(data,conftask,RTtask,RTCorrOnly);
+
+% plot
+cohs = unique(coh); wFit = 0; forTalk = 0;
+Dots_plot(parsedData,cohs,conftask,RTtask,wFit,forTalk)
+
+
 

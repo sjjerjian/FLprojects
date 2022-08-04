@@ -1,7 +1,7 @@
-function [pUpAbs, rtUp, rtLo, upDist, loDist,pLoAbs,dvNotAbs,pGT0,xtDist] = runFPonSeries(uvect,t,Bup,Blo,y0,sigma)
+function [pUpAbs,rtUp,rtLo,upDist,loDist,pLoAbs,dvNotAbs,pGT0,xtDist] = runFPonSeries(uvect,t,Bup,Blo,y0,sigma)
 dbstop if error
 
-% Runs the Fokker-Planck to bounds through a series of stimlus difficulties.
+% Runs the Fokker-Planck to bounds through a series of stimulus difficulties.
 % Just a wrapper to run through a coherence series to generate
 % probability surface in time under boundary conditions.
 %

@@ -1,4 +1,4 @@
-function [logOddsMapR, logOddsMapL, logOddsCorrMap, tAxis, vAxis] = makeLogOddsCorrMap_smooth(k,B,sigma,theta,cohs,tAxis,plotflag)
+function [logOddsMapR, logOddsMapL, logOddsCorrMap, tAxis, vAxis] = makeLogOddsCorrMap_smooth(k,B,sigma,theta,cohs,tAxis,vAxis,plotflag)
 
 if nargin<1
     k=0.4; % sensitivity parameter (mean drift rate = k*Coherence)
@@ -29,7 +29,9 @@ Blo = ones(1,length(tAxis))*-(B+buf); % lower bound
 
 
 % remake Fig. 4a-b of Kiani and Shadlen 2009
-vAxis = linspace(-(B+buf), B+buf, size(xtDist{1},1));
+if isempty(vAxis)
+    vAxis = linspace(-(B+buf), B+buf, size(xtDist{1},1));
+end
 mapLeft = 0; mapRight = 0;
 % for each coherence, the "map" is the probability density conditioned on
 % the stimulus being either "right" or "left" (Fig. 4A)
@@ -82,13 +84,13 @@ if plotflag
 %     figure; [c,h] = contourf(tAxis,vAxis,logOddsMapL,n);
 %     figure; [c,h] = contourf(tAxis,vAxis,logOddsMapR,n);
 %     caxis([0 round(B*k/2.2)]); % B*k/2.2 fails for simMT, where k and sigma and B are all higher than the classic vals
-    caxis([0 3]);
+    caxis([0 3]); % for now hard-code to 3
     [~,hh] = contour(tAxis,vAxis,logOddsCorrMap,[theta -theta]);
     set(hh,'LineColor','k','LineWidth',2);
 %     colorbar('YTick',linspace(0,round(B*k/2.2),6)); % B*k/2.2 fails for simMT, where k and sigma and B are all higher than the classic vals
     colorbar('YTick',linspace(0,3,6)); 
     xlabel('Time (ms)'); ylabel('DV');
-    set(gca,'XTick',0:200:1000,'YTick',-B:round(B/2):B,'XTickLabel',0:200:1000,'TickDir','out');
+    set(gca,'XTick',0:200:1000,'YTick',-B:B/2:B,'XTickLabel',0:tAxis(end)/5:tAxis(end),'TickDir','out');
 %     changeAxesFontSize(gca,24,24); % for paper fig
     title('Log odds correct');
     colormap(jet);

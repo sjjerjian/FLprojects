@@ -12,8 +12,7 @@ global call_num
 
 % retrieve the full parameter set given the adjustable and fixed parameters 
 param = getParam(param, guess, fixed);
-
-maxdur = 3; % max stimulus duration (s)
+max_dur = max(data.dur)/1000; % max stimulus duration (s)
 
 k = param(1);
 B = abs(param(2)); % don't accept negative bound heights
@@ -21,23 +20,21 @@ theta = abs(param(3)); %or negative thetas
 alpha = param(4); % base rate of low-conf choices
 Tnd = param(5); % fixed Tnd, can't see any other way in this model
 
-% % % sigma = 0.1; % make this a free param? RK didn't need to
-% param!? it's not even a variable! hard coded in images_dtb.. (0.1? 0.05?)
-
 % use method of images to calculate PDFs of DV and mapping to log odds corr
-R.t = 0.001:0.001:maxdur;
-% R.Bup = B/1.711; % kluge, super weird: B is not really B
-R.Bup = B; % nope; see comment in images_dtb
+R.t = 0.001:0.001:max_dur;
+R.Bup = B;
 R.drift = k * unique(data.coherence); % takes only unsigned drift rates
+R.drift_freq = hist(data.coherence,unique(data.coherence))'/length(data.coherence); % relative frequency of each coh(drift)
 R.lose_flag = 1; % we always need the losing densities
 R.plotflag = options.plot; % 1 = plot, 2 = plot nicer and export_fig (eg for talk)
-%     R.plotflag = 1; % manual override
+%     R.plotflag = 0; % manual override
 P = images_dtb_2d(R); % /WolpertMOI
 
 
 %% calculate likelihood of the observed data given the model parameters
 
-usetrs_data  = data.correct | data.coherence<1e-6; % use only correct (OR ~0 hdg) trials for RT fits
+% usetrs_data = data.correct | data.coherence<1e-6; % use only correct (OR ~0 hdg) trials for RT fits
+usetrs_data = true(size(data.correct)); % try all trials
 
 % trialwise vars
 pRight_model_trialwise = nan(length(data.coherence),1);
@@ -56,6 +53,8 @@ pRight_model = n;
 pHigh_model = n;
 pRightHigh_model = n;
 pRightLow_model = n;
+pHighCorr_model = n;
+pHighErr_model = n;
 meanRT_model = n;
 meanRT_data = n;
 sigmaRT_data = n;
@@ -64,125 +63,167 @@ meanConf_data = n;
 sigmaConf_data = n;
 nCor = n;
 
-for c = 1:length(cohs)
-    % *** marking differences in signed vs. unsigned ver ***
-    uc = abs(cohs(c))==(cohs(cohs>=0));
-
-    Jdata  = data.scoh==cohs(c);
-
-    % pRight_model stores the predictions made by the model for the
-    % probability of a rightward choice on each trial condition in the
-    % data, and then assigned to the actual data trials of each
-    % condition in pRight_model for log likelihood calculation
+for c = 1:length(cohs) % loop through signed cohs, because that is what defines a trial in the data
+    
+    % index for images_dtb (unsigned coh/drift corresponding to this signed coh)                    
+    uc = abs(cohs(c))==(cohs(cohs>=0));  % *** marking differences in signed vs. unsigned ver ***
+      
+    % grab the distributions from images_dtb:
+    Pxt1 = squeeze(P.up.distr_loser(uc,:,:))'; % losing race pdf given correct
+    Pxt2 = squeeze(P.lo.distr_loser(uc,:,:))'; % losing race pdf given incorrect
 
     % CHOICE
-    if cohs(c)<0
+    if cohs(c)<0 % leftward motion
         % if coh is leftward, then pRight is p(incorrect), aka P.lo
-        pRight_model(c) = P.lo.p(uc)/(P.up.p(uc)+P.lo.p(uc));
-    else
-            % *** marking differences in signed vs. unsigned ver ***
-        pRight_model(c) = P.up.p(uc)/(P.up.p(uc)+P.lo.p(uc));
-        
-            % this seems to overestimate the sensitivity (versus sims)
-            % could it be because P.up.p is the sum of the bound crossing
-            % probability over the full 2 seconds (cdf(end)), whereas some
-            % of that probability should 'leak' out as the incorrect bound
-            % is crossed? Maybe not, because that prob is given by P.lo.p.
-            % E.g. at highest coh, P.lo.p is zero, *also across the 2 sec*,
-            % so the P(right) is legitimately 1 in that case. The same
-            % logic applies at lower cohs...
-    end    
-    pRight_model_trialwise(Jdata) = pRight_model(c);
+        pRight = P.lo.p(uc)/(P.up.p(uc)+P.lo.p(uc));
+        pLeft = 1-pRight;
 
+        % by the definition of conditional probability, P(A|B) = P(A U B) / P(B)
+        % (evidently, the Pxts give us the intersections, not conditionals)
+        pHigh_Right = sum(sum(Pxt2.*(P.logOddsCorrMap>=theta))) / pRight;
+        pHigh_Left = sum(sum(Pxt1.*(P.logOddsCorrMap>=theta))) / pLeft;
+        pLow_Right = sum(sum(Pxt2.*(P.logOddsCorrMap<theta))) / pRight; 
+        pLow_Left = sum(sum(Pxt1.*(P.logOddsCorrMap<theta))) / pLeft;
+        
+    else % rightward motion
+        % if coh is leftward, then pRight is p(correct), aka P.up
+        pRight = P.up.p(uc)/(P.up.p(uc)+P.lo.p(uc));
+        pLeft = 1-pRight;
+
+        % by the definition of conditional probability, P(A|B) = P(A n B) / P(B)
+        % (evidently, the Pxts give us the intersections, not conditionals)
+        pHigh_Right = sum(sum(Pxt1.*(P.logOddsCorrMap>=theta))) / pRight;
+        pHigh_Left = sum(sum(Pxt2.*(P.logOddsCorrMap>=theta))) / pLeft;
+        pLow_Right = sum(sum(Pxt1.*(P.logOddsCorrMap<theta))) / pRight; 
+        pLow_Left = sum(sum(Pxt2.*(P.logOddsCorrMap<theta))) / pLeft;
+    end
+    
+    % by law of total probability
+    pHigh = pHigh_Right*pRight + pHigh_Left*pLeft;
+    pLow = pLow_Right*pRight + pLow_Left*pLeft;
+
+    % by Bayes' rule:
+    pRight_High = pHigh_Right * pRight / pHigh;
+    pRight_Low = pLow_Right * pRight / pLow;
+    pLeft_High = pHigh_Left * pLeft / pHigh;
+% % %     pLeft_Low = pLow_Left * pLeft / pLow; % unused
+
+% % %     % Lastly, the PDW split
+% % %     if cohs(c)<0 % for leftward,
+% % %         pHigh_Corr = pHigh_Left;
+% % %         pHigh_Err = pHigh_Right;
+% % %     else % for rightward,
+% % %         pHigh_Corr = pHigh_Right;
+% % %         pHigh_Err = pHigh_Left;    
+% % %     end
+
+    % adjust the probabilities for the base rate of low-conf bets:
+    % the idea is that Phigh and Plow each get adjusted down/up in
+    % proportion to how close they are to 1 or 0, respectively
+    pHigh_wAlpha = pHigh - alpha*pHigh;
+
+    % Lastly, the PDW split; use Bayes to adjust P(H|R) and P(H|L)
+    pHigh_Right_wAlpha = pRight_High * pHigh_wAlpha / pRight; % Bayes
+    pHigh_Left_wAlpha = pLeft_High * pHigh_wAlpha / pLeft;
+    if cohs(c)<0 % for leftward,
+        pHigh_Corr = pHigh_Left_wAlpha;
+        pHigh_Err = pHigh_Right_wAlpha;
+    else % for rightward,
+        pHigh_Corr = pHigh_Right_wAlpha;
+        pHigh_Err = pHigh_Left_wAlpha;    
+    end
+    
+    % copy to vectors for parsedFit
+    pRight_model(c) = pRight;
+    pHigh_model(c) = pHigh_wAlpha;
+    pRightHigh_model(c) = pRight_High;
+    pRightLow_model(c) = pRight_Low;
+    pHighCorr_model(c) = pHigh_Corr;
+    pHighErr_model(c) = pHigh_Err;
+
+    % copy to trials
+    Jdata = data.scoh==cohs(c); % select trials of this coh
+    pRight_model_trialwise(Jdata) = pRight_model(c);
+    pHigh_model_trialwise(Jdata) = pHigh_model(c);
+    pRightHigh_model_trialwise(Jdata) = pRightHigh_model(c);
+    pRightLow_model_trialwise(Jdata) = pRightLow_model(c);
+    
+    
     % RT
-    nCor(c) = sum(Jdata & usetrs_data);
+    nCor(c) = sum(Jdata & (data.correct | data.coherence<1e-6));
     if options.RTtask            
-        meanRT_model(c) = P.up.mean_t(uc) + Tnd; % I think weighting by P.up.p is unnecessary because mean_t already takes it into account            
+        % model RT needs to be adjusted to account for unabsorbed
+        % probability (trials that don't hit the bound, usually only at low
+        % cohs, when bound is high, etc). Turns out the calculation of
+        % P.up.mean_t only applies to absorbed prob (bound-crossings), so
+        % we simply adjust it by averaging mean_t with maxdur, weighted by
+        % one minus the probability of bound crossing
+        
+        pHB = P.up.p(uc)+P.lo.p(uc); % probability hit bound
+        meanRT_model(c) = pHB.*P.up.mean_t(uc) + (1-pHB)*max_dur + Tnd; % weighted average
+        
+        % what about RT conditioned on wager?
+        
+%         % first lay out some basics. meanRT is dot product of its pdf and
+%         % the time axis vector. from images_dtb:
+%         P.up.mean_t = P.up.pdf_t * R.t'  ./ P.up.p;
+%         P.lo.mean_t = P.lo.pdf_t * R.t'  ./ P.lo.p;
+
+        % in the 1D code (which works!), mean RT given bound crossing AND
+        % high bet (the conditional, not intersection) is:
+%       RThit_high = sum((Ptb(tHi,1)+Ptb(tHi,2)) .* t_ms(tHi)) / Phit_high;
+
+%       In that equation, tHi is the time range at which bound crossing is
+%       guaranteed to result in a high bet, i.e. any times earlier than
+%       where the theta criterion crosses the bound. In the 2D model, bound
+%       crossing is never a guarantee but is always associated with some
+%       probability of losing race being above theta; seems like the
+%       analogy is useful.
+
+%       In words, the 1D equation to me looks like the conditional
+%       expectation of RT (given bound crossing, which almost always
+%       happens; we can worry about weighted average with max_dur later),
+%       divided by the intersection of P(BoundHit|high).
+        
+%       for the numerator (conditional expecation) we need conditional PDF,
+        % which is: P(RT|H) = P(RT,H) / P(H)
+        
+        % so now we need the joint PDF P(RT,H)
+        % we know how to calculate the intersection P(Right,H):
+        % it's sum(sum(Pxt>theta))
+        % for the joint PDF, it should be:
+        % P(RT=r|H) * P(H) OR P(H|RT=r) * P(RT=r)
+        
+        % all of this is just moving things around! writing things in terms
+        % of other things I cannot calculate. There must be an expression
+        % for the P(RT=r|H) or the intersection P(RT n H), using the
+        % ingredients already calculated in images_dtb (what I'm calling
+        % Pxt and Ptb).
+
+        % the rest of this is just scratch-pad...
+%         Ptb1 = P.up.pdf_t(uc,:);
+%         Ptb2 = P.lo.pdf_t(uc,:);
+%         Pxt1Hi = sum(Pxt1.*(P.logOddsCorrMap>=theta))
+%         sum(sum(Ptb1)*Pxt1Hi .* R.t) / pHigh; % nope, incorrect
+                
+        % condExp = ???;
+        % intersect = sum(sum(Pxt1.*(P.logOddsCorrMap>=theta)));        
+%         meanRThigh_model(c) = condExp/intersect;
+
+%         RThit_high = sum((Ptb1+Ptb2) .* R.t) / (pHigh*2);
+%         meanRThigh_model(c) = pHB*RThit_high + (1-pHB)*max_dur + Tnd; % NOPE!
+
         RT_model_trialwise(Jdata) = meanRT_model(c); % copy the mean to each trial, for 'fit' struct
-        meanRT_data(c) = mean(data.RT(Jdata & usetrs_data));
-        sigmaRT_data(c) = std(data.RT(Jdata & usetrs_data)) / sqrt(nCor(c));
+        meanRT_data(c) = mean(data.RT(Jdata & usetrs_data));                 % mean and sigma for the
+        sigmaRT_data(c) = std(data.RT(Jdata & usetrs_data)) / sqrt(nCor(c)); % data we want to fit
         sigmaRT_data_trialwise(Jdata) = sigmaRT_data(c); % copy the SD to each trial, for alternate LL calculation below
     end
-
-    % CONF
-    if options.conftask == 1 % sacc endpoint
-        warning('code not ready'); keyboard;
-        meanConf_model(c) = 2*mean(logistic(confSamples))-1;
-        conf_model_trialwise(Jdata & usetrs_data) = meanConf_model(c);
-        meanConf_data(c) = mean(data.conf(Jdata & usetrs_data));
-        sigmaConf_data(c) = std(data.conf(Jdata & usetrs_data)) / sqrt(nCor(c));
-        sigmaConf_data_trialwise(Jdata) = sigmaConf_data(c);
-    elseif options.conftask == 2 % PDW
-        Pxt = squeeze(P.up.distr_loser(uc,:,:))'; % density of DV for this condition
-        pHigh = sum(Pxt.*(P.logOddsCorrMap>=theta)); % sum of density above theta [but still is a function of time!]
-        pHigh_model(c) = sum(pHigh); % marginalize over time [OR use each cond's mean RT??]
-        pHigh_model_trialwise(Jdata) = pHigh_model(c); % copy to trials
-        
-        % OR split by dir
-        if cohs(c)<0
-            Pxt = squeeze(P.lo.distr_loser(uc,:,:))'; % density of DV for this condition
-            pRightHigh = sum(Pxt.*(P.logOddsCorrMapL>=theta)); % sum of density above theta [but still is a function of time!]
-            pRightLow = sum(Pxt.*(P.logOddsCorrMapL<theta)); % sum of density above theta [but still is a function of time!]
-        else
-            Pxt = squeeze(P.up.distr_loser(uc,:,:))'; % density of DV for this condition
-            pRightHigh = sum(Pxt.*(P.logOddsCorrMapR>=theta)); % sum of density above theta [but still is a function of time!]
-            pRightLow = sum(Pxt.*(P.logOddsCorrMapR<theta)); % sum of density above theta [but still is a function of time!]            
-        end  
-        pRightHigh_model(c) = sum(pRightHigh); % marginalize over time [OR use each cond's mean RT??]
-        pRightHigh_model_trialwise(Jdata) = pRightHigh_model(c); % copy to trials
-        pRightLow_model(c) = sum(pRightLow); % marginalize over time [OR use each cond's mean RT??]
-        pRightLow_model_trialwise(Jdata) = pRightLow_model(c); % copy to trials
-    end
-    
-    
-    % this is from 1D
-% %     % find out which combination of DV and time is associated with high/low wager based on theta
-% %     %if bound crossing does not happen
-% %     bet_high_xt = nan(length(xmesh), max_dur);
-% %     I = xmesh>0;
-% %     logPosteriorOddsRight = log(Pxt_marginal(I,:,1)./Pxt_marginal(I,:,2));
-% %     bet_high_xt(I,:) = logPosteriorOddsRight > theta;    
-% %     I = xmesh<0;
-% %     logPosteriorOddsLeft = log(Pxt_marginal(I,:,2)./Pxt_marginal(I,:,1));
-% %     bet_high_xt(I,:) = logPosteriorOddsLeft > theta2;
-% % 
-% %     bet_high_tb(:,1) = log(Ptb_marginal(:,1,2)./Ptb_marginal(:,1,1)) > theta2;    %lower bound crossing
-% %     bet_high_tb(:,2) = log(Ptb_marginal(:,2,1)./Ptb_marginal(:,2,2)) > theta;     %upper bound crossing
-% % 
-% %     
-% %     Ptb = Ptb_coh(:,:,s); % time * bound
-% %     Pxt = Pxt_coh(:,:,s); % xmesh * time
-% % 
-% %     % calculate probabilities of the four outcomes: right/left x high/low,
-% %     % as a function of time (dur)
-% %     PrightHigh = cumsum(Ptb(:,2).*(bet_high_tb(:,2)==1)) + ...
-% %                 sum(Pxt(xmesh>0,:).*(bet_high_xt(xmesh>0,:)==1),1)' + ...
-% %                 0.5*(Pxt(xmesh==0,:).*(bet_high_xt(xmesh==0,:)==1))'; % half the probability of dv=0 (assuming a 50/50 guess when that happens)
-% %     PrightLow = cumsum(Ptb(:,2).*(bet_high_tb(:,2)==0)) + ...
-% %                 sum(Pxt(xmesh>0,:).*(bet_high_xt(xmesh>0,:)==0),1)' + ...
-% %                 0.5*(Pxt(xmesh==0,:).*(bet_high_xt(xmesh==0,:)==0))';
-% %     PleftHigh = cumsum(Ptb(:,1).*(bet_high_tb(:,1)==1)) + ...
-% %                 sum(Pxt(xmesh<0,:).*(bet_high_xt(xmesh<0,:)==1),1)' + ...
-% %                 0.5*(Pxt(xmesh==0,:).*(bet_high_xt(xmesh==0,:)==1))';
-% %     PleftLow =  cumsum(Ptb(:,1).*(bet_high_tb(:,1)==0)) + ...
-% %                 sum(Pxt(xmesh<0,:).*(bet_high_xt(xmesh<0,:)==0),1)' + ...
-% %                 0.5*(Pxt(xmesh==0,:).*(bet_high_xt(xmesh==0,:)==0))';
-    
     
 end
-   
-% TEMP debugging
-% figure; plot(cohs,pRightHigh_model,'b',cohs,pRightLow_model,'r');
 
-% adjust the probabilities for the base rate of low-conf bets
-pHigh_model = pHigh_model - alpha;
-pHigh_model(pHigh_model<0) = 0;
-pHigh_model_trialwise = pHigh_model_trialwise - alpha;
-pHigh_model_trialwise(pHigh_model_trialwise<0) = 0;
-% 1D ver does it this way instead (not sure why, but try it if above fails to fit well):
-    % pHigh is scaled down in proportion to how close it is 1
-    % % pHigh_model = pHigh_model - alpha*pHigh_model;
-    % % pHigh_model_trialwise = pHigh_model_trialwise - alpha*pHigh_model_trialwise;
+% TEMP, placeholder until we get the correct conditionals
+meanRThigh_model = meanRT_model;
+meanRTlow_model = meanRT_model;
 
 % copy trial params to data struct 'fit', then replace data with model vals
 fit = data;
@@ -209,11 +250,16 @@ elseif options.conftask==2 % PDW
     parsedFit.pHigh = pHigh_model;
     parsedFit.pRightHigh = pRightHigh_model;
     parsedFit.pRightLow = pRightLow_model;
+    parsedFit.pHighCorr = pHighCorr_model;
+    parsedFit.pHighErr = pHighErr_model;
 end
 if options.RTtask
     parsedFit.RTmean = meanRT_model;
+    if options.conftask==2 % PDW
+        parsedFit.RTmeanHigh = meanRThigh_model;
+        parsedFit.RTmeanLow = meanRTlow_model;
+    end
 end
-
 
 
 %% Next, until we have bads/ibs_basic working, calculate error using binomial/gaussian assumptions

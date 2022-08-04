@@ -2,6 +2,7 @@ function parsedData = Dots_parseData(data,conftask,RTtask,RTCorrOnly)
 
 % Following SJ, CF converted to function, for cleaner workspace
 
+
 if nargin < 4, RTCorrOnly = 0; end
 if nargin < 3, RTtask = 0; end
 if nargin < 2, conftask = 0; end
@@ -17,6 +18,10 @@ switch conftask
         data.PDW = nan(size(data.choice));
     case 2
         data.conf= nan(size(data.choice));
+end
+
+if ~isfield(data,'PDW_preAlpha') % before alpha offset, for choice/RT splits
+    data.PDW_preAlpha = data.PDW;
 end
 
 cohs = unique(data.scoh);
@@ -74,39 +79,39 @@ for c = 1:length(cohs)
 
     pCorrect(c) = sum(J & data.correct==1) / n1(c); 
     
-    JJ = data.scoh==cohs(c) & data.PDW==1;
-    n2(c) = sum(JJ);
-    pRightHigh(c) = sum(JJ & data.choice==1) / n2(c); 
+    Jhi = data.scoh==cohs(c) & data.PDW_preAlpha==1;
+    n2(c) = sum(Jhi);
+    pRightHigh(c) = sum(Jhi & data.choice==1) / n2(c); 
     
-    JJJ = data.scoh==cohs(c) & data.PDW==0;
-    n3(c) = sum(JJJ);
-    pRightLow(c) = sum(JJJ & data.choice==1) / n3(c);
+    Jlo = data.scoh==cohs(c) & data.PDW_preAlpha==0;
+    n3(c) = sum(Jlo);
+    pRightLow(c) = sum(Jlo & data.choice==1) / n3(c);
         
     % RT
     nRT1(c) = sum(J & K);
     RTmean(c) = mean(data.RT(J & K));
     RTse(c) = std(data.RT(J & K))/sqrt(nRT1(c));
     
-    nRT2(c) = sum(JJ & K);
-    RTmeanHigh(c) = mean(data.RT(JJ & K));
-    RTseHigh(c) = std(data.RT(JJ & K))/sqrt(nRT2(c));
+    nRT2(c) = sum(Jhi & K);
+    RTmeanHigh(c) = mean(data.RT(Jhi & K));
+    RTseHigh(c) = std(data.RT(Jhi & K))/sqrt(nRT2(c));
 
-    nRT3(c) = sum(JJJ & K);
-    RTmeanLow(c) = mean(data.RT(JJJ & K));
-    RTseLow(c) = std(data.RT(JJJ & K))/sqrt(nRT3(c));
+    nRT3(c) = sum(Jlo & K);
+    RTmeanLow(c) = mean(data.RT(Jlo & K));
+    RTseLow(c) = std(data.RT(Jlo & K))/sqrt(nRT3(c));
     
     % pdw
     L = ~isnan(data.PDW);
     nPDW1(c) = sum(J & L);
     pHigh(c) = sum(J & L & data.PDW==1) / nPDW1(c); % 1 is high-bet
 
-    LL = ~isnan(data.PDW) & data.correct==1;
-    nPDW2(c) = sum(J & LL);
-    pHighCorr(c) = sum(J & LL & data.PDW==1) / nPDW2(c);
+    Lcor = ~isnan(data.PDW) & data.correct==1;
+    nPDW2(c) = sum(J & Lcor);
+    pHighCorr(c) = sum(J & Lcor & data.PDW==1) / nPDW2(c);
 
-    LLL = ~isnan(data.PDW) & data.correct==0;
-    nPDW3(c) = sum(J & LLL);
-    pHighErr(c) = sum(J & LLL & data.PDW==1) / nPDW3(c);
+    Lerr = ~isnan(data.PDW) & data.correct==0;
+    nPDW3(c) = sum(J & Lerr);
+    pHighErr(c) = sum(J & Lerr & data.PDW==1) / nPDW3(c);
     
     
     % conf
@@ -146,14 +151,14 @@ yVals1 = glmval(B1,xVals,'logit');
 
 if conftask==2
     % high bet only
-    I = data.PDW==1;
+    I = data.PDW_preAlpha==1;
     X = data.scoh(I);
     y = data.choice(I)==1;
     [B2, ~, stats2] = glmfit(X, y, 'binomial');
     yVals2 = glmval(B2,xVals,'logit');
 
     % low bet only
-    I = data.PDW==0;
+    I = data.PDW_preAlpha==0;
     X = data.scoh(I);
     y = data.choice(I)==1;
     [B3, ~, stats3] = glmfit(X, y, 'binomial');
