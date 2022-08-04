@@ -2,8 +2,8 @@
 
 clear
 close all
-load 2DAccSim_conftask2_90000trs_sigma05.mat
-% load 2DAccSim_conftask2_180000trs_sigma04.mat
+% load 2DAccSim_conftask2_90000trs_sigma05.mat
+load 2DAccSim_conftask2_180000trs_sigma04.mat
 
 % convert to 0:1
 if max(data.choice(~isnan(data.choice)))==2
@@ -18,7 +18,7 @@ options.errfun = 'dots3DMP_fit_2Dacc_err_singlebound_noMC_signed';
 % options.confModel = 'evidence+time';
 
 % SJ 10/2021, no longer doing model fits via Monte Carlo
-options.runInterpFit = 0; 
+options.runInterpFit = 1; 
 
 options.fitMethod = 'fms'; %'fms','global','multi','pattern','bads'
 % options.fitMethod = 'global';
@@ -28,7 +28,7 @@ options.fitMethod = 'fms'; %'fms','global','multi','pattern','bads'
 
 % pass in orig params from sim as initial guess (or hand-tune if fixed=1)
 if strfind(options.errfun,'singlebound') %%% paramNames = {'kves','kvisLo','kvisHi','B','TndVes','TndVis','TndComb','T2Conf','theta'};
-    guess = [origParams.kves origParams.kvis(1) origParams.kvis(2) origParams.B origParams.Tnds(1) origParams.Tnds(2) origParams.Tnds(3) origParams.ttc origParams.theta];
+    guess = [origParams.kves origParams.kvis(1) origParams.kvis(2) origParams.B/2 origParams.Tnds(1) origParams.Tnds(2) origParams.Tnds(3) origParams.ttc origParams.theta];
 elseif strfind(options.errfun,'sepbounds') %%% paramNames = {'kves','kvisLo','kvisHi','BVes','BVis','BComb','muTnd','T2Conf','theta'};
     guess = [origParams.kves origParams.kvis(1) origParams.kvis(2) origParams.Bves origParams.Bvis origParams.Bcomb origParams.muTnd origParams.ttc origParams.theta];
 end
@@ -47,6 +47,7 @@ options.conftask = conftask; % 1 - sacc endpoint, 2 - PDW
 
 if options.ploterr, options.fh = 400; end
 
+%%
 [X, err_final, fit, fitInterp] = dots3DMP_fitDDM(data,options,guess,fixed);
 % fitInterp is in fact not obsolete, and needs fixing in ^^
 

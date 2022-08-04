@@ -13,7 +13,7 @@
 % 3. remove v short blocks e.g. n<30
 % 4. index coh - different cohs per subj/session, standardize as 1/2 (lo/hi)
 % 5. clean up headings/modalities
-% 6. normalize conf ratings!
+% 6. normalize conf ratings! (and RT?)
 % 7. save cleaned data!
 
 clear all; close all
@@ -28,7 +28,7 @@ paradigm = 'dots3DMP';
 RTtask = 1;
 
 if ~RTtask,  dateRange = 20190625:20191231; % non-RT
-else,        dateRange = 20200213:20220113; % RT
+else,        dateRange = 20200213:20220317; % RT
 % else,        dateRange = 20200213:20211020; % RT
 
 end
@@ -37,7 +37,11 @@ folder = '/Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data/dataStructs/';
 file = [subject '_' num2str(dateRange(1)) '-' num2str(dateRange(end)) '.mat'];
 load([folder file], 'data');
 
-data = rmfield(data,{'reward','confRT','insertTrial','PDW','oneTargChoice','oneTargConf'});
+fields2remove = {'reward','confRT','insertTrial','PDW','oneTargChoice','oneTargConf'};
+for f = 1:length(fields2remove)
+    try data = rmfield(data,fields2remove{f}); end
+end
+ 
 
 %%
 % some new useful vars
@@ -72,22 +76,21 @@ end
 % excludes_subj = {};
 % subjs = unique(data.subj);
 
-removethese = ismember(data.filename,excludes_filename) | ismember(data.subjDate,excludes_subjDate) | ismember(data.subj,excludes_subj) | ~ismember(data.subj,subjs); %#ok<NASGU>
+removethese = ismember(data.filename,excludes_filename) | ismember(data.subjDate,excludes_subjDate) | ismember(data.subj,excludes_subj) | ~ismember(data.subj,subjs);
 fnames = fieldnames(data);
 for F = 1:length(fnames)
-    eval(['data.' fnames{F} '(removethese) = [];']);
+    data.(fnames{F})(removethese) = [];
 end
 
 % now this should reflect only good data, per spreadsheet:
 blocks = unique(data.filename);
-
 
 % remove invalid trials (fixation breaks (which gives nans), and obvious testing trials, signaled by very large confidence (saccade
 % endpoint) values
 removethese = isnan(data.choice) | isnan(data.conf) | data.conf>3 ;
 fnames = fieldnames(data);
 for F = 1:length(fnames)
-    eval(['data.' fnames{F} '(removethese) = [];']);
+    data.(fnames{F})(removethese) = [];
 end
 
 % quick look at blocks, for when some need to be excluded
@@ -97,11 +100,11 @@ end
 N = 30;
 removethese = ismember(data.filename,blocks(nTrialsByBlock<N));
 for F = 1:length(fnames)
-    eval(['data.' fnames{F} '(removethese) = [];']);
+    data.(fnames{F})(removethese) = [];
 end
 
 % quick look at blocks again, shouldn't be any with <N trials
-[blocks,nTrialsByBlock] = blockCounts(data.filename);
+[blocks,nTrialsByBlock,blockInds] = blockCounts(data.filename);
 
 %% organize cohs variable
 
@@ -122,6 +125,7 @@ for b=1:length(blocks)
     blockTrials = strcmp(data.filename,blocks{b});
     temp.cohRaw(~blockTrials) = [];
     [ucohs,~,inds] = unique(temp.cohRaw,'sorted');
+    
     ucohs_byBlock(b,1:length(ucohs)) = ucohs';
     
     if length(ucohs)==3 % only used once (.3,.5,.9 ... pool the two low ones)
@@ -135,6 +139,16 @@ for b=1:length(blocks)
 
 end
 
+
+% blocks 10 and 13 only have two low cohs ~0.05 and 0.15, block 11 has only
+% 0 coh?? discard these
+fnames = fieldnames(data);
+removethese = ismember(blockInds,[10 11 13]);
+for F = 1:length(fnames)
+    data.(fnames{F})(removethese) = [];
+end
+
+
 %% organize headings variable
 % reassign headings to indices -N...0...+N, or fixed headings, within subject block (i.e.
 % arbitrary) ?
@@ -145,16 +159,18 @@ for b=1:length(blocks)
     blockTrials = strcmp(data.filename,blocks{b});
     temp.heading(~blockTrials) = [];
     [uhdgs,~,inds] = unique(temp.heading,'sorted');
-    uhdgs_byBlock(b,1:length(uhdgs)) = uhdgs';
-    
+    uhdgs_byBlock(b,1:length(uhdgs)) = uhdgs'; 
 end
 
 % simple for now, just group by hand...
 
 data.heading(abs(data.heading)<0.01) = 0;
 
+% fix data.correct (see function description for issue!)
+data.correct = dots3DMPCorrectTrials(data.choice,data.heading,data.delta);
+    
 % hdgVals = [1 2 3];
-hdgVals = [1 3 8]; % arbitrary
+hdgVals = logspace(log10(1.25),log10(10),3); % arbitrary
 
 data.heading(data.heading<-0.5 & data.heading>=-2) = -hdgVals(1);
 data.heading(data.heading>0.5 & data.heading<=2) = hdgVals(1);
@@ -165,40 +181,74 @@ data.heading(data.heading>2 & data.heading<6) = hdgVals(2);
 data.heading(data.heading<-6 & data.heading>=-12) = -hdgVals(3);
 data.heading(data.heading>6 & data.heading<=12) = hdgVals(3);
 
+% sanity check
+% uhdgs_byBlock2 = nan(numel(blocks),12);
+% for b=1:length(blocks)
+%     temp = data;
+%     blockTrials = strcmp(data.filename,blocks{b});
+%     temp.heading(~blockTrials) = [];
+%     [uhdgs,~,inds] = unique(temp.heading,'sorted');
+%     uhdgs_byBlock2(b,1:length(uhdgs)) = uhdgs'; 
+% end
+
 %% cull data
 
-mods = unique(data.modality); 
+% this block is mostly obsolete given the standardization we've done on
+% cohs and headings above, but leave it in here anyway for now
 
-% data.coherence(data.coherence<=0.5) = 0.4;
-% data.coherence(data.coherence>0.5) = 0.7;
+mods = unique(data.modality); 
 cohs = unique(data.coherence); 
 
 % remove the rest
 removethese = ~ismember(data.coherence,cohs) & data.modality~=1;
 for F = 1:length(fnames)
-    eval(['data.' fnames{F} '(removethese) = [];']);
+    data.(fnames{F})(removethese) = [];
 end
     
 % the coh assigned to vestib trials (as a placeholder) depends on which
 % cohs were shown in a particular block, so we need to standardize it:
-data.coherence(data.modality==1) = cohs(1);
+% actually this is obsolete here since we already standardized cohs above
+% data.coherence(data.modality==1) = cohs(1);
 
 deltas = unique(data.delta); % aka conflict angle
 hdgs = unique(data.heading);
-% hdgs(hdgs==0) = [];
+% hdgs(hdgs==0) = []; % remove 0 heading trials if not enough? nah, do it
+% later if we want
 
 % remove the rest
 removethese = ~ismember(data.heading,hdgs);
 for F = 1:length(fnames)
-    eval(['data.' fnames{F} '(removethese) = [];']);
+    data.(fnames{F})(removethese) = [];
 end
 
 % final look at blocks 
 [blocks,nTrialsByBlock] = blockCounts(data.filename);
 
+%% final pass, remove some 'bad' RTs, and subjects with too few trials
+
+if ~RTtask
+    subjs = unique(data.subj);
+    subjs2keep = 1:5;
+%     subjs2keep = [1 3 4 5];
+else
+    RTlims = [0.25 2.5];
+    fnames = fieldnames(data);
+    removethese = data.RT < RTlims(1) | data.RT > RTlims(2);
+    for f=1:length(fnames), data.(fnames{f})(removethese) = []; end
+    
+    % should standardize RTs too for better analysis when pooling subject data?
+    % let's check the distributions first
+    
+    subjs = unique(data.subj);
+    subjs2keep = [1 3 5 8 9];
+%     subjs2keep = [1 3 8 9];
+
+end
+fnames = fieldnames(data);
+removethese = ~ismember(data.subj,subjs(subjs2keep));
+for f=1:length(fnames), data.(fnames{f})(removethese) = []; end
+
 %% normalize confidence ratings, *within subject*
-% SJ 07-2021 normalize within L/R choices too, to ameliorate any biases
-% induced by noisy eye tracker
 
 if normalize
 
@@ -208,26 +258,26 @@ for s = 1:length(usubj)
     data = data_orig;
     removethese = ~strcmp(data.subj,usubj{s});
     for F = 1:length(fnames)
-        eval(['data.' fnames{F} '(removethese) = [];']);
+        data.(fnames{F})(removethese) = [];
     end    
     
     % subtract min and divide by max
     
     % Across all choices
-    
-%     data.conf = (data.conf - min(data.conf)) / max((data.conf - min(data.conf)));
+    data.conf = (data.conf - min(data.conf)) / max((data.conf - min(data.conf)));
     
     % SJ 07-2021
     % SEPARATELY FOR LEFT AND RIGHT CHOICES 
     
     % ah, but what if subjects are genuinely more confident on one side
     % that the other (this would be forcibly removed from the dataset...)
+    % so don't do this
     
-    Lconf = data.conf(data.choice==1);
-    Rconf = data.conf(data.choice==2);
-
-    data.conf(data.choice==1) = (Lconf - min(Lconf)) / max((Lconf - min(Lconf)));
-    data.conf(data.choice==2) = (Rconf - min(Rconf)) / max((Rconf - min(Rconf)));
+%     Lconf = data.conf(data.choice==1);
+%     Rconf = data.conf(data.choice==2);
+% 
+%     data.conf(data.choice==1) = (Lconf - min(Lconf)) / max((Lconf - min(Lconf)));
+%     data.conf(data.choice==2) = (Rconf - min(Rconf)) / max((Rconf - min(Rconf)));
     
 
     % OR
@@ -244,6 +294,9 @@ for s = 1:length(usubj)
     % simply cap at 1/0
     % data.conf(data.conf>1) = 1;
     % data.conf(data.conf<0) = 0;
+    
+    % Normalize RTs too
+%     data.RT = (data.RT - min(data.RT)) / max((data.RT - min(data.RT)));
 
     % append each subj to a new data struct
     if s==1
@@ -255,23 +308,32 @@ for s = 1:length(usubj)
     end
 end
 data = data_new;
+data.confRaw = data_orig.conf;
+% data.RTorig  = data_orig.RT;
 clear data_new data_orig
 end
 
 
+
+
+% remove zero heading trials, insufficient data
+% for f=1:length(fnames), data.(fnames{f})(data.heading==0) = []; end
+
+
+
 %%
 if ~RTtask
-    save([folder file(1:end-4) '_nonRT_clean.mat'],'data')
+    save([folder file(1:end-4) '_nonRT_clean_Apr2022.mat'],'data')
 else
-    save([folder file(1:end-4) '_RT_clean_Jan2022.mat'],'data')
+    save([folder file(1:end-4) '_RT_clean_Apr2022.mat'],'data')
 end
 % save([file(1:end-4) '_clean.mat'],'data')
 fprintf('done.\n')
 
 
 %%%%%%%%%%% % helper function
-function [blocks,nTrialsByBlock] = blockCounts(filenames)
-blocks = unique(filenames);
+function [blocks,nTrialsByBlock,blockInds] = blockCounts(filenames)
+[blocks,~,blockInds] = unique(filenames);
 nTrialsByBlock = nan(length(blocks),1);
 for u = 1:length(blocks)
     nTrialsByBlock(u) = sum(ismember(filenames,blocks(u)));

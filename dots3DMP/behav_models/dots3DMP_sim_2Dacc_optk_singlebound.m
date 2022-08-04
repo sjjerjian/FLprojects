@@ -382,8 +382,8 @@ end
 
 
 %% save it
-cd('/Users/chris/Documents/MATLAB')
-% cd('/Users/stevenjerjian/Desktop/FetschLab/Analysis')
+% cd('/Users/chris/Documents/MATLAB')
+cd('/Users/stevenjerjian/Desktop/FetschLab/Analysis')
 save(sprintf('2DAccSim_conftask%d_%dtrs.mat',conftask,ntrials),'data','cohs','deltas','hdgs','mods','origParams','RTtask','conftask','subject')
 
 

@@ -1,88 +1,107 @@
-% function dots3DMP_regressionAnalyses(data)
-
-% Regression models
+% function dots3DMP_regressionAnalyses(data,mods,cohs,deltas,conftask,RTtask)
 
 % SJ 06/2020 started
 % SJ 10/2021 modified significantly
+% SJ 04/2022 modified again
 
-% Analysis of behavioral data
+% Choice/Correct data is going to be fitted by logistic regression (MLE method
+% under binomial assumptions i.e. trials are a list of Bernoulli coin tosses)
+% Same with PDW
+% SEP will require linear reg
 
-% 1. improvement in accuracy when combined condition is presented
+% Regression models
+
+% 1.  effect of combined condition on accuracy
+% 1b. effect of heading strength on accuracy
 % 2. effect of heading strength and RT on high bet probability/SEP
 % (logistic for PDW, multiple linear reg for SEP)
 % 3. effect of heading strength and RT on probability correct (logistic)
 % 4. improvement in accuracy when high bet is chosen
-tstatfun = @(beta,se) 1-tcdf(beta./se,length(beta)-1);
 
+
+subjs = unique(data.subj);
+
+% general tstatistic function for logistic regression to calculate p-value
+tstatfun = @(beta,se) 1-tcdf(beta./se,length(beta)-1);
 
 mods = unique(data.modality);
 cohs = unique(data.coherence);
 deltas = unique(data.delta);
 
-%% 1. improvement in accuracy with combined condition
+%% 1. improvement in accuracy with combined condition (non-conflict only)
 
+% can use choice and signed heading or correct and unsigned heading?
 J = data.delta==0;
 I = data.modality(J)==3;
-hdg = abs(data.heading(J));
+hdg = data.heading(J);
 
-D = [ones(size(hdg)), I, hdg.*I hdg, data.correct(J)];
-% D = [ones(size(data.heading)), data.PDW, (data.heading).*data.PDW (data.heading), data.choice-1];
-[beta,llik,pred,se] = logistfit_se(D);
-p = tstatfun(beta,se);
+D = [ones(size(hdg)), I, hdg.*I, hdg, data.choice(J)-1];
+[beta_AccMod,llik,pred,se] = logistfit_se(D);
+p_AccMod = tstatfun(beta_AccMod,se);
 
+outputStats.AccMod.beta = beta_AccMod;
+outputStats.AccMod.p    = p_AccMod;
 
-%% 2. effect of heading strength on confidence
+%% 1b. effect of heading strength on P(correct)
 
-J = true(size(data.heading));
-% J = data.modality==mods(2) & data.coherence==cohs(1);
+% isn't this just a subset of the above?
+% J = data.delta==0;
+% D = [ones(size(data.heading(J))), data.heading(J), data.choice(J)-1];
+% [beta_AccHdg,llik,pred,se] = logistfit_se(D);
+% p_AccHdg = tstatfun(beta_AccHdg,se);
+% 
+% outputStats.AccHdg.beta = beta_AccHdg;
+% outputStats.AccHdg.p    = p_AccHdg;
 
-if conftask == 1
+%% relationship of RT and choice certainty
+% see Figure 2, equation 4 Kiani 2014
+
+clear lm*
+for s = 1:length(subjs)+1
+    temp = data;
     
-elseif conftask == 2
-    % P(High Bet) = [1 + exp(-b0 + b1*hdg + b2*RT) ] ^ -1
+    if s<length(subjs)+1
+        fnames = fieldnames(data);
+        for f=1:length(fnames)
+            temp.(fnames{f})(~strcmp(data.subj,subjs{s})) = [];
+        end
+    end
     
-    D = [ones(size(data.heading(J))), abs(data.heading(J)), data.PDW(J)];
-%     D = [ones(size(data.heading)), data.RT, abs(data.heading), data.PDW];
-    [beta,llik,pred,se] = logistfit_se(D);
-    
-    p = tstatfun(beta,se);
-    
+    if conftask==1
+        tbl = table(abs(temp.heading),temp.RT,temp.conf,temp.modality,'VariableNames',{'Hdg','RT','Conf','Mod'});
+        lm1 = fitlm(tbl,'interactions','ResponseVar','Conf','PredictorVars',{'Hdg','RT','Mod'},'CategoricalVar','Mod');
+        lmHdgAll(s) = lm1.Coefficients.pValue(3);
+
+        for m=1:length(mods)
+            for c=1:length(cohs)
+                if m==1 && c>1, continue,end
+                J = temp.modality==mods(m) & temp.coherence==cohs(c) & temp.delta==0;
+                tbl = table(abs(temp.heading(J)),temp.RT(J),temp.conf(J),'VariableNames',{'Hdg','RT','Conf'});
+                lm2 = fitlm(tbl,'interactions','ResponseVar','Conf','PredictorVars',{'Hdg','RT'});
+                lmHdgModCoh(m,c,s) = lm2.Coefficients.pValue(3);
+            end
+        end
+    elseif conftask==2
+        % P(High Bet) = [1 + exp(-b0 + b1*hdg + b2*RT) ] ^ -1
+        
+        D = [ones(size(data.heading(J))), abs(data.heading(J)), data.PDW(J)];
+        [beta_ConfHdg,llik,pred,se] = logistfit_se(D);
+        
+        pConf = tstatfun(beta_ConfHdg,se);
+        
+    end
 end
 
-% p(3) is <<0.05, and coefficient is positive, i.e. stronger heading
-% increases probability of choosing high bet
-
-%% 3. effect of heading strength on P(correct)
-
-% P(correct) = [1 + exp(-b0 + b1*hdg + b2*RT) ] ^ -1
     
-D = [ones(size(data.heading)), abs(data.heading), data.correct];
-[beta,llik,pred,se] = logistfit_se(D);
-p = tstatfun(beta,se);
-
-% beta +ve and p significant for both RT and heading --> longer RT does
-% result in increased p(correct) (on average), stronger heading increases
-% p(correct) as well
 
 %% 3b. effect of confidence on P(correct)
 
-% is this valid given logistfit_se structure?? or must heading always be
-% the last indep variable in D
-
-D = [ones(size(data.heading)), abs(data.PDW), data.correct];
-[beta,llik,pred,se] = logistfit_se(D);
-p = tstatfun(beta,se);
-
-%% 4. examine whether higher confidence is associated with increased accuracy
-
-D = [ones(size(data.heading)), data.PDW, abs(data.heading).*data.PDW abs(data.heading), data.correct];
-% D = [ones(size(data.heading)), data.PDW, (data.heading).*data.PDW (data.heading), data.choice-1];
-[beta,llik,pred,se] = logistfit_se(D);
-p = tstatfun(beta,se);
-
-% if we use 
-% p(2:4) all significant, indicating p(high bet) improves accuracy across
-% all headings
+if conftask==1
+elseif conftask==2
+    D = [ones(size(data.heading)), data.PDW, abs(data.heading), data.correct];
+    [beta_AccConf,llik,pred,se] = logistfit_se(D);
+    p_AccConf = tstatfun(beta_AccConf,se);
+end
 
 %% 5.are confidence judgements associated with different reaction times
 
@@ -104,22 +123,6 @@ end
 
 %{
 
-
-
-% Fit regression models to choice, RT, conf data
-% Choice data is going to be fitted by logistic regression (MLE method
-% under binomial assumptions i.e. trials are a list of Bernoulli)
-
-
-
-
-cohs   = unique(data.coherence);
-hdgs   = unique(data.heading);
-deltas = unique(data.delta);
-mods   = unique(data.modality); 
-
-
-tstatfun = @(beta,se) 1-tcdf(beta./se,length(beta)-1);
 
 
 %%
@@ -222,95 +225,6 @@ D = [ones(size(data.heading(goodRT))), RT(goodRT), abs(data.heading(goodRT)), da
 
 % null hypothesis is that RT has no effect on Pcor , i.e. b1 = 0
 p = 1-tcdf(beta./se,length(beta)-1);
-
-%% does modality (comb vs ves) influence the effect of RT on p(correct)?
-
-% this is wrong...
-
-temp = data;
-removethese = data.modality==2;
-for F = 1:length(fnames)
-    eval(['temp.' fnames{F} '(removethese) = [];']);
-end
-RTtemp = RT;
-RTtemp(removethese) = [];
-
-D = [ones(size(temp.heading)), RTtemp, temp.modality==3,...
-    (temp.modality==3).*abs(temp.heading), temp.correct];
-% D = [ones(size(temp.heading)), RTtemp, temp.modality==3, abs(temp.heading),...
-%     (temp.modality==3).*abs(temp.heading), temp.correct];
-[beta,llik,pred,se] = logistfit_se(D);
-
-% null hypothesis is that modality has no influence on the relationship between RT and Pcor , i.e. b4 = 0
-p = 1-tcdf(beta./se,length(beta)-1);
-
-
-
-%%%
-%%
-% Behavioral Analyses
-
-% SJ 05/2021
-% monkey PDW task
-
-clear;clc
-
-% load 'clean' data struct
-load('lucio_20210315-20210707_clean.mat')
-
-%% 1. effect of heading on...
-% a. probability of high bet
-
-% goodRT = data.RT<=1.5;
-% [n,edges,RTbin] = histcounts(data.RT(goodRT),10);
-
-D = [ones(size(data.heading)), abs(data.heading), data.PDW];
-[beta,llik,pred,se] = logistfit_se(D);
-pHigh = 1-tcdf(beta./se,length(beta)-1);
-
-% b. probability correct
-D = [ones(size(data.heading)), abs(data.heading), data.correct];
-[beta,llik,pred,se] = logistfit_se(D);
-pCor = 1-tcdf(beta./se,length(beta)-1);
-
-%% 2. improvement in accuracy on high bets (sort of the same above, but both together)
-
-D = [ones(size(data.heading)),  data.PDW, abs(data.heading), data.correct];
-[beta,llik,pred,se] = logistfit_se(D);
-pHighAcc = 1-tcdf(beta./se,length(beta)-1);
-
-
-%% 4. effect of heading and ves/comb modality on RT  
-% not sure about this
-
-I = data.modality==3;
-D = [ones(size(data.heading)), I, abs(data.heading).*I, abs(data.heading)];
-
-X = data.modality~=2;% & abs(data.heading)<=2.5;
-D = D(X,:); % ignore visual
-RT = data.RT(X);
-
-[B,Berr,~,~,stats] = regress(RT,D);
-
-tbl = table(D(:,2),D(:,3),RT,'VariableNames',{'Hdg','Modality','RT'});
-lmHdgMod = fitlm(tbl,'RT~Hdg+Modality+Hdg*Modality');
-
-
-%% 5. effect of delta on confidence (low headings only)
-
-%K = abs(data.heading)<5;
-D = [ones(size(data.heading)), abs(data.delta) data.PDW];
-%D = D(K,:);
-[beta,llik,pred,se] = logistfit_se(D);
-pDelta = 1-tcdf(beta./se,length(beta)-1);
-
-% TO DO 
-
-% a way to incorporate RT into logistic functions
-
-% design plots of probability high bet and probability correct as a
-% function of RT quantiles (a la Kiani & Shadlen 2009 Figure 1)
-
 
 
 %}

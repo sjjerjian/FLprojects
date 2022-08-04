@@ -48,6 +48,7 @@ for d = 1:length(deltas)+1 % add extra column for all trials irrespective of del
         end
         
         n(m,c,d,h) = nansum(J);
+%         if sum(J), keyboard, end
         pRight(m,c,d,h) = nansum(J & data.choice==2) / n(m,c,d,h); % 2 is rightward!!        
         pCorrect(m,c,d,h) = nansum(J & data.correct) / n(m,c,d,h);
         

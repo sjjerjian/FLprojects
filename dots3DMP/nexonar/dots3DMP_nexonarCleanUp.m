@@ -19,9 +19,7 @@ function [nexPDS,nexClean,exitflag] = dots3DMP_nexonarCleanUp(nex,PDS)
 % copied from the previous trial, which is obviously screwing up
 % conditional analyses, because the match with nex.nexdata is lost
 % I guess this is because the UDP packet on a given trial is dropped, and
-% the way the FLnexonar.cs code is written, the
-% previous trial's info is still in the workspace, and so gets pulled in to
-% the current trial
+% the way the FLnexonar.cs code is written, the previous trial's info is still in the workspace, and so gets pulled in to the current trial
 
 % another thing to be careful about - nexonar data streaming only starts at the motion state,
 % so trials with early breakfixes will never be streamed to Nexonar and therefore not exist in nex, 
@@ -29,26 +27,37 @@ function [nexPDS,nexClean,exitflag] = dots3DMP_nexonarCleanUp(nex,PDS)
 % ...so this code also makes a nexPDS struct that matches the length of PDS, which
 % we can add to the data struct later (see addNexonarToDataStruct flag in
 % PLDAPS_preprocessing)
+% TODO: maybe we should start nexonar streaming a bit earlier?
+% now sending a nexStart and nexEnd event to Trellis for purpose of
+% alignment with recording, but might want a bit more data either side of
+% motion
 
 
-% nexClean will be the same as nex, but corrected
-% nexPDS contains just the nexdata, with the same length as PDS.data
+% nexClean will be the same as nex, but 'corrected'
+% nexPDS contains just the nexdata, with the same length as PDS.data, so
+% can be added to data struct in createDataStructure
 nexClean = nex;
 nexPDS = cell(1,length(PDS.data));
 
-% badOutcomeTrials = diff(nexClean.behavior.RT)==0;
-badInfoTrials    = diff(nexClean.pldaps.trialSeed)==0;
 
-badInfoTrialsIndex = find(badInfoTrials)+1;
+% indices of trials where trial info seems to be duplicated
+badInfoTrialsIndex = find(diff(nexClean.pldaps.trialSeed)==0)+1;
 
 % reassign the trial index as needed, if the next trial was a good one in
 % PDS, or there are no more possible breakfixes until the next 'good Info' trial
+% SJ 01-19-2022, there seemed to be a bug here! fixed it?
+% need to double check the logic here and comment, because it's clearly
+% confusing
+
+% for each of these duplicated trials, 
 for t=1:length(badInfoTrialsIndex)
     done=0;
-    tr = nexClean.pldaps.iTrial(badInfoTrialsIndex(t))+1;
+    
+    tr  = nexClean.pldaps.iTrial(badInfoTrialsIndex(t));
+
     while ~done
-        if PDS.data{tr}.behavior.goodtrial || (nexClean.pldaps.iTrial(tr) == tr+1)
-            nexClean.pldaps.iTrial(badInfoTrialsIndex(t)) = tr;
+        if PDS.data{tr}.behavior.goodtrial || (nexClean.pldaps.iTrial(badInfoTrialsIndex(t)+1) == tr)
+            nexClean.pldaps.iTrial(badInfoTrialsIndex(t)) = tr+1;
             done = 1;
         end
         tr = tr+1;
@@ -75,7 +84,13 @@ for tr=1:nexTrs
     iTrial = nexClean.pldaps.iTrial(tr);
     
     for f=1:length(cond_fnames)
-        nexClean.conditions.(cond_fnames{f})(tr) = PDS.conditions{iTrial}.stimulus.(cond_fnames{f});
+        if strcmp(cond_fnames{f},'headingFreq')
+            nexClean.conditions.headingFreq(tr) = PDS.conditions{iTrial}.stimulus.freq;
+        elseif strcmp(cond_fnames{f},'headingAmpl')
+            nexClean.conditions.headingAmpl(tr) = PDS.conditions{iTrial}.stimulus.ampl;
+        else
+            nexClean.conditions.(cond_fnames{f})(tr) = PDS.conditions{iTrial}.stimulus.(cond_fnames{f});
+        end
     end
 
     for f=1:length(behav_fnames) 
@@ -89,12 +104,16 @@ end
 
 
 % sanity check
-badOutcomeTrials = diff(nexClean.behavior.RT)==0;
-
-% 0 if good, 1 if bad
-exitflag = sum(badOutcomeTrials)>0;
-
-if sum(badOutcomeTrials)>0
-    disp('Something went wrong, corrupted trials still remaining')
-    keyboard
+try
+    badOutcomeTrials = diff(nexClean.behavior.RT)==0;
+    
+    % 0 if good, 1 if bad
+    exitflag = sum(badOutcomeTrials)>0;
+    
+    if sum(badOutcomeTrials)>0
+        disp('Something went wrong, corrupted trials still remaining')
+        keyboard
+    end
+catch
+    exitflag = 0;
 end

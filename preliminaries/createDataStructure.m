@@ -13,11 +13,12 @@ data.choice = []; % initialize this one field, you'll see why
 
 fieldExcludes = {'leftEarly','tooSlow','fixFP','FPHeld','eyeXYs','corrLoopActive','goodtrial', ...
                  'timeTargDisappears','probOfMemorySaccade','leftTargR','leftTargTheta', ...
-                 'rightTargR','rightTargTheta','audioFeedback','textFeedback','rewardDelay','reward'};
+                 'rightTargR','rightTargTheta','audioFeedback','textFeedback','rewardDelay','fixRewarded'};
 
 % now search localDir again for matching files and extract the desired variables from PDS
 allFiles = dir(localDir);
-if addNexonarDataToStruct, allNexFiles = dir([localDirNex '/*.mat']); end
+
+try if addNexonarDataToStruct, allNexFiles = dir([localDirNex '/*.mat']); end; catch, end
 
 for d = 1:length(dateRange)
     for f = 3:length(allFiles) % skip 1+2, they are are "." and ".."
@@ -30,7 +31,6 @@ for d = 1:length(dateRange)
             
             try
                 
-
                 load([localDir allFiles(f).name],'-mat'); % load it. this is the time limiting step;
                                                           % will eventually change how data are saved to make this faster
                 if exist('PDS','var')
@@ -54,8 +54,10 @@ for d = 1:length(dateRange)
                             fnames = fieldnames(PDS.conditions{t}.stimulus);
                             fnames(ismember(fnames,fieldExcludes)) = [];
                             for F = 1:length(fnames)
-                                eval(['data.' fnames{F} '(T,1) = PDS.conditions{t}.stimulus.' fnames{F} ';']);
+%                                 eval(['data.' fnames{F} '(T,1) = PDS.conditions{t}.stimulus.' fnames{F} ';']);
+                                data.(fnames{F})(T,1) = PDS.conditions{t}.stimulus.(fnames{F});
                             end
+                            
                                 % EXCEPT! dot duration, and anything else in
                                 % PDS.data.stimulus, i.e. things that are generated
                                 % on each trial and not pre-configured. For now
@@ -67,20 +69,17 @@ for d = 1:length(dateRange)
                                 data.dotPos{T,1} = PDS.data{t}.stimulus.dotPos;
                             end
                             
-                            % to store all the reward amounts
-                            % maybe don't need this, all reward analyses
-                            % will have to be done within session first, so
-                            % go to cleaned-up PDS files
-%                             if isfield(PDS.data{t},'reward')
-%                                 fnames = fieldnames(PDS.data{t}.reward);
-%                                 fnames(ismember(fnames,fieldExcludes)) = [];
-%                                 for F = 1:length(fnames)
-%                                     eval(['data.reward.' fnames{F} '(T,1) = PDS.data{t}.reward.' fnames{F} ';']);
-%                                 end
-%                             end
+                            % reward variables
+                            if saveRewardData
+                                fnames = fieldnames(PDS.data{t}.reward);
+                                fnames(ismember(fnames,fieldExcludes)) = [];
+                                for F = 1:length(fnames)
+                                    %                                 eval(['data.' fnames{F} '(T,1) = PDS.data{t}.reward.' fnames{F} ';']);
+                                    data.(fnames{F})(T,1) = PDS.data{t}.reward.(fnames{F});
+                                end
+                            end
                             
-                            % SJ 10/2021 not true 'RT', need to replace
-                            % with time that eyes leave choice target?
+                            % SJ 10/2021 'pseudo-RT for sequential PDW'
 %                             if isfield(PDS.data{t},'postTarget')
 %                                 try
 %                                     data.confRT(T,1) = PDS.data{t}.postTarget.timeConfTargEntered - PDS.data{t}.postTarget.timeToConfidence;
@@ -97,7 +96,9 @@ for d = 1:length(dateRange)
                                 % SJ 07-2020, correct defaults to logical but
                                 % then gives error for NaN - use double instead
                                 if strcmp(fnames{F},'correct'), data.correct(T,1) = 0; end
-                                eval(['data.' fnames{F} '(T,1) = PDS.data{t}.behavior.' fnames{F} ';']);
+%                                 eval(['data.' fnames{F} '(T,1) = PDS.data{t}.behavior.' fnames{F} ';']);
+                                data.(fnames{F})(T,1) = PDS.data{t}.behavior.(fnames{F});
+
                             end
                                                         
                             % noticed a couple extra things we need, not in either place -CF 02-2021
@@ -114,18 +115,20 @@ for d = 1:length(dateRange)
                     end
                     
                     % SJ 08-2021, adding Nexonar data in at this point
-                    if addNexonarDataToStruct
-                        matchingNexFile = cellfun(@(x) strcmp(x(1:25), allFiles(f).name(1:25)), {allNexFiles.name});
-                        if sum(matchingNexFile)==1
-                            load([localDirNex allNexFiles(matchingNexFile).name],'-mat'); % load the nexonar data
-                            
-                            nexPDS = dots3DMP_nexonarCleanUp(nex,PDS);
-                            data.nexonar = nexPDS';
-
-                        else
-                            % no matching nexonar data (not recorded?)
-                            % or more than one matching file (but this should be impossible)
-                            disp(['could not find matching nexonar data for ' allFiles(f).name '...skipping'])
+                    try
+                        if addNexonarDataToStruct
+                            matchingNexFile = cellfun(@(x) strcmp(x(1:25), allFiles(f).name(1:25)), {allNexFiles.name});
+                            if sum(matchingNexFile)==1
+                                load([localDirNex allNexFiles(matchingNexFile).name],'-mat'); % load the nexonar data
+                                
+                                nexPDS = dots3DMP_nexonarCleanUp(nex,PDS);
+                                data.nexonar = nexPDS';
+                                
+                            else
+                                % no matching nexonar data (not recorded?)
+                                % or more than one matching file (but this should be impossible)
+                                disp(['could not find matching nexonar data for ' allFiles(f).name '...skipping'])
+                            end
                         end
                     end
                     

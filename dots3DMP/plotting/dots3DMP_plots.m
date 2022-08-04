@@ -1,4 +1,4 @@
-function dots3DMP_plots(parsedData,mods,cohs,deltas,hdgs,conftask,RTtask)
+function fh = dots3DMP_plots(parsedData,mods,cohs,deltas,hdgs,conftask,RTtask)
 
 % first, for all trials irrespective of delta
 D = length(deltas)+1; % (the extra column we made for pooling across deltas)
@@ -10,7 +10,7 @@ D = find(deltas==0);
 clr{1} = {'ko','ro','bo'};
 clr{2} = {'ko','ro','bo'};
 clr{3} = {'ko','yo','go'};
-figure(101+D);
+fh(1) = figure(101+D);
 % set(gcf,'Color',[1 1 1],'Position',[300 1000 450+300*(length(cohs)-2) 200+150*(conftask>0)+150*RTtask],'PaperPositionMode','auto'); clf;
 set(gcf,'Color',[1 1 1],'Position',[200 80 700 900],'PaperPositionMode','auto'); clf;
 for c = 1:length(cohs)
@@ -27,7 +27,7 @@ for c = 1:length(cohs)
         ylim([0 1]);
         if length(mods)>1; title(['coh = ' num2str(cohs(c))]); end
     end
-    legend(h,'vestib','visual','comb','Location','northwest');
+    legend(h,'ves','vis','comb','Location','northwest');
     xlabel('heading angle (deg)'); ylabel('P(right)');
     try changeAxesFontSize(gca,15,15); catch; end
     
@@ -39,8 +39,8 @@ for c = 1:length(cohs)
             ylim([0 1]); hold on;
         end
         xlabel('heading angle (deg)');
-        if conftask==1, ylabel('SEP (''confidence'', %)');
-        elseif conftask==2, ylabel('P(high bet)');
+         if conftask==1, ylim([0 1.25]); ylabel('SEP (''confidence'', %)');
+        elseif conftask==2, ylim([0 1]); ylabel('P(high bet)');
         end
         try changeAxesFontSize(gca,15,15); catch; end
     end
@@ -68,7 +68,7 @@ clr{2} = {'b^','c^','g^'};
 clr{3} = {'bo','co','go'};
 
 clear L;
-figure(108);
+fh(2) = figure(108);
 % set(gcf,'Color',[1 1 1],'Position',[50 20 450+300*(length(cohs)-2) 200+150*(conftask>0)+150*RTtask],'PaperPositionMode','auto'); clf;
 set(gcf,'Color',[1 1 1],'Position',[900 80 700 900],'PaperPositionMode','auto'); clf;
 for c = 1:length(cohs)
@@ -94,10 +94,10 @@ for c = 1:length(cohs)
             h(d) = errorbar(hdgs, squeeze(parsedData.confMean(3,c,d,:)), squeeze(parsedData.confSE(3,c,d,:)), [clr{c}{d} '-'], 'linewidth', 1.5);
             hold on;
         end
-        ylim([0 1]); 
+        
         xlabel('heading angle (deg)'); 
-        if conftask==1, ylabel('SEP (''confidence'', %)');
-        elseif conftask==2, ylabel('P(high bet)');
+        if conftask==1, ylim([0 1.25]); ylabel('SEP (''confidence'', %)');
+        elseif conftask==2, ylim([0 1]); ylabel('P(high bet)');
         end
         try changeAxesFontSize(gca,15,15); catch; end
     end 

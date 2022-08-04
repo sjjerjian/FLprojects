@@ -12,16 +12,16 @@ if conftask == 0, error('Cannot split data by confidence for non-conf task!'); e
 %% parse data
 % create and use matrices of summary data indexed by variables of interest
 
-n = nan(length(mods),length(cohs),length(deltas)+1,length(hdgs),2);
+n = nan(length(mods)+1,length(cohs),length(deltas)+1,length(hdgs),2);
                                % add extra column^ for pooling all trials irrespective of delta
 [pRight, RTmean, RTse, confMean, confSE] = deal(n);
 
 xVals = hdgs(1):0.1:hdgs(end);
-yVals = nan(length(mods),length(cohs),length(deltas)+1,length(xVals),2);
+yVals = nan(length(mods)+1,length(cohs),length(deltas)+1,length(xVals),2);
 
-B = cell(length(mods),length(cohs),length(deltas)+1,2);
-stats = cell(length(mods),length(cohs),length(deltas)+1,2);
-plotLogistic = nan(length(mods),length(cohs),length(deltas)+1,2);
+B = cell(length(mods)+1,length(cohs),length(deltas)+1,2);
+stats = cell(length(mods)+1,length(cohs),length(deltas)+1,2);
+plotLogistic = nan(length(mods)+1,length(cohs),length(deltas)+1,2);
 
 if conftask==1
     % currently just a median split across subjs
