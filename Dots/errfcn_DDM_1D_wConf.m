@@ -8,6 +8,7 @@ param = getParam(param, guess, fixed);
 
 k = param(1);
 B = abs(param(2)); % don't accept negative bound heights
+sigma = 1; % not a free param
 theta = abs(param(3)); %or negative thetas
 theta2 = theta; % allows expanded model with separate thetas for each choice (currently unused)
 alpha = param(4); % base rate of low-conf choices

@@ -15,7 +15,7 @@ clear all; close all;
 load tempsim.mat % temp, for param recovery
 
 options.RTtask = 1;
-options.conftask = 2;
+options.conftask = 2; % 1=continuous, 2=PDW
 cohs = unique(data.scoh);
 
 % parse trial data into aggregated and other support vars
@@ -25,7 +25,7 @@ if ~exist('parsedData','var')  % e.g., if simulation was run
 end
 
 % optional [data will be plotted below regardless, along with the fits]
-% Dots_plot(parsedData,cohs,options.conftask,options.RTtask)
+Dots_plot(parsedData,cohs,options.conftask,options.RTtask)
 
 
 %% now the fitting itself
@@ -33,7 +33,7 @@ end
 
 %****** first select which model to fit ********
 % modelID=1; options.errfcn = @errfcn_DDM_1D_wConf;      % 1D DDM with threshold on log odds, usually for var dur [Kiani 09 (FP4)]
-modelID=2; options.errfcn = @errfcn_DDM_2D_wConf_noMC; % 2D DDM aka anticorrelated race, for RT+conf [Kiani 14 / van den Berg 16 (WolpertMOI)]
+% modelID=2; options.errfcn = @errfcn_DDM_2D_wConf_noMC; % 2D DDM aka anticorrelated race, for RT+conf [Kiani 14 / van den Berg 16 (WolpertMOI)]
 
 % options.errfcn = @errfcn_DDM_2D_wConf_noMC_signed; modelID=2; % as above, but with signed cohs
 %***********************************************
@@ -60,23 +60,23 @@ switch modelID
             alpha = origParams.alpha;
             Tnd = origParams.TndMean/1000; % convert to s
         else
-            k = 0.6; % sensitivity parameter
-            B = 15; % bound height
+            k = 0.4; % sensitivity parameter
+            B = 30; % bound height
             theta = 0.8; % criterion (in log odds correct) for betting high
             alpha = 0.1; % base rate of low-bet choices
-            Tnd = 0.3; % non-decision time (s)
+            Tnd = 1.5; % non-decision time (s)
         end
         guess = [k B theta alpha Tnd];
         fixed = [0 0 0     0     0  ]; % can fix some params and fit the others, or fix all to hand-tune
         
     case 2 %errfcn_DDM_2D_wConf
         
-        if exist('origParams','var') % simulation
+        if exist('origParams','var') % i.e., from simulation
             k = origParams.k;
             B = origParams.B;
             theta = origParams.theta;
             alpha = origParams.alpha;
-            Tnd = origParams.TndMean/1000;
+            Tnd = origParams.TndMean/1000; % convert to s
         else
             k = 20;
             B = 1;
