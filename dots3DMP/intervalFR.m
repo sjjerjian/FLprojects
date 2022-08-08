@@ -1,4 +1,4 @@
-function [meanFR,semFR,trialFR,tInt,groups,groupIC] = intervalFR(spiketimes,ev1,ev2,groupVar)
+function [meanFR,semFR,trialFR,tInt,groups,groupIC] = intervalFR(spiketimes,ev1,ev2,groupVar,resort)
 %
 % calculate firing rate within specified intervals for given set of
 % spiketimes, over indep variable and grouping variable (indepVar will be
@@ -17,6 +17,8 @@ function [meanFR,semFR,trialFR,tInt,groups,groupIC] = intervalFR(spiketimes,ev1,
 % columns can also be specified relative to an event e.g. stimOn+2
 %
 % TO DO clearer documentation on inputs + outputs and usage
+
+if nargin<5,resort=0;end
 
 [ntrs,nInt] = size(ev1);
 if nargin<4 || isempty(groupVar)
@@ -48,7 +50,9 @@ end
 
 % reshape so that 'heading' or main independent variable is separate axis
 % to other conditions, makes plotting easier
+if resort
 uhdgs=unique(groupVar(:,end));
 meanFR = reshape(meanFR,length(uhdgs),[],size(meanFR,2));
 semFR  = reshape(semFR,length(uhdgs),[],size(semFR,2));
 groups = reshape(groups,length(uhdgs),[],size(groups,2));
+end
