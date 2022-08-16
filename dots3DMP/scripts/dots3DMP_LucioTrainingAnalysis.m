@@ -8,13 +8,13 @@ conftask = 2; % 1=colorbars, 2=PDW
 
 subject = 'lucio';
 paradigm = 'dots3DMP';
-dateRange = 20210315:20210512;
+dateRange = 20210315:20220808;
 
 
 %%
 % change to whatever local folder data is stored in
-% folder = '/Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data/';
-folder = '/Users/chris/Documents/MATLAB/PLDAPS_data/';
+folder = '/Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data/';
+% folder = '/Users/chris/Documents/MATLAB/PLDAPS_data/';
 
 file = [subject '_' num2str(dateRange(1)) '-' num2str(dateRange(end)) '.mat'];
 load([folder file], 'data');

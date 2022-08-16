@@ -21,7 +21,7 @@ switch subject
     
     case 'lucio'
 %         load('lucio_20210315-20210805_clean.mat') % recent lucio data, PDW + RT
-        load('lucio_20211101-20220602_clean.mat') % recent lucio data, PDW + RT
+%         load('lucio_20211101-20220602_clean.mat') % recent lucio data, PDW + RT
 
         conftask = 2; % 1=colorbars, 2=PDW
         RTtask   = 1;
