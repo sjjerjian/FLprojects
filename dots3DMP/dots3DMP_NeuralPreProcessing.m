@@ -48,7 +48,7 @@
 % SJ 06-2022 significant updates
 %           Fixed issues with processing of mksort data, timestamps of
 %           multiple recordings. 
-%           Switched dataCell from {} to () struct format.
+%           Switched dataCell from {} to dataStruct () struct format.
 
 clear all
 close all
@@ -68,7 +68,7 @@ paradigms = {'dots3DMPtuning','dots3DMP','RFMapping','VesMapping'};
 subject = 'lucio';
 
 % dateRange = [20220223:20220331 20220512:20220531];
-dateRange = 20220615;
+dateRange = 20220805:20220812;
 
 dateStr = num2str(dateRange(1));
 for d = 2:length(dateRange)
@@ -81,7 +81,7 @@ end
 keepMU   = 1; 
 useSCP = 1;
 useVPN = 0;
-overwriteLocalFiles = 0; % set to 1 to always use the server copy
+overwriteLocalFiles = 1; % set to 1 to always use the server copy
 
 % SJ 04-2022
 % download associated PDS data files (we'll need this for some cleanup)
@@ -99,4 +99,4 @@ remoteDir = ['/var/services/homes/fetschlab/data/' subject '/' subject '_neuro/'
 %     mountDir  = ['/Volumes/homes/fetschlab/data/' subject '/' subject '_neuro/'];
 
 getNeuralEventsInfo; % grab the task events and info files
-createSessionData;   % create the dataCell
+createSessionData;   % create the dataStruct

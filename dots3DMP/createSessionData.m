@@ -1,15 +1,14 @@
 %% create SessionData
 
 % create a struct with neural Data for each session, see
-% dots3DMP_NeuralPreProcessing for explanation of dataCell structure
+% dots3DMP_NeuralPreProcessing for explanation of dataStruct structure
 
 % fields in 'events' which are time-based
 tEvs   = {'trStart','fpOn','fixation','reward','stimOn','stimOff','saccOnset','targsOn','targHold','postTargHold','reward','breakfix'};
 
-% dataCell = {};
-dataCell = struct();
+dataStruct = struct();
 
-% sess = length(dataCell); % eventually allow for this code to append to existing dataCell if desired, instead of always starting from blank
+% sess = length(dataStruct); % eventually allow for this code to append to existing dataStruct if desired, instead of always starting from blank
 sess = 0;
 
 sflds = {'subject','date','pen','gridxy','probe_type','probe_ID'};
@@ -22,14 +21,8 @@ for n = 1:length(currentFolderList)
     load(fullfile(localDir,[subject currentFolderList{n} 'dots3DMP_info.mat']));
     fprintf('Adding data from %s, %d of %d\n',currentFolderList{n},n,length(currentFolderList))
     
-    % we want 1 entry in dataCell for each unique 'recording session' -
-    % each set
-    
+    % we want 1 entry in dataStruct for each unique 'recording set'
     [unique_sets,~,ic] = unique(info.rec_group);
-    
-    
-    % SJ TO DO add some fprintf statements to report progress and what is
-    % being added
     
     for u=1:length(unique_sets)
         
@@ -39,27 +32,21 @@ for n = 1:length(currentFolderList)
             mountDir = sprintf('/Volumes/homes/fetschlab/data/%s/%s_neuro/%d/%s%d_%d/',subject,subject,info.date,subject,info.date,unique_sets(u));
             try 
                 sp = loadKSdir(mountDir);
-                [spikeAmps, spikeDepths, templateDepths, tempAmps, tempsUnW, templateDuration, waveforms] = templatePositionsAmplitudes(sp.temps, sp.winv, sp.ycoords, sp.spikeTemplates, sp.tempScalingAmps);
-                [~,max_site] = max(max(abs(sp.temps),[],2),[],3);
-                chs = sp.ycoords(max_site);
-                depths = templateDepths;
+%                 [spikeAmps, spikeDepths, templateDepths, tempAmps, tempsUnW, templateDuration, waveforms] = templatePositionsAmplitudes(sp.temps, sp.winv, sp.ycoords, sp.spikeTemplates, sp.tempScalingAmps);
+%                 [~,max_site] = max(max(abs(sp.temps),[],2),[],3);
+%                 chs = sp.ycoords(max_site);
+%                 depths = templateDepths;
             catch
-                fprintf('Could not load kilosort sp struct for %s, set %d',info.date,unique_sets(u));
+                fprintf('Could not load kilosort sp struct for %d, set %d',info.date,unique_sets(u));
                 continue
             end
         end
         
         sess = sess+1;
-        
-        % assign fields relevant to given recording 'set'/session
-%         for f=1:length(sflds)
-%             dataCell{sess}.info.(sflds{f}) = info.(sflds{f});
-%         end
-%         dataCell{sess}.info.set = unique_sets(u);
-        
-        dataCell(sess).date = info.date;
-        dataCell(sess).info = info;
-        dataCell(sess).set = unique_sets(u);
+
+        dataStruct(sess).date = info.date;
+        dataStruct(sess).info = info;
+        dataStruct(sess).set = unique_sets(u);
         
         % loop over paradigms (this is slightly different to how the
         % nsEvents are created!)
@@ -116,31 +103,28 @@ for n = 1:length(currentFolderList)
                 timeStampsShifted = thisParEvents.analogInfo.timeStampsShifted ./ double(thisParEvents.analogInfo.Fs);
 
                 % do some concatenation in pldaps and events fields in case
-                % the same par+block is split over multiple files (unlikely)
+                % the same par+block is split over multiple trellis files
+                
                 nTr    = length(thisParEvents.Events.trStart);
                 fnames = fieldnames(thisParEvents.Events);
                 for f=1:length(fnames)
                     
                     if ismember(fnames{f},tEvs)
-                        %                     dataCell{sess}.data.(paradigms{par}).events.(fnames{f})(currPos+1:currPos+nTr) = thisParEvents.Events.(fnames{f}) + timeStampsShifted(1);
-                        dataCell(sess).data.(paradigms{par}).events.(fnames{f})(currPos+1:currPos+nTr) = thisParEvents.Events.(fnames{f})  + timeStampsShifted(1);
+                        dataStruct(sess).data.(paradigms{par}).events.(fnames{f})(currPos+1:currPos+nTr) = thisParEvents.Events.(fnames{f})  + timeStampsShifted(1);
                     else
-                        %                     dataCell{sess}.data.(paradigms{par}).events.(fnames{f})(currPos+1:currPos+nTr) = thisParEvents.Events.(fnames{f});
-                        dataCell(sess).data.(paradigms{par}).events.(fnames{f})(currPos+1:currPos+nTr) = thisParEvents.Events.(fnames{f});
+                        dataStruct(sess).data.(paradigms{par}).events.(fnames{f})(currPos+1:currPos+nTr) = thisParEvents.Events.(fnames{f});
                     end
                     
                 end
                 fnames = fieldnames(thisParEvents.pldaps);
                 for f=1:length(fnames)
                     if strcmp(fnames{f},'unique_trial_number') && ~iscell(nsEvents.pldaps.unique_trial_number)
-%                         dataCell{sess}.data.(paradigms{par}).pldaps.(fnames{f})(currPos+1:currPos+nTr,:) = thisParEvents.pldaps.(fnames{f});
-                        dataCell(sess).data.(paradigms{par}).pldaps.unique_trial_number(currPos+1:currPos+nTr,:) = thisParEvents.pldaps.(fnames{f});
+                        dataStruct(sess).data.(paradigms{par}).pldaps.unique_trial_number(currPos+1:currPos+nTr,:) = thisParEvents.pldaps.(fnames{f});
                     else
-%                         dataCell{sess}.data.(paradigms{par}).pldaps.(fnames{f})(currPos+1:currPos+nTr) = thisParEvents.pldaps.(fnames{f});
-                        dataCell(sess).data.(paradigms{par}).pldaps.(fnames{f})(currPos+1:currPos+nTr) = thisParEvents.pldaps.(fnames{f});
+                        dataStruct(sess).data.(paradigms{par}).pldaps.(fnames{f})(currPos+1:currPos+nTr) = thisParEvents.pldaps.(fnames{f});
                     end
                 end
-                dataCell(sess).data.(paradigms{par}).pldaps.blockNum2(currPos+1:currPos+nTr,:) = utf;
+                dataStruct(sess).data.(paradigms{par}).pldaps.blockNum2(currPos+1:currPos+nTr,:) = utf;
                 currPos = currPos+nTr;
 
                 % deal with single electrode recording neural data
@@ -230,21 +214,18 @@ for n = 1:length(currentFolderList)
             cids = sp.cids(inds);
             cgs  = sp.cgs(inds); 
             
-%             dataCell{sess}.data.(paradigms{par}).cluster_id = cids;
-%             dataCell{sess}.data.(paradigms{par}).cluster_type = cgs;
-            
-            dataCell(sess).data.(paradigms{par}).cluster_id = cids;
-            dataCell(sess).data.(paradigms{par}).cluster_type = cgs;
+            dataStruct(sess).data.(paradigms{par}).cluster_id = cids;
+            dataStruct(sess).data.(paradigms{par}).cluster_type = cgs;
+            dataStruct(sess).data.(paradigms{par}).cluster_labels = {'MU','SU'};
 
             % SJ 06/13/2022 
-%             dataCell(sess).data.(paradigms{par}).chs = chs;
-%             dataCell(sess).data.(paradigms{par}).depths = depths;
+%             dataStruct(sess).data.(paradigms{par}).chs = chs;
+%             dataStruct(sess).data.(paradigms{par}).depths = depths;
 
             for unit=1:sum(inds)
                 
                 theseSpikes = sp.clu==cids(unit) & thisParSpikes;   
-%                 dataCell{sess}.data.(paradigms{par}).spiketimes{unit} = spikeTimes(theseSpikes);
-                dataCell(sess).data.(paradigms{par}).spiketimes{unit} = spikeTimes(theseSpikes);
+                dataStruct(sess).data.(paradigms{par}).spiketimes{unit} = spikeTimes(theseSpikes);
 
             end
             
@@ -259,4 +240,4 @@ end
 
 file = [subject '_' num2str(dateRange(1)) '-' num2str(dateRange(end)) '_neuralData.mat'];
 disp('saving...');
-save([localDir(1:length(localDir)-length(subject)-7) file], 'dataCell');
+save([localDir(1:length(localDir)-length(subject)-7) file], 'dataStruct');
