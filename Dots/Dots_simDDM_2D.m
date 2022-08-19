@@ -17,7 +17,7 @@ confModel = 'evidence+time';
 % confModel = 'time_only';
 % ^ these require different units for theta, time and evidence respectively
 
-ntrials = 50000;
+ntrials = 60000;
 
 dbstop if error
 
@@ -27,22 +27,41 @@ coh = randsample(cohs,ntrials,'true')';
 dT = 1; % ms
 max_dur = 3000;
 
+allowNonHB = 0; % allow non-hit-bound trials or not (if yes, RT = max_dur)
+% but modeling becomes difficult due to unabsorbed probability
+
+
 %% params
 % these are very different from 1D model, k is larger and bound is smaller,
 % maybe because of the way images_dtb is written (?)
 
 k = 18; % drift rate coeff (conversion from %coh to units of DV)
-B = 0.7; % bound height (0.6)
+B = 0.7; % bound height
     mu = k*coh; % mean of momentary evidence (drift rate)
-sigma = 1; % unit variance (Moreno-Bote 2010)           
+sigma = 1; % unit variance (Moreno-Bote 2010), not a free param           
 theta = 1.2; % threshold for high bet in units of log odds correct (Kiani & Shadlen 09, 14)
 
 % % alternate slate of params, to check robustness of fitting code (pre-param recovery)
 % k = 8; % drift rate coeff (conversion from %coh to units of DV)
-% B = 0.9;  % bound height (0.6)
+% B = 0.9;  % bound height
 %     mu = k*coh; % mean of momentary evidence (drift rate)
-% sigma = 1; % unit variance (Moreno-Bote 2010)           
+% sigma = 1; % unit variance (Moreno-Bote 2010), not a free param             
 % theta = 1.6; % threshold for high bet in units of log odds correct (Kiani & Shadlen 09, 14)
+
+% % for higher pHB
+% k = 24; % drift rate coeff (conversion from %coh to units of DV)
+% B = 0.4; % bound height
+%     mu = k*coh; % mean of momentary evidence (drift rate)
+% sigma = 1; % unit variance (Moreno-Bote 2010), not a free param             
+% theta = 1.2; % threshold for high bet in units of log odds correct (Kiani & Shadlen 09, 14)
+
+% % for lower pHB
+% k = 18; % drift rate coeff (conversion from %coh to units of DV)
+% B = 1; % bound height
+%     mu = k*coh; % mean of momentary evidence (drift rate)
+% sigma = 1; % unit variance (Moreno-Bote 2010), not a free param             
+% theta = 1.2; % threshold for high bet in units of log odds correct (Kiani & Shadlen 09, 14)
+% max_dur = 2000;
 
 
 alpha = 0; % base rate of low bets (offset to PDW curve, as seen in data)
@@ -109,7 +128,7 @@ for n = 1:ntrials
     
     % because Mu is signed according to direction (positive=right),
     % dv(:,1) corresponds to evidence favoring rightward, not evidence
-    % favoring the correct decision as in Kiani eqn. 3 and images_dtb
+    % favoring the correct decision [as in Kiani eqn. 3 and images_dtb]
 
     % decision outcome
     cRT1 = find(dv(1:max_dur,1)>=B, 1); % time of first bound crossing(s):
@@ -130,18 +149,25 @@ for n = 1:ntrials
         choice(n) = -1;
     % (3) neither hits bound,
     elseif isempty(cRT1) && isempty(cRT2)
-        RT(n) = max_dur;
-            % which DV matters for confidence if neither hits bound? 
-            % SJ 07/2020 logOddsCorrMap is fixed, so just shift finalV up
-            % so that 'winner' did hit bound,
-        whichWon = dv(max_dur,:)==max(dv(max_dur,:));
-        finalV(n) = dv(end,~whichWon) + B-dv(end,whichWon);
-        % ^  shifting the losing dv up by whatever the
-        % difference is between the bound and the winning dv
+        if allowNonHB
+            RT(n) = max_dur;
+                % which DV matters for confidence if neither hits bound? 
+                % SJ 07/2020 logOddsCorrMap is fixed, so just shift finalV up
+                % so that 'winner' did hit bound,
+            whichWon = dv(max_dur,:)==max(dv(max_dur,:));
+            finalV(n) = dv(end,~whichWon) + B-dv(end,whichWon);
+            % ^  shifting the losing dv up by whatever the
+            % difference is between the bound and the winning dv
 
-        hitBound(n) = 0;
-        a = [1 -1];
-        choice(n) = a(whichWon);
+            hitBound(n) = 0;
+            a = [1 -1];
+            choice(n) = a(whichWon);
+        else
+            RT(n) = NaN;
+            finalV(n) = NaN;
+            hitBound(n) = 0;
+            choice(n) = NaN;
+        end
     % (4) or both do
     else
         RT(n) = min([cRT1 cRT2]);
@@ -150,31 +176,35 @@ for n = 1:ntrials
         hitBound(n) = 1;
         a = [1 -1];
         choice(n) = a(whichWon);
+    end    
+    
+    if hitBound(n)==0 && allowNonHB==0
+        logOddsCorr(n) = NaN;
+        conf(n) = NaN;
+        pdw(n) = NaN;
+    else
+        diffV = abs((P.y+B)-finalV(n));
+        diffT = abs(R.t*1000-RT(n));
+        switch confModel
+            case 'evidence+time'
+                % use map to look up log-odds that the motion is rightward
+                thisV = find(diffV==min(diffV));
+                thisT = find(diffT==min(diffT));
+                logOddsCorr(n) = P.logOddsCorrMap(thisV(1), thisT(1));
+
+                expectedPctCorr(n) = logistic(logOddsCorr(n)); % convert to pct corr
+                conf(n) = 2*expectedPctCorr(n) - 1; % convert to 0..1
+                pdw(n) = logOddsCorr(n) > theta;
+            case 'evidence_only'
+                conf(n) = max(diffV) ./ range(P.y);
+                pdw(n) = max(diffV) > theta;
+            case 'time_only'
+                conf(n) = 1 - (RT(n)/1000) ./ range(P.t);
+                pdw(n) = (RT(n)/1000) < theta;
+        end
+        if isnan(conf(n)), conf(n)=0; end % if dvs are almost overlapping, force conf to zero as it can sometimes come out as NaN
     end
     
-    diffV = abs((P.y+B)-finalV(n));
-    diffT = abs(R.t*1000-RT(n));
-            
-    switch confModel
-        case 'evidence+time'
-            % use map to look up log-odds that the motion is rightward
-            thisV = find(diffV==min(diffV));
-            thisT = find(diffT==min(diffT));
-            logOddsCorr(n) = P.logOddsCorrMap(thisV(1), thisT(1));
-            
-            expectedPctCorr(n) = logistic(logOddsCorr(n)); % convert to pct corr
-            conf(n) = 2*expectedPctCorr(n) - 1; % convert to 0..1
-            pdw(n) = logOddsCorr(n) > theta;
-        case 'evidence_only'
-            conf(n) = max(diffV) ./ range(P.y);
-            pdw(n) = max(diffV) > theta;
-        case 'time_only'
-            conf(n) = 1 - (RT(n)/1000) ./ range(P.t);
-            pdw(n) = (RT(n)/1000) < theta;
-    end
-   
-    if isnan(conf(n)), conf(n)=0; end % if dvs are almost overlapping, force conf to zero as it can sometimes come out as NaN
-
 end
 toc
 
