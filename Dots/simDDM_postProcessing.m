@@ -1,9 +1,27 @@
 % scriptified the post-processing after simDDM (1D and 2D), to standardize
 
+% remove NaNs (non-HBs if not allowed)
+remove = isnan(choice);
+coh(remove)=[];
+choice(remove)=[];
+RT(remove)=[];
+pdw(remove)=[];
+conf(remove)=[];
+ntrials = length(choice);
 
 % adjust wager probability for base rate of low bets, as seen in data
 % ('compresses' the curve, not an offset, because P(high) varies with coh)
-pdw_preAlpha = pdw; % save original PDW for plotting choice/RT splits (relationship between conf and choice/RT is, by construction, independent of alpha)
+
+% first, save original PDW for plotting choice/RT splits (bc relationship
+% between conf and choice/RT is, by construction, independent of alpha)
+pdw_preAlpha = pdw;
+    % Puzzling why this is needed, actually.
+    % Although we might wonder what those relationships would have looked
+    % like if we had access to actual confidence independent of alpha, in
+    % practice it is irrelevant because we cannot disentangle this in data.
+    % Yet the pre-param recovery misses if we don't use this, in both the
+    % 'data' and model calculations...
+
 pdw(pdw==1 & rand(length(pdw),1)<alpha) = 0;
 
 % add non-decision time (truncated normal dist)
@@ -20,7 +38,9 @@ RT = DT+Tnd;
 pCorrect_total = sum(sign(choice)==sign(coh)) / ntrials
 
 % should be >0.95 or else maxDur isn't long enough (or need urgency!)
-hitBoundPct = sum(hitBound)/length(hitBound)
+pHitBound = sum(hitBound)/length(hitBound)
+Z = abs(coh)<0.0001;
+pHitBound_zeroCoh = sum(hitBound(Z))/sum(Z)
 
 %% format data as in experimental data files and generate output structs
 
@@ -53,9 +73,5 @@ Dots_plot(parsedData,cohs,conftask,RTtask,wFit,forTalk)
 
 %% temp: save data, e.g. for param recovery
 
-save tempsim.mat data origParams
-
-% if needed for debugging fitting code:
-% Psim = P; Rsim = R;
-% save tempdata.mat Psim Rsim
+save tempsim.mat data origParams allowNonHB
 

@@ -15,9 +15,17 @@ if options.feedback==2
     ylabel('-LL');
 end
     
+% 	k= 2.38697
+% 	B= 1.47939
+% 	theta= 1.46254
+% 	alpha= 0.077478
+% 	Tnd= 0.831844
+
 % upper and lower bounds on the parameters
-LB = guess/4;
-UB = guess*4;
+% LB = guess/4;
+% UB = guess*4;
+LB = [1  0.5 0.4 0   0.2];
+UB = [16 5   3   0.6 2  ];
 
 global call_num; call_num=1;
 
@@ -26,11 +34,17 @@ if all(fixed)
 else
 
     switch options.fitMethod
-        case 'fms'
+        case 'fms'              %'TolX', 1e-3, 'TolFun', 1e-2,
             % fminsearch, pretty standard; main alternatives are fmincon or fminunc
             fitOptions = optimset('Display', 'final', 'MaxFunEvals', 500*sum(fixed==0), 'MaxIter', ... 
                 500*sum(fixed==0), 'TolX', 1e-3, 'TolFun', 1e-2, 'UseParallel', 'Always');
             [X,~] = fminsearch(@(x) options.errfcn(x,guess,fixed,data,options), guess, fitOptions);
+
+        case 'fmc'
+            % fmincon, for constraining the params
+            fitOptions = optimset('Display', 'final', 'MaxFunEvals', 500*sum(fixed==0), 'MaxIter', ... 
+                500*sum(fixed==0), 'TolX', 1e-3, 'TolFun', 1e-2, 'UseParallel', 'Always');
+            [X,~] = fmincon(@(x) options.errfcn(x,guess,fixed,data,options),guess,[],[],[],[],LB,UB,[],fitOptions);
 
         case 'global'
             % GlobalSearch from Global Optimization Toolbox
@@ -70,7 +84,6 @@ else
 
             error('BADS code not ready');
     end
-
 
 end
 

@@ -81,13 +81,12 @@ else
 end
 
 
-%% separate RT by corr/err  [maybe pick this up later]
+%% separate RT by corr/err [maybe pick this up later]
 
 % % if RTtask
 % %    
 % %     figure(102);
 % %     set(gcf,'Color',[1 1 1],'Position',[600 500 450 200+200*nplots],'PaperPositionMode','auto'); clf;
-% % 
 % % 
 % % end
 

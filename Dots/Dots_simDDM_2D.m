@@ -12,12 +12,14 @@ cd('/Users/chris/Documents/MATLAB/Projects/offlineTools/Dots')
 
 clear all; close all
  
+allowNonHB = 0; % allow non-hit-bound trials (where RT = max_dur) or not 
+
 confModel = 'evidence+time';
 % confModel = 'evidence_only';
 % confModel = 'time_only';
 % ^ these require different units for theta, time and evidence respectively
 
-ntrials = 60000;
+ntrials = 75000;
 
 dbstop if error
 
@@ -26,9 +28,6 @@ coh = randsample(cohs,ntrials,'true')';
 
 dT = 1; % ms
 max_dur = 3000;
-
-allowNonHB = 0; % allow non-hit-bound trials or not (if yes, RT = max_dur)
-% but modeling becomes difficult due to unabsorbed probability
 
 
 %% params
@@ -40,6 +39,7 @@ B = 0.7; % bound height
     mu = k*coh; % mean of momentary evidence (drift rate)
 sigma = 1; % unit variance (Moreno-Bote 2010), not a free param           
 theta = 1.2; % threshold for high bet in units of log odds correct (Kiani & Shadlen 09, 14)
+alpha = 0.15; % base rate of low bets (offset to PDW curve, as seen in data)
 
 % % alternate slate of params, to check robustness of fitting code (pre-param recovery)
 % k = 8; % drift rate coeff (conversion from %coh to units of DV)
@@ -47,27 +47,11 @@ theta = 1.2; % threshold for high bet in units of log odds correct (Kiani & Shad
 %     mu = k*coh; % mean of momentary evidence (drift rate)
 % sigma = 1; % unit variance (Moreno-Bote 2010), not a free param             
 % theta = 1.6; % threshold for high bet in units of log odds correct (Kiani & Shadlen 09, 14)
+% alpha = 0.15; % base rate of low bets (offset to PDW curve, as seen in data)
 
-% % for higher pHB
-% k = 24; % drift rate coeff (conversion from %coh to units of DV)
-% B = 0.4; % bound height
-%     mu = k*coh; % mean of momentary evidence (drift rate)
-% sigma = 1; % unit variance (Moreno-Bote 2010), not a free param             
-% theta = 1.2; % threshold for high bet in units of log odds correct (Kiani & Shadlen 09, 14)
-
-% % for lower pHB
-% k = 18; % drift rate coeff (conversion from %coh to units of DV)
-% B = 1; % bound height
-%     mu = k*coh; % mean of momentary evidence (drift rate)
-% sigma = 1; % unit variance (Moreno-Bote 2010), not a free param             
-% theta = 1.2; % threshold for high bet in units of log odds correct (Kiani & Shadlen 09, 14)
-% max_dur = 2000;
-
-
-alpha = 0; % base rate of low bets (offset to PDW curve, as seen in data)
 TndMean = 300; % non-decision time (ms)
 TndSD = 0; % 50-100 works well; set to 0 for fixed Tnd 
-TndMin = TndMean/2;
+TndMin = TndMean/2; % need to truncate the Tnd dist
 TndMax = TndMean+TndMin;
 
 origParams.k = k;
@@ -80,9 +64,10 @@ origParams.TndSD  = TndSD;
 origParams.TndMin = TndMin;
 origParams.TndMax  = TndMax;
 
+
 %%
-% ME is a draw from bivariate normal with mean vector Mu and covariance
-% matrix V start with correlation matrix:
+% momentary evidence is a draw from bivariate normal with mean vector Mu
+% and covariance matrix V.  Start with correlation matrix:
 S = [1 -1/sqrt(2) ; -1/sqrt(2) 1];
 % -1/sqrt(2) is the correlation for our version of images_dtb;
 % can only be changed with an update to the flux file
@@ -149,6 +134,7 @@ for n = 1:ntrials
         choice(n) = -1;
     % (3) neither hits bound,
     elseif isempty(cRT1) && isempty(cRT2)
+        hitBound(n) = 0;
         if allowNonHB
             RT(n) = max_dur;
                 % which DV matters for confidence if neither hits bound? 
@@ -158,14 +144,11 @@ for n = 1:ntrials
             finalV(n) = dv(end,~whichWon) + B-dv(end,whichWon);
             % ^  shifting the losing dv up by whatever the
             % difference is between the bound and the winning dv
-
-            hitBound(n) = 0;
             a = [1 -1];
             choice(n) = a(whichWon);
         else
             RT(n) = NaN;
             finalV(n) = NaN;
-            hitBound(n) = 0;
             choice(n) = NaN;
         end
     % (4) or both do

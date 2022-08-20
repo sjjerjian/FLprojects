@@ -7,9 +7,11 @@
 
 clear all; close all;
 
-ntrials = 50000;
+ntrials = 75000;
 
 dbstop if error
+
+allowNonHB = 1; % allow non-hit-bound trials (where RT = max_dur) or not 
 
 cohs = [-0.512 -0.256 -0.128 -0.064 -0.032 -eps eps 0.032 0.064 0.128 0.256 0.512];
 coh = randsample(cohs,ntrials,'true')';
@@ -21,19 +23,17 @@ tAxis = dT:dT:max_dur;
 % params
 k = 0.4; % drift rate coeff (conversion from %coh to units of DV)
 B = 24; % bound height
-mu = k*coh; % mean of momentary evidence (drift rate)
 sigma = 1; % SD of momentary evidence
 theta = 1.2; % threshold for high bet in units of log odds correct (Kiani & Shadlen 2009)
+alpha = 0.15; % base rate of low bets (compresses & shifts the PDW curve down; does not interact w RT or choice)
 
 % % a very different set of params/outcomes, just to prove we can reproduce it in model code 
 % k = 0.6;
 % B = 40;
-% mu = k*coh;
 % sigma = 1;
 % theta = 1;
+% alpha = 0.1;
 
-theta2 = theta; % optional, a separate bet criterion for left v right
-alpha = 0.4; % base rate of low bets (compresses & shifts the PDW curve down; does not interact w RT or choice)
 TndMean = 300; % non-decision time (ms)
 TndSD = 0; 
 TndMin = TndMean/2;
@@ -53,7 +53,9 @@ origParams.TndMax  = TndMax;
 
 %% calculate log odds corr maps using Kiani 09 (FP4, Chang-Cooper) method
 
+theta2 = theta; % optional, a separate bet criterion for left v right
 options.plot = 0; % plot marginal PDFs and LO map
+
 makeLogOddsMap_1D
 
 
@@ -69,54 +71,62 @@ expectedPctCorr = nan(ntrials,1); % expected probability correct (converted to c
 conf = nan(ntrials,1); % confidence rating
 pdw = nan(ntrials,1); % post-decision wager
 
+mu = k*coh; % mean of momentary evidence (drift rate)
+
 tic
 for n = 1:ntrials
     
     % the diffusion process
-%     dv = [0, cumsum(normrnd(mu(n),sigma,1,max_dur))];
-    dv = cumsum(normrnd(mu(n),sigma,1,max_dur));
+
+    
+%     dv = [0, cumsum(normrnd(mu(n),sigma,1,max_dur))]; 
+    dv = cumsum(normrnd(mu(n),sigma,1,max_dur)); %^ enforce zero at t=1, or t=0? shouldn't matter much    
 
     cRT = find(abs(dv)>=B, 1, 'first');
     if isempty(cRT)
-        RT(n) = max_dur;
-        dvEnd = dv(RT(n));
         hitBound(n) = 0;
+        if allowNonHB
+            RT(n) = max_dur;
+            dvEnd = dv(RT(n));
+            choice(n) = sign(dvEnd);
+        else
+            RT(n) = NaN;
+            choice(n) = NaN;
+        end
     else
+        hitBound(n) = 1;
         RT(n) = cRT;
         dvEnd = B*sign(dv(RT(n))); % cap bound crossings at bound value
-        hitBound(n) = 1;
-    end
-   
-    % choice
-    if dvEnd==0 % if by some miniscule chance DV ends at zero, flip a coin
-        choice(n) = sign(randn);
-    else
         choice(n) = sign(dvEnd);
     end
 
     if hitBound(n)==0
-        % look up the expected log odds corr for this trial's V and T
-        thisV = find(abs(vAxis-dvEnd)==min(abs(vAxis-dvEnd)));
-        thisT = find(abs(tAxis-RT(n))==min(abs(tAxis-RT(n))));
-        if isnan(logOddsCorrMap(thisV(1), thisT(1))) % unfortunate rounding error: if dv gets very close to bound exactly at max_dur, but doesn't hit, it's effectively rounded up to the bound by thisV, but LO map is not defined at the bound
-            if dvEnd>0
-                logOddsCorr(n) = logOddsCorrMap(thisV(1)-1, thisT(1));
+        if allowNonHB
+            % look up the expected log odds corr for this trial's V and T
+            thisV = find(abs(vAxis-dvEnd)==min(abs(vAxis-dvEnd)));
+            thisT = find(abs(tAxis-RT(n))==min(abs(tAxis-RT(n))));
+            if isnan(logOddsCorrMap(thisV(1), thisT(1))) % unfortunate rounding error: if dv gets very close to bound exactly at max_dur, but doesn't hit, it's effectively rounded up to the bound by thisV, but LO map is not defined at the bound
+                if dvEnd>0
+                    logOddsCorr(n) = logOddsCorrMap(thisV(1)-1, thisT(1));
+                else
+                    logOddsCorr(n) = logOddsCorrMap(thisV(1)+1, thisT(1));
+                end
             else
-                logOddsCorr(n) = logOddsCorrMap(thisV(1)+1, thisT(1));
+                logOddsCorr(n) = logOddsCorrMap(thisV(1), thisT(1));
+            end
+
+            % post-decision wager:
+            if logOddsCorr(n) >= theta % bet high
+                pdw(n) = 1;
+            elseif logOddsCorr(n) < theta % bet low
+                pdw(n) = 0;
+            else
+                keyboard 
             end
         else
-            logOddsCorr(n) = logOddsCorrMap(thisV(1), thisT(1));
+            logOddsCorr(n) = NaN;
+            pdw(n) = NaN;            
         end
-        
-        % post-decision wager:
-        if logOddsCorr(n) >= theta % bet high
-            pdw(n) = 1;
-        elseif logOddsCorr(n) < theta % bet low
-            pdw(n) = 0;
-        else
-            keyboard 
-        end
-        
     elseif hitBound(n)==1 % hit bound, no need for Pxt lookup
         if choice(n)==-1
             logOddsCorr(n) = log(Ptb_marginal(RT(n),1,1)./Ptb_marginal(RT(n),1,2));

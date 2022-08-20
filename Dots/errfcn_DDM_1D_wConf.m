@@ -6,18 +6,23 @@ global call_num
 
 param = getParam(param, guess, fixed);
 
+% obsolete, I think
+% % % if ~isfield(data,'PDW_preAlpha')
+% % %     data.PDW_preAlpha = data.PDW;
+% % % end
+
 k = param(1);
 B = abs(param(2)); % don't accept negative bound heights
-sigma = 1; % not a free param
-theta = abs(param(3)); %or negative thetas
+theta = abs(param(3)); % no negative thetas
+alpha = max([0 param(4)]); % base rate of low-conf choices (bounded at zero)
+Tnd = max([0 param(5)]); % non-decision time (ms)
+
 theta2 = theta; % allows expanded model with separate thetas for each choice (currently unused)
-alpha = param(4); % base rate of low-conf choices
-Tnd = param(5); % non-decision time (ms)
+sigma = 1; % not a free param
 
 %%%% scriptified this for the time being, to standardize between sim and fit
 makeLogOddsMap_1D
 %%%%
-
 
 % accumulate log likelihood
 expectedPright = nan(size(data.scoh));
@@ -48,115 +53,160 @@ try
         Pxt = Pxt_coh(:,:,c); % xmesh * time
         
         % calculate probabilities of the four outcomes: right/left x high/low,
-        % as a function of time (dur)
-        PrightHigh = cumsum(Ptb(:,2).*(bet_high_tb(:,2)==1)) + ...
+        % as a function of time (dur); these are the intersections, e.g. P(R n H)
+        pRightHigh = cumsum(Ptb(:,2).*(bet_high_tb(:,2)==1)) + ...
                     sum(Pxt(xmesh>0,:).*(bet_high_xt(xmesh>0,:)==1),1)' + ...
                     0.5*(Pxt(xmesh==0,:).*(bet_high_xt(xmesh==0,:)==1))'; % half the probability of dv=0 (assuming a 50/50 guess when that happens)
-        PrightLow = cumsum(Ptb(:,2).*(bet_high_tb(:,2)==0)) + ...
+        pRightLow = cumsum(Ptb(:,2).*(bet_high_tb(:,2)==0)) + ...
                     sum(Pxt(xmesh>0,:).*(bet_high_xt(xmesh>0,:)==0),1)' + ...
                     0.5*(Pxt(xmesh==0,:).*(bet_high_xt(xmesh==0,:)==0))';
-        PleftHigh = cumsum(Ptb(:,1).*(bet_high_tb(:,1)==1)) + ...
+        pLeftHigh = cumsum(Ptb(:,1).*(bet_high_tb(:,1)==1)) + ...
                     sum(Pxt(xmesh<0,:).*(bet_high_xt(xmesh<0,:)==1),1)' + ...
                     0.5*(Pxt(xmesh==0,:).*(bet_high_xt(xmesh==0,:)==1))';
-        PleftLow =  cumsum(Ptb(:,1).*(bet_high_tb(:,1)==0)) + ...
+        pLeftLow =  cumsum(Ptb(:,1).*(bet_high_tb(:,1)==0)) + ...
                     sum(Pxt(xmesh<0,:).*(bet_high_xt(xmesh<0,:)==0),1)' + ...
                     0.5*(Pxt(xmesh==0,:).*(bet_high_xt(xmesh==0,:)==0))';
 
         %ensure total prob sums to one
-        Ptot = PrightHigh + PrightLow + PleftHigh + PleftLow;
+        Ptot = pRightHigh + pRightLow + pLeftHigh + pLeftLow;
         if any(abs(Ptot-1)>1e-3)
             warning('the probabilities do not add up to one!\n\tPtot=%f (for c= %d)\n', min(Ptot), c);
-            PrightHigh = PrightHigh./Ptot;
-            PrightLow = PrightLow./Ptot;
-            PleftHigh = PleftHigh./Ptot;
-            PleftLow = PleftLow./Ptot;
+            pRightHigh = pRightHigh./Ptot;
+            pRightLow = pRightLow./Ptot;
+            pLeftHigh = pLeftHigh./Ptot;
+            pLeftLow = pLeftLow./Ptot;
         end
 
         % adjust the probabilities for the base rate of low-conf bets:
         % the idea is that Phigh and Plow each get adjusted down/up in
         % proportion to how close they are to 1 or 0, respectively
-        Phigh = PrightHigh + PleftHigh;
+        Phigh = pRightHigh + pLeftHigh;
         Phigh_wAlpha = Phigh - alpha*Phigh;
+        Plow = pRightLow + pLeftLow;
+        Plow_wAlpha = 1 - Phigh_wAlpha;
 
-        % now recover the corresponding right/left proportions;
-        % these will only be used for pHigh conditioned on correct/error
-        PrightHigh_wAlpha = (PrightHigh./Phigh) .* Phigh_wAlpha;
-        PleftHigh_wAlpha = (PleftHigh./Phigh) .* Phigh_wAlpha;
+        % now recover the corresponding right/left proportions
+        PrightHigh_wAlpha = (pRightHigh./Phigh) .* Phigh_wAlpha;
+        PrightLow_wAlpha = (pRightLow./Plow) .* Plow_wAlpha;
+        PleftHigh_wAlpha = (pLeftHigh./Phigh) .* Phigh_wAlpha;
+        PleftLow_wAlpha = (pLeftLow./Plow) .* Plow_wAlpha;
         
         % calculate expected p(right) and P(high), given the durs
         I = data.scoh==coh_set(c);
         dur = data.dur(I);
-        expectedPright(I) = (PrightHigh(dur) + PrightLow(dur)) ./ (PrightHigh(dur) + PrightLow(dur) + PleftHigh(dur) + PleftLow(dur));
+        expectedPright(I) = (pRightHigh(dur) + pRightLow(dur)) ./ (pRightHigh(dur) + pRightLow(dur) + pLeftHigh(dur) + pLeftLow(dur));
             pRight_model(c) = mean(expectedPright(I)); % taking the mean feels wrong here.. (shouldn't matter for RT, where dur is always max_dur)
-                               % ****** %
-        expectedPhigh(I) = Phigh_wAlpha(dur) ./ (PrightHigh(dur) + PrightLow(dur) + PleftHigh(dur) + PleftLow(dur)); % only this one should take alpha into account!
-                               % ****** %
+        expectedPhigh(I) = Phigh_wAlpha(dur) ./ (pRightHigh(dur) + pRightLow(dur) + pLeftHigh(dur) + pLeftLow(dur)); % only this one should take alpha into account [this is weird; see note in simDDM_postProcessing]
             pHigh_model(c) = mean(expectedPhigh(I));
-        expectedPrightHigh(I) = PrightHigh(dur) ./ (PrightHigh(dur) + PleftHigh(dur)); % NOT simply PrightHigh as a quaternary outcome, because it's Pright *conditioned* on high
+        expectedPrightHigh(I) = pRightHigh(dur) ./ (pRightHigh(dur) + pLeftHigh(dur)); % conditional (P(right|high)), not intersection (PrightHigh)
             pRightHigh_model(c) = mean(expectedPrightHigh(I));
-        expectedPrightLow(I) = PrightLow(dur) ./ (PrightLow(dur) + PleftLow(dur));
+        expectedPrightLow(I) = pRightLow(dur) ./ (pRightLow(dur) + pLeftLow(dur));
             pRightLow_model(c) = mean(expectedPrightLow(I));
                         
         % pHigh conditioned on correct/error; uses the 'withAlpha' versions in the numerator
-        if coh_set(c)>=0 % rightward motion
-            expectedPhighCorr(I) = PrightHigh_wAlpha(dur) ./ (PrightHigh(dur) + PrightLow(dur));
-            expectedPhighErr(I) = PleftHigh_wAlpha(dur) ./ (PleftHigh(dur) + PleftLow(dur));
-        else % leftward motion
-            expectedPhighCorr(I) = PleftHigh_wAlpha(dur) ./ (PleftHigh(dur) + PleftLow(dur));
-            expectedPhighErr(I) = PrightHigh_wAlpha(dur) ./ (PrightHigh(dur) + PrightLow(dur));
+        if coh_set(c)<0 % leftward motion
+            expectedPhighCorr(I) = PleftHigh_wAlpha(dur) ./ (pLeftHigh(dur) + pLeftLow(dur));
+            expectedPhighErr(I) = PrightHigh_wAlpha(dur) ./ (pRightHigh(dur) + pRightLow(dur));
+        else % rightward motion
+            expectedPhighCorr(I) = PrightHigh_wAlpha(dur) ./ (pRightHigh(dur) + pRightLow(dur));
+            expectedPhighErr(I) = PleftHigh_wAlpha(dur) ./ (pLeftHigh(dur) + pLeftLow(dur));
         end            
         pHighCorr_model(c) = mean(expectedPhighCorr(I));
         pHighErr_model(c) = mean(expectedPhighErr(I));
 
-        
-        % compute mean RT (not currently used for fitting; effectively this
-        % is a fit-then-predict strategy for RT tasks)
-        dI = double(coh_set(c)>=0)+1; % index for this dir (L=1, R=2)
-        tHi = 1:TBint(dI)-1; % time range over which bound crossing leads to high bet
-        tLo = TBint(dI):size(Ptb,1); % time range over which bound crossing leads to low bet
-        % TBint is 'theta-bound intersection', see makeLogOddsMap_1D
+        if options.RTtask        
+            % compute mean RT
+            dI = double(coh_set(c)>=0)+1; % index for this dir (L=1, R=2)
+            tHi = 1:TBint(dI)-1; % time range over which bound crossing leads to high bet
+            tLo = TBint(dI):size(Ptb,1); % time range over which bound crossing leads to low bet
+            % TBint is 'theta-bound intersection', see makeLogOddsMap_1D
 
-        % compute weighted average: P(hit) * <P(RT|hit)> + P(~hit) * <P(RT|~hit)> (the latter is simply maxdur)
-        Phit = sum(sum(Ptb));
-        Pnohit = 1-Phit;
-        RThit = sum((Ptb(:,1)+Ptb(:,2)) .* t_ms) / Phit;
-        RTnohit = max_dur;
-        RT_weightedAvg = Phit*RThit + Pnohit*RTnohit;
-        expectedRT(I) = RT_weightedAvg/1000 + Tnd; % change to s and add Tnd
+            % compute weighted average: P(hit) * <P(RT|hit)> + P(~hit) * <P(RT|~hit)> (the latter is simply maxdur)
+            if options.ignoreUnabs
+                pHB = 1;
+%                 pHBhigh = 1;      % this fails! why? it works in 2D...
+%                 PnoHB_high = 0;   
+%                 pHBlow = 1;       
+%                 PnoHB_low = 0;    
+            else
+                pHB = sum(sum(Ptb)); % prob of crossing either bound
+%                 pHBhigh = sum(Ptb(tHi,1)+Ptb(tHi,2));
+%                 PnoHB_high = sum(Pxt(xmesh>0,end).*(bet_high_xt(xmesh>0,end)==1),1) + sum(Pxt(xmesh<0,end).*(bet_high_xt(xmesh<0,end)==1),1); % the portion of PRightHigh and PLeftHigh within the bounds
+%                 pHBlow = sum(Ptb(tLo,1)+Ptb(tLo,2));
+%                 PnoHB_low = sum(Pxt(xmesh>0,end).*(bet_high_xt(xmesh>0,end)==0),1) + sum(Pxt(xmesh<0,end).*(bet_high_xt(xmesh<0,end)==0),1); % the portion of PRightLow and PLeftLow within the bounds
+            end
+                        
+            % calc mean RT as dot-product of PDF
+            RThb = (sum((Ptb(:,1)+Ptb(:,2)) .* t_ms) / pHB);
+            RTnoHB = max_dur; 
+            RT_weightedAvg = pHB*RThb + (1-pHB)*RTnoHB;
+            expectedRT(I) = RT_weightedAvg/1000 + Tnd; % change to s and add Tnd
             meanRT_model(c) = mean(expectedRT(I));
 
-        % repeat for high and low bets
-        Phit_high = sum(Ptb(tHi,1)+Ptb(tHi,2));
-        Pnohit_high = sum(Pxt(xmesh>0,end).*(bet_high_xt(xmesh>0,end)==1),1) + sum(Pxt(xmesh<0,end).*(bet_high_xt(xmesh<0,end)==1),1); % the portion of PRightHigh and PLeftHigh within the bounds
-        RThit_high = sum((Ptb(tHi,1)+Ptb(tHi,2)) .* t_ms(tHi)) / Phit_high;
-        RTnohit_high = max_dur; 
-        RT_weightedAvg_high = (Phit_high*RThit_high + Pnohit_high*RTnohit_high) / (Phit_high + Pnohit_high); % this time, weighted avg is normalized by total P(High), which is of course not 1
-        expectedRThigh(I) = RT_weightedAvg_high/1000 + Tnd; % change to s and add Tnd
+            % repeat for high and low bets
+            pHBhigh = sum(Ptb(tHi,1)+Ptb(tHi,2));
+            PnoHB_high = sum(Pxt(xmesh>0,end).*(bet_high_xt(xmesh>0,end)==1),1) + sum(Pxt(xmesh<0,end).*(bet_high_xt(xmesh<0,end)==1),1); % the portion of PRightHigh and PLeftHigh within the bounds
+            RThb_high = sum((Ptb(tHi,1)+Ptb(tHi,2)) .* t_ms(tHi)) / pHBhigh;
+            RT_weightedAvg_high = (pHBhigh*RThb_high + PnoHB_high*RTnoHB) / (pHBhigh + PnoHB_high); % this time, weighted avg is normalized by total P(High), which is of course not 1
+            expectedRThigh(I) = RT_weightedAvg_high/1000 + Tnd; % change to s and add Tnd
             meanRThigh_model(c) = mean(expectedRThigh(I));
 
-        Phit_low = sum(Ptb(tLo,1)+Ptb(tLo,2));
-        Pnohit_low = sum(Pxt(xmesh>0,end).*(bet_high_xt(xmesh>0,end)==0),1) + sum(Pxt(xmesh<0,end).*(bet_high_xt(xmesh<0,end)==0),1); % the portion of PRightLow and PLeftLow within the bounds
-        RThit_low = sum((Ptb(tLo,1)+Ptb(tLo,2)) .* t_ms(tLo)) / Phit_low;
-        RTnohit_low = max_dur;
-        RT_weightedAvg_low = (Phit_low*RThit_low + Pnohit_low*RTnohit_low) / (Phit_low + Pnohit_low); % this time, weighted avg is normalized by total P(Low), which is of course not 1
-        expectedRTlow(I) = RT_weightedAvg_low/1000 + Tnd; % change to s and add Tnd
+            pHBlow = sum(Ptb(tLo,1)+Ptb(tLo,2));
+            PnoHB_low = sum(Pxt(xmesh>0,end).*(bet_high_xt(xmesh>0,end)==0),1) + sum(Pxt(xmesh<0,end).*(bet_high_xt(xmesh<0,end)==0),1); % the portion of PRightLow and PLeftLow within the bounds
+            RThb_low = sum((Ptb(tLo,1)+Ptb(tLo,2)) .* t_ms(tLo)) / pHBlow;
+            RT_weightedAvg_low = (pHBlow*RThb_low + PnoHB_low*RTnoHB) / (pHBlow + PnoHB_low); % this time, weighted avg is normalized by total P(Low), which is of course not 1
+            expectedRTlow(I) = RT_weightedAvg_low/1000 + Tnd; % change to s and add Tnd
             meanRTlow_model(c) = mean(expectedRTlow(I));
-            
+        end
+
         % update log-likelihood
-        % *this is incomplete, as it only takes into account p(right),
-        % conditioned on pdw, and (I think) treats each of the four
-        % outcomes as binomially distributed instead of a single
-        % multinomial
-        % **it also does not take into account RT, but that's okay for this
-        % model
+        dur_rightHigh = data.dur(I & data.choice==1 & data.PDW==1);
+        dur_rightLow = data.dur(I & data.choice==1 & data.PDW==0);
+        dur_leftHigh = data.dur(I & data.choice==0 & data.PDW==1);
+        dur_leftLow = data.dur(I & data.choice==0 & data.PDW==0);
         
-        dur_rightHigh = data.dur(I & data.choice==1 & data.PDW_preAlpha==1);
-        dur_rightLow = data.dur(I & data.choice==1 & data.PDW_preAlpha==0);
-        dur_leftHigh = data.dur(I & data.choice==0 & data.PDW_preAlpha==1);
-        dur_leftLow = data.dur(I & data.choice==0 & data.PDW_preAlpha==0);
-        minP = 1e-300;
-        LL = LL + sum(log(max(PrightHigh(dur_rightHigh),minP))) + sum(log(max(PrightLow(dur_rightLow),minP))) + ...
-                  sum(log(max(PleftHigh(dur_leftHigh),minP)))   + sum(log(max(PleftLow(dur_leftLow),minP)));
+        % multinomial with n=1, k=4 (categorial distribution), but missing a term?
+        LL_choice_pdw = sum(log(max(PrightHigh_wAlpha(dur_rightHigh),eps))) + sum(log(max(PrightLow_wAlpha(dur_rightLow),eps))) + ...
+                        sum(log(max(PleftHigh_wAlpha(dur_leftHigh),eps)))   + sum(log(max(PleftLow_wAlpha(dur_leftLow),eps)));
+                    
+        if options.RTtask        
+            % for RT, use Palmer et al. 2005, Eq. 3 & A.34+A.35 (assume zero variance in Tr aka Tnd)
+            mu = abs(k*coh_set(c)); % this is mu-prime in Palmer
+            if coh_set(c)==0
+                VarRT = 2/3 * B^4; % Eq. limiting case for coh=0
+            else
+                VarRT = (B*tanh(B*mu) - B*mu.*sech(B*mu)) ./ mu.^3;
+            end
+            sigmaRT = sqrt(VarRT./sum(I)); % equation in text above Eq 3
+
+            % calc separately for high bet first, 
+            J = I & data.PDW_preAlpha==1;
+            meanRTmodel = meanRThigh_model(c)*1000;
+            meanRTdata = mean(data.RT(J))*1000;
+            L_RT_high = 1./(sigmaRT*sqrt(2*pi)) .* exp(-(meanRTmodel-meanRTdata).^2 ./ (2*sigmaRT.^2));
+            L_RT_high = max(L_RT_high,eps);
+
+            % then low bet:
+            J = I & data.PDW_preAlpha==0;
+            meanRTmodel = meanRTlow_model(c)*1000;
+            meanRTdata = mean(data.RT(J))*1000;
+            L_RT_low = 1./(sigmaRT*sqrt(2*pi)) .* exp(-(meanRTmodel-meanRTdata).^2 ./ (2*sigmaRT.^2));
+            L_RT_low = max(L_RT_low,eps);
+
+            % total LL for RT
+            LL_RT = log(L_RT_high)+log(L_RT_low);
+
+            % total LL for choice, pdw, and RT for this coherence
+            LL_thisC = LL_choice_pdw + LL_RT;
+        else
+            % total LL for choice, pdw, and RT for this coherence
+            LL_thisC = LL_choice_pdw;            
+        end
+        
+        % accumulate LL across cohs
+        LL = LL + LL_thisC;
+              
+        % keep track of n
         n = n + length(dur_rightHigh) + length(dur_rightLow) + length(dur_leftHigh) + length(dur_leftLow);
     end
     
@@ -202,7 +252,7 @@ try
 
 catch Error
     fprintf('\n\nERROR!!!\n'); fprintf('run %d\n', call_num);
-    fprintf('\tk= %g\n\tB= %g\n\ttheta= %g\n\talpha= %g\n', k, B, theta, alpha);
+    fprintf('\tk= %g\n\tB= %g\n\ttheta= %g\n\talpha= %g\nTnd= %g\n', k, B, theta, alpha, Tnd);
     fprintf('c= %d\n', c);
     for i = 1 : length(Error.stack)
         fprintf('entry %d of error stack\n', i);
@@ -214,13 +264,12 @@ catch Error
 end
 
 err = -LL;
-%     fit = data; % fit isn't needed here, but keep for consistency w 2D
 
 %print progress report
 if options.feedback
     fprintf('\n\n\n****************************************\n');
     fprintf('run %d\n', call_num);
-    fprintf('\tk= %g\n\tB= %g\n\ttheta= %g\n\talpha= %g\n', k, B, theta, alpha);
+    fprintf('\tk= %g\n\tB= %g\n\ttheta= %g\n\talpha= %g\n\tTnd= %g\n', k, B, theta, alpha, Tnd);
     fprintf('err: %f\n', err);
     fprintf('number of processed trials: %d\n', n);
 end

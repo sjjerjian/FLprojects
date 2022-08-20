@@ -20,7 +20,9 @@ switch conftask
         data.conf= nan(size(data.choice));
 end
 
-if ~isfield(data,'PDW_preAlpha') % before alpha offset, for choice/RT splits
+% before alpha offset, for choice/RT splits 
+% [this is weird; see note in simDDM_postProcessing]
+if ~isfield(data,'PDW_preAlpha') 
     data.PDW_preAlpha = data.PDW;
 end
 
