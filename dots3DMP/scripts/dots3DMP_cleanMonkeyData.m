@@ -8,8 +8,8 @@ RTtask = 1;
 subject = 'lucio';
 paradigm = 'dots3DMP';
 % dateRange = 20210315:20210805; % RT
-dateRange = 20211101:20220809; % RT
-
+% dateRange = 20211101:20220809; % RT
+dateRange = 20220301:20220817;
 
 %%
 % folder = '/Users/chris/Documents/MATLAB/PLDAPS_data/';

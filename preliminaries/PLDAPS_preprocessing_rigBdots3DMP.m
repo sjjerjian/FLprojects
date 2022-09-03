@@ -20,7 +20,7 @@ paradigm = 'dots3DMP';
 today    = str2double(datestr(now,'yyyymmdd'));
 
 subject = 'lucio';
-dateRange = 20211101:today; % RT
+dateRange = 20220301:today; % RT
 % dateRange = 20210714;
 
 % subject = 'human';
@@ -42,7 +42,7 @@ mountDir  = ['/Volumes/homes/fetschlab/data/' subject '/'];
 
 addNexonarDataToStruct = 0; % SJ 08-2021
 addDotPositionToStruct = 0; % SJ 01-2022
-saveRewardData = 0; % SJ 06-2022
+saveRewardData = 1; % SJ 06-2022
 
 %% get PDS files from server -- DON'T FORGET VPN
 % will skip files that already exist locally, unless overwrite set to 1
