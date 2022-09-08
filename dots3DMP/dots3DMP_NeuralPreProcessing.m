@@ -146,7 +146,6 @@ for s = 1:length(dataStruct)
         units  = dataStruct(s).data.(parSelect{par}).units;
         events = dataStruct(s).data.(parSelect{par}).events;
 
-% can improve this...
         parUnits(par,:)  = units.cluster_id;
         numSpikes(par,:) = cellfun(@length,units.spiketimes);
         numTrials(par,:) = length(events.trStart);

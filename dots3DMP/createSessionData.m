@@ -32,9 +32,9 @@ for n = 1:length(currentFolderList)
             mountDir = sprintf('/Volumes/homes/fetschlab/data/%s/%s_neuro/%d/%s%d_%d/',subject,subject,info.date,subject,info.date,unique_sets(u));
             try 
                 sp = loadKSdir(mountDir);
-                unitInfo = getUnitInfo(mountDir, keepMU);
+                %unitInfo = getUnitInfo(mountDir, keepMU);
             catch
-                fprintf('Could not load kilosort sp struct for %d, set %d',info.date,unique_sets(u));
+                fprintf('Could not load kilosort sp struct for %d, set %d\n',info.date,unique_sets(u));
                 continue
             end
         end
@@ -234,13 +234,14 @@ for n = 1:length(currentFolderList)
             dataStruct(sess).data.(paradigms{par}).units.cluster_labels = {'MU','SU'};
 
             % import the additional info
-            if ~contains(info.probe_type{1},'Single')
-                if ~isequal(cids',unitInfo.cluster_id)
-                    keyboard
+            try
+                if ~contains(info.probe_type{1},'Single')
+                    if ~isequal(cids',unitInfo.cluster_id)
+                        keyboard
+                    end
+                    dataStruct(sess).data.(paradigms{par}).units.moreInfo = unitInfo;
                 end
-                dataStruct(sess).data.(paradigms{par}).units.moreInfo = unitInfo;
             end
-
 
             fprintf('Adding %d SU and %d MU\n',sum(cgs==2),sum(cgs==1))
 
