@@ -8,8 +8,8 @@ RTtask = 1;
 subject = 'lucio';
 paradigm = 'dots3DMP';
 % dateRange = 20210315:20210805; % RT
-dateRange = 20211101:20220602; % RT
-
+% dateRange = 20211101:20220809; % RT
+dateRange = 20220301:20220817;
 
 %%
 % folder = '/Users/chris/Documents/MATLAB/PLDAPS_data/';
@@ -57,7 +57,7 @@ end
 %% Some manual excludes e.g. of bad sessions, non-RT/PDW
 
 excludes_filename = {};
-excludes_date = [20210608];
+excludes_date = [];
 
 % remove fixation breaks (indicated by nans), or manually excluded filenames
 removethese = isnan(data.choice) | isnan(data.RT) | isinf(data.RT) | isnan(data.PDW);
@@ -67,8 +67,7 @@ for F = 1:length(fnames)
     eval(['data.' fnames{F} '(removethese) = [];']);
 end
 
-% should do the trial number based exclusion here, earlier on we are
-% counting fixation breaks
+% should do the trial number based exclusion here, once brfixes are removed
 
 % quick look at blocks, for when some need to be excluded
 blocks = unique(data.filename);
@@ -77,12 +76,13 @@ for u = 1:length(blocks)
     nTrialsByBlock(u) = sum(ismember(data.filename,blocks(u)));
 end
 
-% we can be pretty sure blocks with <N good trials are to be discarded
+% discard blocks with <N good trials
 N = 50;
 removethese = ismember(data.filename,blocks(nTrialsByBlock<N));
 for F = 1:length(fnames)
     eval(['data.' fnames{F} '(removethese) = [];']);
 end
+
 % quick look at blocks again
 blocks = unique(data.filename);
 nTrialsByBlock = nan(length(blocks),1);

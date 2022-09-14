@@ -34,7 +34,7 @@ elseif conftask==2
     yLab = 'P(High Bet)';
     yL = [0 1];
     nbins = 5;
-    xRange = [0.35 1];
+    xRange = [0.35 1.5];
 end
 
 for c = 1:size(ucond,1)+1 % the extra one is for all conditions pooled
@@ -169,10 +169,10 @@ for c = 1:size(ucond,1)+1 % the extra one is for all conditions pooled
 %         plot(xVec,yVec,'color',cmap(h,:))
 %         text(xVec(2),yVec(2),num2str(uhdg(h)),'color',cmap(h,:),'fontsize',12,'horizo','center');
 
-        if c==size(ucond,1)+1
-            plot(xRange(1)*1.1+[0.08 0.15],0.7-0.15*h*ones(1,2),'color',cmap(h,:),'linewidth',3);
-            text(xRange(1)*1.1+0.3,0.7-0.15*h,sprintf('%.2g%s',uhdg(h),char(176)),'color','k','fontsize',14,'horizo','center');
-        end
+%         if c==size(ucond,1)+1
+            plot(xRange(2)*0.8+[0.08 0.15],0.9-0.15*h*ones(1,2),'color',cmap(h,:),'linewidth',3);
+            text(xRange(2)*0.8+0.25,0.9-0.15*h,sprintf('%.2g%s',uhdg(h),char(176)),'color','k','fontsize',14,'horizo','center');
+%         end
        
     end
     
@@ -188,9 +188,10 @@ for c = 1:size(ucond,1)+1 % the extra one is for all conditions pooled
             ylabel(yLab)
         end
     else
-        set(gca,'xticklabel',[]);
-        text(xRange(1)*1.1+0.25,0.7,'|hdg|','color',cmap(end,:),'fontsize',14,'horizo','center','fontweight','bold');
+%         set(gca,'xticklabel',[]);
     end
+    text(xRange(2)*0.8+0.25,0.9,'|hdg|','color',cmap(end,:),'fontsize',14,'horizo','center','fontweight','bold');
+
     if mod(c,2)==1
         set(gca,'yticklabel',[]);
     end
@@ -236,10 +237,10 @@ for c = 1:size(ucond,1)+1 % the extra one is for all conditions pooled
             k(h) = errorbar(squeeze(Xc(c,h,:,1)),squeeze(Yc(c,h,:,1)),squeeze(Yce(c,h,:,1)),'color',cmap(h,:),'LineWidth', 2,...
                 'LineStyle','-','Marker','o','MarkerSize',6,'MarkerFaceColor',cmap(h,:)); hold on;
         end
-        if c==size(ucond,1)+1
-            plot(xRange(1)*1.1+[0.08 0.15],0.7-0.15*h*ones(1,2),'color',cmap(h,:),'linewidth',3);
-            text(xRange(1)*1.1+0.3,0.7-0.15*h,sprintf('%.2g%s',uhdg(h),char(176)),'color','k','fontsize',14,'horizo','center');
-        end
+%         if c==size(ucond,1)+1
+            plot(xRange(2)*0.8+[0.08 0.15],0.9-0.15*h*ones(1,2),'color',cmap(h,:),'linewidth',3);
+            text(xRange(2)*0.8+0.3,0.9-0.15*h,sprintf('%.2g%s',uhdg(h),char(176)),'color','k','fontsize',14,'horizo','center');
+%         end
     end
     
 
@@ -254,9 +255,10 @@ for c = 1:size(ucond,1)+1 % the extra one is for all conditions pooled
             ylabel('Accuracy')
         end
     else
-        set(gca,'xticklabel',[]);
-        text(xRange(1)*1.1+0.25,0.7,'|hdg|','color',cmap(end,:),'fontsize',14,'horizo','center','fontweight','bold');
+%         set(gca,'xticklabel',[]);
     end
+    text(xRange(2)*0.8+0.25,0.9,'|hdg|','color',cmap(end,:),'fontsize',14,'horizo','center','fontweight','bold');
+
     if mod(c,2)==1
         set(gca,'yticklabel',[]);
     end

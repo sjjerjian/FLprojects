@@ -20,7 +20,7 @@ paradigm = 'dots3DMP';
 today    = str2double(datestr(now,'yyyymmdd'));
 
 subject = 'lucio';
-dateRange = 20211101:today; % RT
+dateRange = 20220301:today; % RT
 % dateRange = 20210714;
 
 % subject = 'human';
@@ -50,7 +50,7 @@ saveRewardData = 1; % SJ 06-2022
 useSCP = 0; % 1 - secure copy of files to local folder, 0 - load files directly from mounted drive, save locally only after cleanup
 useVPN = 0; % 1 - use proxy VPN (off campus), 0 - use 172 address
 overwriteLocalFiles = 0; % set to 1 to always use the server copy
-% getDataFromServer % now also includes pdsCleanup to reduce file size and complexity
+getDataFromServer % now also includes pdsCleanup to reduce file size and complexity
 
 %% get Nexonar files from server
 

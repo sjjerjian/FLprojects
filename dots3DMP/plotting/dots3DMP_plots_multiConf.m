@@ -22,11 +22,11 @@ clrseqs = {'Greys','Reds','Blues'};
 nConfGroups = length(parsedData.confGroups);
 
 for m = 1:length(mods)
-    if splitPDW
-        clr{mods(m)} = cbrewer('seq',clrseqs{m},ceil(nConfGroups/2));
-    else
+%     if splitPDW
+%         clr{mods(m)} = cbrewer('seq',clrseqs{m},ceil(nConfGroups/2));
+%     else
         clr{mods(m)} = cbrewer('seq',clrseqs{m},nConfGroups);
-    end
+%     end
 end
 
 % CHOICES i.e. pRight
@@ -57,7 +57,7 @@ for c=1:length(cohs)
             colind = mod(nc,parsedData.confGroupSplit); colind(colind==0) = parsedData.confGroupSplit;
             if parsedData.plotLogistic(m,c,D,nc)
                 h(m) = plot(parsedData.xVals,squeeze(parsedData.yVals(m,c,D,:,nc)),'color',clr{mods(m)}(colind,:),'linestyle',lnstl,'linewidth',1.5); hold on;
-                errorbar(hdgs, squeeze(parsedData.pRight(m,c,D,:,nc)), squeeze(parsedData.pRightSE(m,c,D,:,nc)), 'color',clr{mods(m)}(colind,:),'linewidth',1.5);
+                errorbar(hdgs, squeeze(parsedData.pRight(m,c,D,:,nc)), squeeze(parsedData.pRightSE(m,c,D,:,nc)), 'color',clr{mods(m)}(colind,:),'linestyle','none','linewidth',1.5);
             else
                 h(m) = errorbar(hdgs, squeeze(parsedData.pRight(m,c,D,:,nc)), squeeze(parsedData.pRightSE(m,c,D,:,nc)), 'color',clr{mods(m)}(colind,:),'linewidth',1.5); hold on;
             end
@@ -156,7 +156,7 @@ if conftask && splitPDW==0
                 %             end
             end
             if m==length(mods), xlabel(xLab); end
-            if c==1, ylabel('RT (s)'); end
+            if c==1, ylabel('P(High Bet)'); end
             try changeAxesFontSize(gca,15,15); tidyaxes; catch; end
         end
     end

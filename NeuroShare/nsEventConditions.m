@@ -7,15 +7,15 @@ function [nsEvents] = nsEventConditions(nsEvents,PDS,par)
 % modality are sent as indices in condition list. Here we pull the actual
 % info from PLDAPS
 %
-% SJ 2022
-% 05-2022    fixed issues with mismatched trials
-% 06-14-2022 added 'goodtrial' from PDS, since this isn't in all Ripple
-% files
+% SJ updates
+% 05-2022 fixed issues with mismatched trials
+% 06-2022 added 'goodtrial' from PDS, since this isn't in all Ripple files
+% 08-2022 added import of 1-targ behavior from PLDAPS, also not sent to Trellis
 
 %% check that unique trial numbers match completely, if not, select NS entries to match
-% note that if multiple PDS files correspond to one Trellis files, this
+% note that if multiple PDS files correspond to one Trellis file, this
 % will return just the trials in nsEvents which correspond to the selected
-% PDS file. so probably unwise to overwrite nsEvents in the wrapper!
+% PDS file. i.e. probably unwise to overwrite nsEvents in the wrapper!
 
 for t=1:length(PDS.data)
     PDSutn(t,:) = PDS.data{t}.unique_number;
@@ -33,8 +33,8 @@ matchTrials = ismember(NSutn,PDSutn,'rows');
 
 % 06-2022
 % breakfix vector was 1 entry short in one case, which messes up the
-% matchTrials stuff. let's remove it, and just add in the goodtrial logical
-% later.
+% matchTrials stuff. let's just remove it, and just add in the goodtrial logical
+% later. (this needs to be fixed at some point)
 try nsEvents.Events = rmfield(nsEvents.Events,'breakfix'); catch; end
 
 % remove fields only relevant to RFmapping
@@ -98,8 +98,14 @@ for t = 1:length(PDSconditions)
     % datapixx time is what is sent, use this rather than PDS.data{t}.trstart!
     PDStrstart(t) = PDSdata{t}.datapixx.unique_trial_time(1);
     
-    goodtrialVec(t) = PDSdata{t}.behavior.goodtrial;
+    nsEvents.Events.goodtrial(t) = PDSdata{t}.behavior.goodtrial;
     
+    % SJ added 08-23-2022
+    if strcmp(nsEvents.pldaps.parName{t},'dots3DMP')
+        nsEvents.Events.oneTargChoice(t) = PDSdata{t}.behavior.oneTargChoice;
+        nsEvents.Events.oneTargConf(t)   = PDSdata{t}.behavior.oneTargConf;
+    end
+
 end
 
 % just add in the fields from PDS to nsEvents, without any further checks (except
@@ -112,8 +118,6 @@ for f=1:length(fnames)
         nsEvents.Events.(fnames{f}) = temp.(fnames{f});
     end
 end
-
-nsEvents.Events.goodtrial = goodtrialVec;
 
 
 

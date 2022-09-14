@@ -6,9 +6,14 @@
 
 clear; clc
 
-% cd /Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data
-load lucio_20210315-20210805_clean.mat
-alldata = data;
+cd /Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data/dataStructs/
+load lucio_20211101-20220809_partClean.mat
+
+% partClean because I have not re-assigned cohs and headings etc, so that I
+% can go through each day individually and make notes on performance
+
+
+alldata = data; % re-cast as alldata, so that we can store individual blocks in data
 
 conftask = 2; % 1=colorbars, 2=PDW
 RTtask = 1;
@@ -23,6 +28,9 @@ hdgs   = unique(data.heading);
 days = unique(data.date); %date
 nDays = length(days);
 
+files = unique(data.filename); %  blocks
+nFiles = length(files);
+
 %%
 
 fnames = fieldnames(alldata);
@@ -31,11 +39,12 @@ fnames = fieldnames(alldata);
 
 clear nCorrect* nTrials*
 clear parsedData gfit wves deltas_day
-for d = 1:nDays
+for d = 1:nDays  %1:nFiles
     
     clear data;
     trials_day = alldata.date == days(d);
-    
+%     trials_day = strcmp(alldata.filename,files{d});
+
     % cutoff for the min number of trials to get reliable estimates
     
 %     if sum(trials_day) > 600
@@ -46,26 +55,49 @@ for d = 1:nDays
         nTrials(d,1) = sum(trials_day);
         nCorrect(d,1) = sum(data.correct);
         
-        nTrialsConf(d,1) = sum(data.PDW==1);
-        nTrialsConf(d,2) = sum(data.PDW==0);
+        nTrialsConf(d,1) = sum(data.PDW==1 & ~data.oneTargConf);
+        nTrialsConf(d,2) = sum(data.PDW==0 & ~data.oneTargConf);
+        nTrialsConf(d,3)  = sum(data.oneTargConf);
         
-        nCorrectConf(d,1) = sum(data.correct & data.PDW==1);
-        nCorrectConf(d,2) = sum(data.correct & data.PDW==0);
+        nCorrectConf(d,1) = sum(data.correct & data.PDW==1 & ~data.oneTargConf);
+        nCorrectConf(d,2) = sum(data.correct & data.PDW==0 & ~data.oneTargConf);
+        nCorrectConf(d,3) = sum(data.correct & data.oneTargConf);
         
         deltas_day{d,1} = unique(data.delta);
         hasDelta(d) = any(data.delta~=0);
         
-        parsedData(d) = dots3DMP_parseData(data,mods,cohs,deltas_day{d},hdgs,conftask,RTtask); % basic parsing of data, logistic fits
+        % now remove all the one-targ conf trials for parsing the gross
+        % behavioral metrics
+        oneTargConf = logical(data.oneTargConf);
+        for F = 1:length(fnames)
+            data.(fnames{F})(oneTargConf) = [];
+        end
+        
+        mods_day{d} = unique(data.modality);
+        cohs_day{d} = unique(data.coherence);
+        hdgs_day{d} = unique(data.heading);
+        
+        parsedData(d) = dots3DMP_parseData(data,mods_day{d},cohs_day{d},deltas_day{d},hdgs_day{d},conftask,RTtask); % basic parsing of data, logistic fits
         
         gfit(d) = dots3DMP_fit_cgauss(data,mods,cohs,deltas_day{d},conftask,RTtask); % gaussian fitting
-            
-        wves(d) = dots3DMP_cueWeights(gfit(d),cohs,deltas_day{d});
+%         wves(d) = dots3DMP_cueWeights(gfit(d),cohs,deltas_day{d});
        
             
 %     end
 
 end
 
+%% plot each day, for visually assessment
+
+% d = 11;
+% mods_day{d}
+
+for d = 20:66
+dots3DMP_plots(parsedData(d),mods_day{d},cohs_day{d},deltas_day{d},hdgs_day{d},conftask,RTtask)
+fprintf('%d Total number of trials: %d\n', days(d), sum(parsedData(d).n(:)))
+pause
+clf
+end
 
 %% plot example day
 

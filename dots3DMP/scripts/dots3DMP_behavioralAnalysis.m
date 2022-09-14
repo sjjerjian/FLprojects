@@ -21,7 +21,8 @@ switch subject
     
     case 'lucio'
 %         load('lucio_20210315-20210805_clean.mat') % recent lucio data, PDW + RT
-        load('lucio_20211101-20220602_clean.mat') % recent lucio data, PDW + RT
+%         load('lucio_20211101-20220602_clean.mat') % recent lucio data, PDW + RT
+        load('lucio_20220301-20220817_clean.mat') % recent lucio data, PDW + RT
 
         conftask = 2; % 1=colorbars, 2=PDW
         RTtask   = 1;
@@ -73,6 +74,7 @@ mods   = unique(data.modality);
 cohs   = unique(data.coherence); 
 deltas = unique(data.delta);
 % deltas = [-3 3];
+deltas = 0;
 hdgs   = unique(data.heading);
 
 
@@ -151,14 +153,16 @@ dots3DMP_plots_cgauss_byConf(gfit_byConf,parsedData_byConf,mods,cohs,deltas,hdgs
 %%
 
 rewRatio = data.amountRewardHighConfOffered ./ data.amountRewardLowConfOffered;
-nbins = 4;
+nbins = 3;
 confQ = [0 quantile(rewRatio,nbins-1) inf];
 confGroup = discretize(rewRatio, confQ); 
-% confGroup = double(data.PDW)+1;
-% confGroup(logical(data.oneTargConf))= 3;
 
-splitPDW = 0;
-removeOneTarg = 1;
+% this only works if the dataset still includes oneTargConf trials!
+confGroup = double(data.PDW)+1;
+confGroup(logical(data.oneTargConf))= 3;
+
+splitPDW = 1;
+removeOneTarg = 0;
 parsedData = dots3DMP_parseData_multiConf(data,mods,cohs,deltas,hdgs,confGroup,conftask,RTtask,removeOneTarg,splitPDW); % don't remove 1-targets, and don't split by hi/lo, so we can plot P(high bet) as function of reward ratio
 
 dots3DMP_plots_multiConf(parsedData,mods,cohs,deltas,hdgs,conftask,RTtask,splitPDW)
