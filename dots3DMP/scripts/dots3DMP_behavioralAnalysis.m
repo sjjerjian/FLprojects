@@ -15,7 +15,7 @@ addpath(genpath('/Users/stevenjerjian/Desktop/FetschLab/Analysis/codes/'))
 
 %% select subject, load the data
 
-subject = 'lucio';
+subject = 'zarya';
 
 switch subject
     
@@ -27,6 +27,13 @@ switch subject
         conftask = 2; % 1=colorbars, 2=PDW
         RTtask   = 1;
         
+        RTlims = [0.25 2.25];
+
+    case 'zarya'
+        load('zarya_20220301-20220920_clean.mat') % recent lucio data, PDW + RT
+
+        conftask = 2; % 1=colorbars, 2=PDW
+        RTtask   = 1;
         RTlims = [0.25 2.25];
 
     case 'human'
@@ -87,14 +94,14 @@ hdgs   = unique(data.heading);
 parsedData = dots3DMP_parseData(data,mods,cohs,deltas,hdgs,conftask,RTtask); 
 
 % gaussian fits
-gfit = dots3DMP_fit_cgauss(data,mods,cohs,deltas,conftask,RTtask); 
+% gfit = dots3DMP_fit_cgauss(data,mods,cohs,deltas,conftask,RTtask); 
 
 %% summary plots
 % logistic fit plots
-% dots3DMP_plots(parsedData,mods,cohs,deltas,hdgs,conftask,RTtask)
+dots3DMP_plots(parsedData,mods,cohs,deltas,hdgs,conftask,RTtask)
 
 % separate subplots for each coh, with all mods on same subplot
-dots3DMP_plots_cgauss_byCoh(gfit,parsedData,mods,cohs,deltas,hdgs,conftask,RTtask)
+% dots3DMP_plots_cgauss_byCoh(gfit,parsedData,mods,cohs,deltas,hdgs,conftask,RTtask)
 
 % or...separate subplots for each mod/delta, and all cohs on same subplot
 % n.b. - this one needs tidying to look nice

@@ -5,11 +5,11 @@ clear all; close all
 conftask = 2;
 RTtask = 1;
 
-subject = 'lucio';
+subject = 'zarya';
 paradigm = 'dots3DMP';
 % dateRange = 20210315:20210805; % RT
 % dateRange = 20211101:20220809; % RT
-dateRange = 20220301:20220817;
+dateRange = 20220301:20220920;
 
 %%
 % folder = '/Users/chris/Documents/MATLAB/PLDAPS_data/';
@@ -110,7 +110,13 @@ data.coherence(data.modality==1) = cohs(1);
 
 data.heading(abs(data.heading)<0.01) = 0;
 % hdgs = unique(data.heading);
-hdgs = [-12 -6 -3 -1.5 0 1.5 3 6 12];
+
+switch subject
+    case 'zarya'
+        hdgs = [-12 -6 -3 -1.5 1.5 3 6 12];
+    case 'lucio'
+        hdgs = [-12 -6 -3 -1.5 0 1.5 3 6 12];
+end
 
 % remove the rest
 removethese = ~ismember(data.heading,hdgs) | ~ismember(data.coherence,cohs);
