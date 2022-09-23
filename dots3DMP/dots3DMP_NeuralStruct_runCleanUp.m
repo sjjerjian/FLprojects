@@ -1,6 +1,17 @@
-function dots3DMP_NeuralStruct_runCleanUp(dataStruct,parSelect,minRate,minTrs)
+function dataStruct_clean = dots3DMP_NeuralStruct_runCleanUp(dataStruct,parSelect,minRate,minTrs)
 
-fprintf('Cleaning up data, resaving\n')
+% fprintf('Cleaning up data, resaving\n')
+
+% parSelect - list of experimental paradigms *Unlike initial generation of
+% dataStruct, this will mean only units recorded in ALL paradigms in
+% parSelect will be kept.
+% e.g. {'dots3DMPtuning','dots3DMP'};
+
+% minRate - minimum global/coarse firing rate of the unit in spikes/s
+% across valid trials
+% minTrs - minimum number of trials per unique condition 
+%       TODO - make sure minTrs works for mapping paradigms too
+
 
 dataStruct_clean = dataStruct;
 removeEntireSession = false(size(dataStruct));
@@ -9,7 +20,8 @@ for s = 1:length(dataStruct)
     clear parUnits numSpikes numTrials enoughTrials
 
     % sessions that don't have all pars in parSelect get marked for
-    % removal, but do it at the end so as not to mess up the loop counter
+    % removal, i.e. unit for sure was not recorded in all selected pars!
+    % % but do it at the end so as not to mess up the loop counter
     if ~all(isfield(dataStruct(s).data,parSelect))
         removeEntireSession(s) = true;
         continue
@@ -24,8 +36,13 @@ for s = 1:length(dataStruct)
         numSpikes(par,:) = cellfun(@length,units.spiketimes);
         numTrials(par,:) = length(events.trStart);
 
+        if contains(parSelect{par},'dots3DMP')
+            stimCondList = [events.heading; events.modality; events.coherence; events.delta]';
+        end
 
-        stimCondList = [events.heading; events.modality; events.coherence; events.delta]';
+        if par==1
+            enoughTrials = nan(length(parSelect,length(units.cluster_id)));
+        end
 
         for u = 1:length(units.cluster_id)
 
@@ -62,7 +79,7 @@ for s = 1:length(dataStruct)
 end
 
 dataStruct_clean(removeEntireSession) = [];
-dataStruct = dataStruct_clean;
-
-file = [subject '_' num2str(dateRange(1)) '-' num2str(dateRange(end)) '_neuralData_clean.mat'];
-save([localDir(1:length(localDir)-length(subject)-7) file], 'dataStruct');
+% dataStruct = dataStruct_clean;
+% 
+% file = [subject '_' num2str(dateRange(1)) '-' num2str(dateRange(end)) '_neuralData_clean.mat'];
+% save([localDir(1:length(localDir)-length(subject)-7) file], 'dataStruct');

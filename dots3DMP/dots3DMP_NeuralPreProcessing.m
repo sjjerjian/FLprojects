@@ -76,16 +76,16 @@ paradigms = {'dots3DMPtuning','dots3DMP','RFMapping','VesMapping'};
 runCleanUp = 0;
 
 % inputs to dots3DMP_NeuralStruct_runCleanUp
-parSelect  = {'dots3DMPtuning','dots3DMP'}; 
+parSelect  = {'dots3DMPtuning','dots3DMP','RFmapping','VesMapping'}; 
 minRate    = 5;
 minTrs     = 5;
 
 subject = 'lucio';
 
 % dateRange = [20220223:20220331 20220512:20220531];
-% dateRange = 20220805:20220902;
+dateRange = 20220615:20220916;
 % dateRange = 20220901:20220902;
-dateRange = 20220913;
+% dateRange = 20220913;
 
 dateStr = num2str(dateRange(1));
 for d = 2:length(dateRange)
@@ -95,7 +95,7 @@ end
 %%
 keepMU = 1;           % include all SU and MU
 useSCP = 1;
-useVPN = 1;
+useVPN = 0;
 overwriteLocalFiles = 0; % set to 1 to always use the server copy
 
 % SJ 04-2022
