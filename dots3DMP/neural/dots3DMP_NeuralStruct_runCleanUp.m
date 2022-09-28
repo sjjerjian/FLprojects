@@ -41,7 +41,7 @@ for s = 1:length(dataStruct)
         end
 
         if par==1
-            enoughTrials = nan(length(parSelect,length(units.cluster_id)));
+            enoughTrials = nan(length(parSelect),length(units.cluster_id));
         end
 
         for u = 1:length(units.cluster_id)

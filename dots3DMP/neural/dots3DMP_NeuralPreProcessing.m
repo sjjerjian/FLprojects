@@ -83,9 +83,9 @@ minTrs     = 5;
 subject = 'lucio';
 
 % dateRange = [20220223:20220331 20220512:20220531];
-dateRange = 20220615:20220916;
+dateRange = 20220615:20220923;
 % dateRange = 20220901:20220902;
-% dateRange = 20220913;
+% dateRange = 20220923;
 
 dateStr = num2str(dateRange(1));
 for d = 2:length(dateRange)

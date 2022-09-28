@@ -65,7 +65,9 @@ for n = 1:length(currentFolderList)
                 end
                 PDSfilenames{pf} =  [info.subject num2str(info.date) info.par{theseFiles(pf)} num2str(info.pldaps_filetimes(theseFiles(pf))) '.mat'];
                 try load(fullfile(PDSdir,PDSfilenames{pf}),'PDS');
-                catch, fprintf('PDS file not found %s\n',PDSfilenames{pf}); return;
+                catch, fprintf('PDS file not found %s\n',PDSfilenames{pf}); 
+                    keyboard
+                    return;
                 end
                 en = st-1+length(PDS.data);
                 allPDS.data(st:en)       = PDS.data;
@@ -243,6 +245,8 @@ for n = 1:length(currentFolderList)
                     end
                     dataStruct(sess).data.(paradigms{par}).units.moreInfo = unitInfo;
                 end
+            catch
+%                 keyboard
             end
 
             fprintf('Adding %d SU and %d MU\n',sum(cgs==2),sum(cgs==1))

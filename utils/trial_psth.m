@@ -1,5 +1,5 @@
-function [Yt, x, Y, durs] = trial_psth(spktimes,alignEvent,varargin)
-% [Yt, x, Y, durs] = TRIAL_PSTH(spktimes,alignEvent,varargin)
+function [Yt, x, Y, durs,whichEventAlign] = trial_psth(spktimes,alignEvent,varargin)
+% [Yt, x, Y, durs, whichEventAlign] = TRIAL_PSTH(spktimes,alignEvent,varargin)
 %
 % This code generates peri-event time histograms  for each trial using times in spktimes, aligned to a single event (alignEvent). 
 % It also returns the total activity in the same interval, and duration of
@@ -24,14 +24,16 @@ function [Yt, x, Y, durs] = trial_psth(spktimes,alignEvent,varargin)
 %       alltrials   - default 0, only include trials after the first spike and before the final spike (inclusive)
 %                   - 1 will keep all trials. if unit was not recorded for all trials (e.g. due to drifting signal), 
 %                       this could artificially lower firing rate when later averaging across trials!
-%       normalize   - if 1, divide by binsize to give firing rate over time, and
-%                     divide overall 'y' count by durs to get average firing rate. default is 0, which returns counts
+%       countORrate   - default 1, divide by binsize to give firing rate over time, and divide overall 'y' count by durs to get average
+%                     firing rate. 0 returns raw counts
 %
 % OUTPUTS:
 %       Yt   - firing rate or spike counts over time [Ntrs x nbins]
 %       x    - time of Yt bins (center of bin) relative to alignment event [nbins x 1]
 %       Y    - mean firing rate in interval [Ntrs x 1]
 %       durs - duration of intervals [Ntrs x 1]
+%       whichEventAlign - which event did we end up aligning to (i.e. was
+%       the first column in alignEvent the earlier event or the later one)
 % ----------
 %
 % A short essay on the usage of alignEvent...
@@ -109,6 +111,8 @@ function [Yt, x, Y, durs] = trial_psth(spktimes,alignEvent,varargin)
 % TODOs: 
 %
 % - add alternatives to boxcar method of psth computation
+% - plotAsHist option - if we want to plot psth as true 'boxcar', we need
+% to duplicate every value in x and y
 % - use some flags to skip binning sections of code if user only requests average rate in interval?
 % - spin-off a function which calculates a fixed number of bins for trials
 % of variable duration, by varying the bin size on each trial as needed
@@ -123,7 +127,7 @@ p.addRequired('alignEvent');
 assert(isvector(spktimes),'User must provide spike times as a vector')
 assert(( isvector(alignEvent) || ismatrix(alignEvent)) && size(alignEvent,2)<=2,'alignEvent must be an Nx1 or Nx2 array')
 
-var_names = {'tStart','tEnd','binSize','alltrials','normalize'};
+var_names = {'tStart','tEnd','binSize','alltrials','countORrate'};
 defaults = {-1,1,0.05,false,true};
 
 for v=1:length(var_names)
@@ -142,6 +146,8 @@ if (Ntr==0), disp('No good trials...'); return; end
 if size(alignEvent,2)==2
     [alignEvent,EvOrder] = sort(alignEvent,2);
     whichEventAlign = EvOrder(1); % align to whichever event was originally first column in alignEvent
+    % add a check in here to make sure that alignEvent temporal order is
+    % consistent on each trial
 else     % if alignEvent is a vector, tStart and tEnd are both relative to same event              
     alignEvent(:,2) = alignEvent(:,1);
     whichEventAlign = 1;
@@ -166,13 +172,13 @@ end
 
 %%  define the x-axis 'edges' for PSTH, and pre-allocate fr
 
-% to get the overall extent of bins, we need to re-calculate the start OR
-% end relative to the desired alignment event, since tStart and tEnd are
-% initially set relative to separate events in alignEvent.
-% (if alignEvent has just one column, this is redundant, but still fine)
+% to get the overall extent of bins we need, we need to re-calculate the start OR end relative to the desired alignment event, since tStart and tEnd are
+% initially defined relative to separate events in alignEvent. (if alignEvent has just one column, this is redundant, but still fine)
+% e.g. if we set tStart and tEnd as zero, relative to stimOn and stimOff respectively, and align to stimOn, tStart_new will remain 0, 
+% whereas tEnd_new will become the maximum time of stimOff(+tEnd)
 
 if whichEventAlign==2
-    tStarts_new = tr_starts - alignEvent(:,2);
+    tStarts_new = tr_starts - alignEvent(:,2); % tStarts_new will be <0
     tStart_new  = min(tStarts_new);
     tEnd_new    = p.tEnd;
 elseif whichEventAlign==1
@@ -238,13 +244,17 @@ end
 
 % shift 'x' from edges of bins to middle of bins, helpful for later
 % plotting of Yt at the center of each bin
+% TODO, make this flexible, we might want to duplicate bin x and vals to
+% plot old-school histogram style
+% and if we have a causal or gaussian filter for calculating spike counts,
+% this could be different
+
 x=x+diff(x(1:2))/2;
 x(end)=[]; % cut off the end, so that x is nBins long
-
 % note that this means there will be no zero in x - the closest values will be -binSize/2 and +binsize/2. 
 
 
-if p.normalize  
+if p.countORrate==1  
     Yt = Yt / p.binSize; % normalize spike count by bin width to get firing rate!
     Y = Y ./ durs;       % while we're at it, normalize total spike count by total interval time
 end
