@@ -34,7 +34,6 @@ eventInfo.binSize = 0.01;
 
 optsTR.calcTuning  = 0;
 optsTR.smoothFR    = 1;
-optsTR.normalizeFR = 0;
 optsTR.convKernel  = fspecial('average', [1 20]); 
 
 allUnitsVesMapping = dots3DMP_FRmatrix_fromDataStruct(dataStruct,par,eventInfo,condsVesMapping,condlabels,optsTR);

@@ -4,7 +4,8 @@
 % dots3DMP_NeuralPreProcessing for explanation of dataStruct structure, and
 % how different paradigms are segmented when recording is done all in one.
 
-% TODO 09-2022 modify single neuron pipeline to take Wave_clus data instead
+% TODO 09-2022 modify single neuron pipeline to take Wave_clus data
+% instead?
 
 % fields in 'events' which contain event times, this will be important later
 tEvs   = {'trStart','fpOn','fixation','reward','stimOn','stimOff','saccOnset','targsOn','targHold','postTargHold','reward','breakfix','nexStart','nexEnd','return'};
