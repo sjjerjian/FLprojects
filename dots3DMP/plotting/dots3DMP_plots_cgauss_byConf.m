@@ -29,7 +29,7 @@ clr{1} = {'ko','ro','bo'};
 clr{2} = {'kd','rd','bd'};
 fclr{1} = 'krb';
 fclr{2} = 'www';
-clnstl = '-:'; % high low conf line style
+clnstl = {'-','--'}; % high low conf line style
 
 
 % CHOICES i.e. pRight
@@ -49,7 +49,7 @@ for c=1:length(cohs)
             
         for cc=1:2
             beta = [gfit.choice.mu(m,c,D,cc) gfit.choice.sigma(m,c,D,cc)];
-            h(cc) = plot(parsedData.xVals, gfit.choice.func(beta,parsedData.xVals), clr{cc}{m}(1),'linestyle',clnstl(cc),'linewidth',1.5); hold on;
+            h(cc) = plot(parsedData.xVals, gfit.choice.func(beta,parsedData.xVals), clr{cc}{m}(1),'linestyle',clnstl{cc},'linewidth',1.5); hold on;
             errorbar(hdgs, squeeze(parsedData.pRight(m,c,D,:,cc)), squeeze(parsedData.pRightSE(m,c,D,:,cc)), clr{cc}{m},'linewidth',1.5,'markerfacecolor',fclr{cc}(m));
         end
         set(gca,'xtick',xt);
@@ -86,14 +86,15 @@ for c=1:length(cohs)
         
         for cc=1:2
             beta = [gfit.RT.ampl(m,c,D,cc) gfit.RT.mu(m,c,D,cc) gfit.RT.sigma(m,c,D,cc) gfit.RT.bsln(m,c,D,cc)];
-            h(cc) = plot(parsedData.xVals, gfit.RT.func(beta,parsedData.xVals), clr{cc}{m}(1),'linestyle',clnstl(cc),'linewidth',1.5); hold on;
+            h(cc) = plot(parsedData.xVals, gfit.RT.func(beta,parsedData.xVals), clr{cc}{m}(1),'linestyle',clnstl{cc},'linewidth',1.5); hold on;
             errorbar(hdgs, squeeze(parsedData.RTmean(m,c,D,:,cc)), squeeze(parsedData.RTse(m,c,D,:,cc)), clr{cc}{m},'linewidth',1.5,'markerfacecolor',fclr{cc}(m));
         end
         set(gca,'xtick',xt);
         if conftask==1
             ylim([0.8 2]);
-        else    
-            ylim([0.45 0.9]);
+        else   
+            if mods(m)==2, ylim([0.6 1.2])
+            else, ylim([0.45 0.9]); end
         end
         if m>1
             ht=title([modlabels{m} ', coh = ' num2str(cohs(c))]); set(ht,'color',clr{1}{m}(1)); 

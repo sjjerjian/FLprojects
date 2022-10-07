@@ -26,12 +26,11 @@ else
     guess_cgauss = [0 3];
     
     % CONFIDENCE - 'flipped' Gaussian
+    flippedGauss = @(b,hdg) 1 - ( b(1) .* exp(-(hdg-b(2)).^2 ./ (2*b(3).^2)) + b(4));
     if conftask==1 % continuous, sacc endpoint
-        flippedGauss = @(b,hdg) 1 - ( b(1) .* exp(-(hdg-b(2)).^2 ./ (2*b(3).^2)) + b(4));
-        flippedGauss_err = @(param,SEP,hdg) nansum((flippedGauss(param,hdg)-SEP).^2);
+        flippedGauss_err = @(param,SEP,hdg) sum((flippedGauss(param,hdg)-SEP).^2);
         guess_fgauss = [0.2 0 2 0.4];
     elseif conftask==2 % PDW, probabilities
-        flippedGauss = @(b,hdg) 1 - ( b(1) .* exp(-(hdg-b(2)).^2 ./ (2*b(3).^2)) + b(4));
         flippedGauss_err = @(param,pdw,hdg) -( sum(log(flippedGauss(param,hdg(pdw)))) + sum(log(1-flippedGauss(param,hdg(~pdw)))) );
         guess_fgauss = [0.2 0 2 0.5];
     end
@@ -92,6 +91,7 @@ for n = 1:nboots
                     I = data.modality==mods(m) & data.coherence==cohs(c) & data.delta==deltas(D);
                 end
             end
+            I = I & ~data.oneTargConf;
             
             bootI = randsample(find(I),sum(I),true);
             
