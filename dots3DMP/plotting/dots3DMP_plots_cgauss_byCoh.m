@@ -28,7 +28,10 @@ elseif conftask==2
     else,            RTylims = [0.5 0.9]; 
     end
     xt = -12:6:12;
-    if length(mods)>1, cohlabs = {sprintf('coh = %.1f',cohs(1)),sprintf('coh = %.1f',cohs(2))}; end
+    if length(mods)>1, 
+%         cohlabs = {sprintf('coh = %.1f',cohs(1)),sprintf('coh = %.1f',cohs(2))}; 
+        cohlabs = {'Low Coh','High Coh'};
+    end
 end 
 
 

@@ -74,7 +74,7 @@ for c = 1:nconds
     errorbar(uhdg,confCorr(:,c),confCorrSE(:,c),'color',mcols(c,:),'linestyle','-','linew',1.5,'marker','o');
 end
 ylabel(yLab);
-axis([min(uhdg)-1 max(uhdg)+1 0 1])
+axis([min(uhdg)-1 max(uhdg)+1 0.25 1])
 try changeAxesFontSize(gca,12,12); tidyaxes; catch; end
 box off;
 title('Correct')
@@ -85,7 +85,7 @@ for c = 1:nconds
 end
 xlabel(sprintf('heading angle (%s)',char(176))); 
 ylabel(yLab);
-axis([min(uhdg)-1 max(uhdg)+1 0 1])
+axis([min(uhdg)-1 max(uhdg)+1 0.25 1])
 try changeAxesFontSize(gca,12,12); tidyaxes; catch; end
 box off;
 title('Error')
@@ -95,7 +95,7 @@ subplot(222); hold on
 for c = 1:nconds
     errorbar(RTCorr(:,c),confCorr(:,c),confCorrSE(:,c),'color',mcols(c,:),'linestyle','-','linew',1.5,'marker','o');
 end
-axis([xRange 0 1])
+axis([xRange 0 0.75])
 try changeAxesFontSize(gca,12,12); tidyaxes; catch; end
 title('Correct')
 
@@ -104,7 +104,7 @@ for c = 1:nconds
     errorbar(RTErr(1:3,c),confErr(1:3,c),confErrSE(1:3,c),'color',mcols(c,:),'linestyle','-','linew',1.5,'marker','o');
 end
 xlabel('RT (s)')
-axis([xRange 0 1])
+axis([xRange 0 0.75])
 try changeAxesFontSize(gca,12,12); tidyaxes; catch; end
 end
 title('Error')

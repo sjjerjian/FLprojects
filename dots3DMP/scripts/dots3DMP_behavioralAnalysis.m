@@ -15,14 +15,14 @@ addpath(genpath('/Users/stevenjerjian/Desktop/FetschLab/Analysis/codes/'))
 
 %% select subject, load the data
 
-subject = 'zarya';
+subject = 'lucio';
 
 switch subject
     
     case 'lucio'
 %         load('lucio_20210315-20210805_clean.mat') % recent lucio data, PDW + RT
 %         load('lucio_20211101-20220602_clean.mat') % recent lucio data, PDW + RT
-        load('lucio_20220301-20220817_clean.mat') % recent lucio data, PDW + RT
+        load('lucio_20220301-20221006_clean.mat') % recent lucio data, PDW + RT
 
         conftask = 2; % 1=colorbars, 2=PDW
         RTtask   = 1;
@@ -88,23 +88,19 @@ hdgs   = unique(data.heading);
 %%
 
 
-%% basic parsing and descriptive gaussian fits 
+%% basic parsing and plot of logistic fits
 
 % means per condition, logistic fits
 parsedData = dots3DMP_parseData(data,mods,cohs,deltas,hdgs,conftask,RTtask); 
-
-% gaussian fits
-% gfit = dots3DMP_fit_cgauss(data,mods,cohs,deltas,conftask,RTtask); 
-
-%% summary plots
-% logistic fit plots
 dots3DMP_plots(parsedData,mods,cohs,deltas,hdgs,conftask,RTtask)
 
-% separate subplots for each coh, with all mods on same subplot
-% dots3DMP_plots_cgauss_byCoh(gfit,parsedData,mods,cohs,deltas,hdgs,conftask,RTtask)
+%% gaussian fits and plots
+gfit = dots3DMP_fit_cgauss(data,mods,cohs,deltas,conftask,RTtask); 
 
-% or...separate subplots for each mod/delta, and all cohs on same subplot
-% n.b. - this one needs tidying to look nice
+% separate subplots for each coh, with all mods on same subplot
+gfits_fig = dots3DMP_plots_cgauss_byCoh(gfit,parsedData,mods,cohs,deltas,hdgs,conftask,RTtask);
+
+% or...separate subplots for each mod/delta, and all cohs on same subplot - this one needs tidying to look nice if it's going to be used
 % dots3DMP_plots_cgauss_byModDelta(gfit,parsedData,mods,cohs,deltas,hdgs,conftask,RTtask)
 
 %% psychophysical cue weights
@@ -140,7 +136,7 @@ end
 % plotOption == 1 - plot correct/high bet only
 % plotOption == 2 - plot correct/error or high/low bet separately
 % plotOption == -1 - plot all trials
-dots3DMP_RTquantiles(data,conftask,1)
+dots3DMP_RTquantiles(data,conftask,0)
 
 %% PDW and RT for correct vs incorrect trials
 
@@ -151,6 +147,7 @@ dots3DMP_CorrectVsErrorCurves(data,conftask,RTtask,1)
 % Choice curves for low bet should be shallower - indicative that PDW is
 % predictive of accuracy, even within a stimulus condition!
 
+cohs = 0.3;
 parsedData_byConf = dots3DMP_parseData_byConf(data,mods,cohs,deltas,hdgs,conftask,RTtask); 
 gfit_byConf       = dots3DMP_fit_cgauss_byConf(data,mods,cohs,deltas,conftask,RTtask);
 

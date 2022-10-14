@@ -5,11 +5,11 @@ clear all; close all
 conftask = 2;
 RTtask = 1;
 
-subject = 'zarya';
+subject = 'lucio';
 paradigm = 'dots3DMP';
 % dateRange = 20210315:20210805; % RT
 % dateRange = 20211101:20220809; % RT
-dateRange = 20220301:20220920;
+dateRange = 20220301:20221006;
 
 %%
 % folder = '/Users/chris/Documents/MATLAB/PLDAPS_data/';
@@ -18,8 +18,8 @@ folder = '/Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data/dataStructs/';
 file = [subject '_' num2str(dateRange(1)) '-' num2str(dateRange(end)) '.mat'];
 load([folder file], 'data');
 
-try data = rmfield(data,'amountRewardLowConf'); catch, end
-try data = rmfield(data,'amountRewardHighConf'); catch, end
+% try data = rmfield(data,'amountRewardLowConf'); catch, end
+% try data = rmfield(data,'amountRewardHighConf'); catch, end
 
 
 % load('/Users/chris/Downloads/lucio_20210315-20210707_clean.mat')

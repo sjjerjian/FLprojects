@@ -19,9 +19,8 @@ addpath(genpath('/Users/stevenjerjian/Desktop/FetschLab/Analysis/codes/'))
 paradigm = 'dots3DMP';
 today    = str2double(datestr(now,'yyyymmdd'));
 
-subject = 'zarya';
-dateRange = 20220301:today; % RT
-% dateRange = 20210714;
+subject = 'lucio';
+dateRange = 20210315:today; % RT
 
 % subject = 'human';
 % dateRange = 20190625:20191231; % non-RT
@@ -42,14 +41,14 @@ mountDir  = ['/Volumes/homes/fetschlab/data/' subject '/'];
 
 addNexonarDataToStruct = 0; % SJ 08-2021
 addDotPositionToStruct = 0; % SJ 01-2022
-saveRewardData = 0;         % SJ 06-2022
+saveRewardData = 1;         % SJ 06-2022
 
 %% get PDS files from server -- DON'T FORGET VPN
 % will skip files that already exist locally, unless overwrite set to 1
 
 useSCP = 0; % 1 - secure copy of files to local folder, 0 - load files directly from mounted drive, save locally only after cleanup
 useVPN = 0; % 1 - use proxy VPN (off campus), 0 - use 172 address
-overwriteLocalFiles = 1; % set to 1 to always use the server copy
+overwriteLocalFiles = 0; % set to 1 to always use the server copy
 getDataFromServer % now also includes pdsCleanup to reduce file size and complexity
 
 %% get Nexonar files from server

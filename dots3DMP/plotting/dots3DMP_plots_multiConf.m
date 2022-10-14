@@ -25,7 +25,9 @@ for m = 1:length(mods)
 %     if splitPDW
 %         clr{mods(m)} = cbrewer('seq',clrseqs{m},ceil(nConfGroups/2));
 %     else
-        clr{mods(m)} = cbrewer('seq',clrseqs{m},nConfGroups);
+%         clr{mods(m)} = cbrewer('seq',clrseqs{m},nConfGroups);
+        clr{mods(m)} = cbrewer('qual','Dark2',nConfGroups);
+
 %     end
 end
 
@@ -43,23 +45,23 @@ for c=1:length(cohs)
         %             errorbar(hdgs, squeeze(parsedData.pRight(end,1,D,:,cc)), squeeze(parsedData.pRightSE(end,1,D,:,cc)), 'color',[1 1 1]*0.5,'linewidth',1.5,'markerfacecolor',[1 1 1]*0.5);
         
         for nc=1:nConfGroups
-            if splitPDW
-                if nc>parsedData.confGroupSplit*2
-                    continue
-                elseif nc>parsedData.confGroupSplit
-                    lnstl = '-';
-                else
-                    lnstl = '--';
-                end
-            else
+%             if splitPDW
+%                 if nc>parsedData.confGroupSplit*2
+%                     continue
+%                 elseif nc>parsedData.confGroupSplit
+%                     lnstl = '-';
+%                 else
+%                     lnstl = '--';
+%                 end
+%             else
                 lnstl = '-';
-            end
+%             end
             colind = mod(nc,parsedData.confGroupSplit); colind(colind==0) = parsedData.confGroupSplit;
             if parsedData.plotLogistic(m,c,D,nc)
-                h(m) = plot(parsedData.xVals,squeeze(parsedData.yVals(m,c,D,:,nc)),'color',clr{mods(m)}(colind,:),'linestyle',lnstl,'linewidth',1.5); hold on;
+                h(m) = plot(parsedData.xVals,squeeze(parsedData.yVals(m,c,D,:,nc)),'color',clr{mods(m)}(colind,:),'linestyle',lnstl,'linewidth',2); hold on;
                 errorbar(hdgs, squeeze(parsedData.pRight(m,c,D,:,nc)), squeeze(parsedData.pRightSE(m,c,D,:,nc)), 'color',clr{mods(m)}(colind,:),'linestyle','none','linewidth',1.5);
             else
-                h(m) = errorbar(hdgs, squeeze(parsedData.pRight(m,c,D,:,nc)), squeeze(parsedData.pRightSE(m,c,D,:,nc)), 'color',clr{mods(m)}(colind,:),'linewidth',1.5); hold on;
+                h(m) = errorbar(hdgs, squeeze(parsedData.pRight(m,c,D,:,nc)), squeeze(parsedData.pRightSE(m,c,D,:,nc)), 'color',clr{mods(m)}(colind,:),'linewidth',2); hold on;
             end
         end
         set(gca,'xtick',xt);
@@ -92,19 +94,19 @@ for c=1:length(cohs)
         %         subplot(1,length(mods),m)
         if m==1 && c~=1, delete(gca); continue, end
         for nc=1:nConfGroups
-            if splitPDW
-                if nc>parsedData.confGroupSplit*2
-                    continue
-                elseif nc>parsedData.confGroupSplit
-                    lnstl = '-';
-                else
-                    lnstl = '--';
-                end
-            else
+%             if splitPDW
+%                 if nc>parsedData.confGroupSplit*2
+%                     continue
+%                 elseif nc>parsedData.confGroupSplit
+%                     lnstl = '-';
+%                 else
+%                     lnstl = '--';
+%                 end
+%             else
                 lnstl = '-';
-            end
+%             end
             colind = mod(nc,parsedData.confGroupSplit); colind(colind==0) = parsedData.confGroupSplit;
-            h(m) = errorbar(hdgs, squeeze(parsedData.RTmean(m,c,D,:,nc)), squeeze(parsedData.RTse(m,c,D,:,nc)), 'color',clr{mods(m)}(colind,:),'linewidth',1.5); hold on;
+            h(m) = errorbar(hdgs, squeeze(parsedData.RTmean(m,c,D,:,nc)), squeeze(parsedData.RTse(m,c,D,:,nc)), 'color',clr{mods(m)}(colind,:),'linewidth',2); hold on;
             set(gca,'xtick',xt);
             if conftask==1
                 ylim([0.8 2]);
@@ -141,7 +143,7 @@ if conftask && splitPDW==0
             if m==1 && c~=1, delete(gca); continue, end
             for nc=1:nConfGroups
                 colind = mod(nc,parsedData.confGroupSplit); colind(colind==0) = parsedData.confGroupSplit;
-                h(m) = errorbar(hdgs, squeeze(parsedData.confMean(m,c,D,:,nc)), squeeze(parsedData.confSE(m,c,D,:,nc)), 'color',clr{mods(m)}(colind,:),'linewidth',1.5); hold on;
+                h(m) = errorbar(hdgs, squeeze(parsedData.confMean(m,c,D,:,nc)), squeeze(parsedData.confSE(m,c,D,:,nc)), 'color',clr{mods(m)}(colind,:),'linewidth',2); hold on;
                 set(gca,'xtick',xt);
                 if conftask==1
                     ylim([0.8 2]);
