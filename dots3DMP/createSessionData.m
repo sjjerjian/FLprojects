@@ -1,16 +1,27 @@
 %% create SessionData
 
 % create a struct with neural Data for each session, see
-% dots3DMP_NeuralPreProcessing for explanation of dataStruct structure, and
-% how different paradigms are segmented when recording is done all in one.
+% dots3DMP_NeuralPreProcessing for explanation of dataStruct structure
+
+% IMPORTANT: 
+% For spike sorting purposes, successive recordings with the same putative
+% units are concatenated.
+% The timestamps for concatenated recordings are shifted according to the
+% length of the overall data so that the range of events and spikes is
+% matched for a given recording (nsEvents.analogData.timeStamps and .timeStampsShifted).
+% i.e. if a recording is the first in the set, it's timestamps should start from around 0, whereas 
+% % if it is later in the set they will start from some other time >0. 
+% The spiketimes will be matched accordingly, so the range of spiketimes should approximately match the range of (and be aligned to) task events. 
+
 
 % TODO 09-2022 modify single neuron pipeline to take Wave_clus data
-% instead?
 
 % fields in 'events' which contain event times, this will be important later
-tEvs   = {'trStart','fpOn','fixation','reward','stimOn','stimOff','saccOnset','targsOn','targHold','postTargHold','reward','breakfix','nexStart','nexEnd','return'};
+tEvs   = {'trStart','fpOn','fixation','reward','stimOn','stimOff','saccOnset',...
+    'targsOn','targHold','postTargHold','reward','breakfix','nexStart','nexEnd','return'};
 
-% sess = length(dataStruct); % eventually allow for this code to append to existing dataStruct if desired, instead of always starting from blank
+% sess = length(dataStruct); % eventually allow for this code to append to
+% existing dataStruct if desired, instead of always starting from blank?
 
 dataStruct = struct();
 sess = 0;
@@ -33,13 +44,24 @@ for n = 1:length(currentFolderList)
         if ~contains(info.probe_type{1},'Single')
             remoteDirSpikes = sprintf('/var/services/homes/fetschlab/data/%s/%s_neuro/%d/%s%d_%d/',subject,subject,info.date,subject,info.date,unique_sets(u));
             mountDir = sprintf('/Volumes/homes/fetschlab/data/%s/%s_neuro/%d/%s%d_%d/',subject,subject,info.date,subject,info.date,unique_sets(u));
+            
+            % 10/09/2022
+            fprintf('using kilosort 2.5 results\n')
+            mountDir = sprintf('/Volumes/homes/fetschlab/data/%s/%s_neuro/%d/%s%d_%d_ks25/',subject,subject,info.date,subject,info.date,unique_sets(u));
+
             try 
+                disp(mountDir)
                 sp = loadKSdir(mountDir);
-                %unitInfo = getUnitInfo(mountDir, keepMU);
             catch
                 fprintf('Could not load kilosort sp struct for %d, set %d\n',info.date,unique_sets(u));
                 continue
             end
+            try                 
+                unitInfo = getUnitInfo(mountDir, keepMU);
+            catch
+                fprintf('Could not get cluster info for this ks file\n')
+            end
+
         end
         
         sess = sess+1;
@@ -48,8 +70,7 @@ for n = 1:length(currentFolderList)
         dataStruct(sess).info = info;
         dataStruct(sess).set = unique_sets(u);
         
-        % loop over paradigms 
-        % (SJ note to self: the logic flow here is different to how nsEvents is created)
+        % loop over paradigms (this differs from the loop structure of how nsEvents is initially created)
         for par=1:length(paradigms)
             
             theseFiles =  find((ic'==unique_sets(u)) & ismember(lower(info.par),lower(paradigms{par})) & (~isnan(info.pldaps_filetimes)));
@@ -76,11 +97,10 @@ for n = 1:length(currentFolderList)
                 st = en+1;
             end
             
-            % for each trellis file within a given set+paradigm,
-            % concatenate and store the events, and compute the necessary
-            % shift for the spiketimes (if there were multiple trellis
-            % files concatenated for kilosort, we will need to subtract the
+            % for each trellis file within a given set+paradigm, concatenate and store the events, and compute the necessary
+            % shift for the spiketimes (if there were multiple trellis files concatenated for kilosort, we will need to subtract the
             % shifted timestamps to line the spikes up with events again)
+
             [unique_trellis_files,~,ii] = unique(info.trellis_filenums(theseFiles));
             
             currPos = 0;
@@ -98,11 +118,9 @@ for n = 1:length(currentFolderList)
             for utf=1:length(unique_trellis_files)
                 NSfilename  = sprintf('%s%ddots3DMP%04d_RippleEvents.mat',info.subject,info.date,unique_trellis_files(utf));
                 
-                % messed up with PDS files on this one...
-                if strcmp(NSfilename, 'lucio20220719dots3DMP0008_RippleEvents.mat')
-                    continue
-                end
-                
+                % messed up with PDS files on this one, oops
+                if strcmp(NSfilename, 'lucio20220719dots3DMP0008_RippleEvents.mat'), continue, end
+
                 try
                     load(fullfile(localDir,NSfilename));
                 catch
@@ -114,14 +132,12 @@ for n = 1:length(currentFolderList)
                 
                 % pull in relevant condition data from PLDAPS and sub-select trials from this paradigm
 
-                % % SJ added 08-22-2022 oneTargChoice and Conf!
-                [thisParEvents] = nsEventConditions(nsEvents,allPDS,lower(paradigms{par}));
-                
+                [thisParEvents]   = nsEventConditions(nsEvents,allPDS,lower(paradigms{par})); % % SJ added 08-22-2022 oneTargChoice and Conf!
                 timeStampsShifted = thisParEvents.analogInfo.timeStampsShifted ./ double(thisParEvents.analogInfo.Fs);
 
-                % do some concatenation in pldaps and events fields in case
-                % the same par+block is split over multiple trellis files
-                
+                % do some concatenation in pldaps and events fields, in case the same par+block is split over multiple trellis files
+                % TO DO, implement option to consider tuning at beginning and end of task as separate...
+
                 nTr    = length(thisParEvents.Events.trStart);
                 fnames = fieldnames(thisParEvents.Events);
                 for f=1:length(fnames)
@@ -192,28 +208,23 @@ for n = 1:length(currentFolderList)
                     % store the depth/ch information from info...
                     % probably do it here...
 
-                else
-                    % pick out spikes from the sp.st vector which can be linked
-                    % to this paradigm's timeframe (with a reasonable buffer on either
-                    % side, e.g. 20secs), and what time to shift the spike
-                    % times by (if any) so that they align with events again
-                    % N.B. this shift is only necessary if multiple Trellis
-                    % recordings were made for same location - these will
-                    % have been concatenated for kilosort sorting, but
-                    % events will still be separate
+
+                else % kilosort data
+
+                    % pick out spikes from the sp.st vector which can be linked to this paradigm's timeframe (with a reasonable buffer on either
+                    % side, e.g. 20secs), and what time to shift the spike times by (if any) so that they align with events again
+                    % Note. this shift is only necessary if multiple Trellis recordings were made for same location - these will
+                    % have been concatenated for kilosort sorting, but events will still be separate
                     
 %                     timeStampsShifted = thisParEvents.analogInfo.timeStampsShifted ./ double(thisParEvents.analogInfo.Fs);
                     timeLims = timeStampsShifted(1) + thisParEvents.Events.trStart([1 end]) + [-1 1]*20;
                     
-                    thisFileSpikes    = (sp.st >= timeLims(1) & sp.st < timeLims(2));
-                    thisParSpikes     = thisParSpikes | thisFileSpikes;
+                    thisFileSpikes = (sp.st >= timeLims(1) & sp.st < timeLims(2));
+                    thisParSpikes  = thisParSpikes | thisFileSpikes; % union
                     
-                    % set the shifted time for each spike associated with a particular
-                    % file to reconcile with nsEvents. NOTE: This is
-                    % file- rather than paradigm specific, as there may be
-                    % more than one file for a given paradigm
-                    % also note that this will miss spikes outside the
-                    % timeLims above, but we don't really care about them
+                    % set the shifted time for each spike associated with a particular file, to reconcile with events. 
+                    % NOTE: This is file- rather than paradigm-specific, as there may be more than one file for a given paradigm.
+                    % also note that this will miss spikes outside the timeLims above, but we don't really care about them
                     % anyway because we select for thisParSpikes below
                     shiftSpikeTime(thisFileSpikes) = timeStampsShifted(1);
                     
@@ -222,9 +233,7 @@ for n = 1:length(currentFolderList)
             
             if isempty(sp.st), continue, end
             
-            % shift the spike times now
-            % add shifted time because we have shifted the nsEvents too
-            % when storing them above.
+            % shift the spike times now, because we have shifted the nsEvents too when storing them above.
             spikeTimes = sp.st + shiftSpikeTime;
           
             if keepMU, inds = sp.cgs<3;
@@ -239,16 +248,16 @@ for n = 1:length(currentFolderList)
             dataStruct(sess).data.(paradigms{par}).units.cluster_labels = {'MU','SU'};
 
             % import the additional info
-            try
-                if ~contains(info.probe_type{1},'Single')
-                    if ~isequal(cids',unitInfo.cluster_id)
-                        keyboard
-                    end
-                    dataStruct(sess).data.(paradigms{par}).units.moreInfo = unitInfo;
-                end
-            catch
-%                 keyboard
-            end
+%             try
+%                 if ~contains(info.probe_type{1},'Single')
+%                     if ~isequal(cids',unitInfo.cluster_id)
+%                         keyboard
+%                     end
+%                     dataStruct(sess).data.(paradigms{par}).units.moreInfo = unitInfo;
+%                 end
+%             catch
+% %                 keyboard
+%             end
 
             fprintf('Adding %d SU and %d MU\n',sum(cgs==2),sum(cgs==1))
 
@@ -267,6 +276,8 @@ for n = 1:length(currentFolderList)
         
 end
 
-file = [subject '_' num2str(dateRange(1)) '-' num2str(dateRange(end)) '_neuralData.mat'];
+% file = [subject '_' num2str(dateRange(1)) '-' num2str(dateRange(end)) '_neuralData.mat'];
+file = [subject '_' num2str(dateRange(1)) '-' num2str(dateRange(end)) '_neuralData_ks25.mat'];
+
 disp('saving...');
 save([localDir(1:length(localDir)-length(subject)-7) file], 'dataStruct');

@@ -45,16 +45,16 @@ if ~strcmpi(par,'RFmapping')
 end
 
 
-fnames = fieldnames(nsEvents.Events);
-for f = 1:length(fnames)
-    nsEvents.Events.(fnames{f}) = nsEvents.Events.(fnames{f})(matchTrials);
+fnamesC = fieldnames(nsEvents.Events);
+for f = 1:length(fnamesC)
+    nsEvents.Events.(fnamesC{f}) = nsEvents.Events.(fnamesC{f})(matchTrials);
 end
-fnames = fieldnames(nsEvents.pldaps);
-for f = 1:length(fnames)
-    if strcmp(fnames{f},'unique_trial_number') && ~iscell(nsEvents.pldaps.unique_trial_number) % SJ 05-2022 some early files used a cell instead of mat, can re-create info files to fix this
+fnamesC = fieldnames(nsEvents.pldaps);
+for f = 1:length(fnamesC)
+    if strcmp(fnamesC{f},'unique_trial_number') && ~iscell(nsEvents.pldaps.unique_trial_number) % SJ 05-2022 some early files used a cell instead of mat, can re-create info files to fix this
         nsEvents.pldaps.unique_trial_number = nsEvents.pldaps.unique_trial_number(matchTrials,:);
     else
-        nsEvents.pldaps.(fnames{f}) = nsEvents.pldaps.(fnames{f})(matchTrials);
+        nsEvents.pldaps.(fnamesC{f}) = nsEvents.pldaps.(fnamesC{f})(matchTrials);
     end
 end
 
@@ -86,16 +86,19 @@ end
 
 % refactor trial data from individual cells into matrix for easier insertion into nsEvents
 % should be fixed across trials within a paradigm
-fnames = fieldnames(PDS.conditions{1}.stimulus);
+fnamesC = fieldnames(PDS.conditions{1}.stimulus);
 
-clear temp
+clear tempConds
 for t = 1:length(PDSconditions)
     
-    for f=1:length(fnames)
-        temp.(fnames{f})(:,t) = PDSconditions{t}.stimulus.(fnames{f});
+    for f=1:length(fnamesC)
+        tempConds.(fnamesC{f})(:,t) = PDSconditions{t}.stimulus.(fnamesC{f});
+        try
+            tempBehav.RT(:,t) = PDSdata{t}.behavior.RT;
+        end
     end
     
-    % datapixx time is what is sent, use this rather than PDS.data{t}.trstart!
+    % datapixx time is what is sent to Ripple
     PDStrstart(t) = PDSdata{t}.datapixx.unique_trial_time(1);
     
     nsEvents.Events.goodtrial(t) = PDSdata{t}.behavior.goodtrial;
@@ -105,19 +108,27 @@ for t = 1:length(PDSconditions)
         nsEvents.Events.oneTargChoice(t) = PDSdata{t}.behavior.oneTargChoice;
         nsEvents.Events.oneTargConf(t)   = PDSdata{t}.behavior.oneTargConf;
     end
-
 end
+
+
+
 
 % just add in the fields from PDS to nsEvents, without any further checks (except
 % for the ones done above)
-fnames = fieldnames(PDSconditions{1}.stimulus);
-for f=1:length(fnames)
-    if any(strcmp(fnames{f},{'headingTheta','hdgOrder','headingPhi'}))
-        nsEvents.Events.(fnames{f}) = mat2cell(temp.(fnames{f})',ones(sum(matchTrials),1))';
+fnamesC = fieldnames(PDSconditions{1}.stimulus);
+for f=1:length(fnamesC)
+    if any(strcmp(fnamesC{f},{'headingTheta','hdgOrder','headingPhi'}))
+        nsEvents.Events.(fnamesC{f}) = mat2cell(tempConds.(fnamesC{f})',ones(sum(matchTrials),1))';
     else
-        nsEvents.Events.(fnames{f}) = temp.(fnames{f});
+        nsEvents.Events.(fnamesC{f}) = tempConds.(fnamesC{f});
     end
 end
+try
+    nsEvents.Events.RT = tempBehav.RT;
+end
+
+% SJ 09-30-2022 should do the same with behavior - sanity check that chocie
+% and PDW are transferred correctly, and also to take the RT from here!
 
 
 

@@ -12,6 +12,9 @@ function dataStruct_clean = dots3DMP_NeuralStruct_runCleanUp(dataStruct,parSelec
 % minTrs - minimum number of trials per unique condition 
 %       TODO - make sure minTrs works for mapping paradigms too
 
+if length(minTrs)==1
+    minTrs = repmat(minTrs,length(parSelect),1);
+end
 
 dataStruct_clean = dataStruct;
 removeEntireSession = false(size(dataStruct));
@@ -55,7 +58,7 @@ for s = 1:length(dataStruct)
 
             [uStimConds,~,ic]    = unique(stimCondList(itr_start:itr_end,:),'rows');
             [nTrConds,~]         = hist(ic,unique(ic));
-            enoughTrials(par,u)  = all(nTrConds>=minTrs);
+            enoughTrials(par,u)  = all(nTrConds>=minTrs(par));
         end
 
     end
@@ -75,6 +78,10 @@ for s = 1:length(dataStruct)
 
         % overwrite
         dataStruct_clean(s).data.(parSelect{par}).units = units;
+
+        if isempty(units.cluster_id)
+            removeEntireSession(s) = true;
+        end
     end
 end
 

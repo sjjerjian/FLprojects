@@ -5,19 +5,25 @@ addpath(genpath('/Users/stevenjerjian/Desktop/FetschLab/Analysis/codes/'))
 % Load in the data
 
 subject   = 'lucio';
-dateRange = 20220615:20220923;
+% dateRange = 20220615:20221003;
+dateRange = 20220805:20221003;
+
+% dateRange = 20221003;
 
 dataPath = '/Users/stevenjerjian/Desktop/FetschLab/Analysis/data/';
-dataFileName = sprintf('%s_%d-%d_neuralData.mat',subject,dateRange(1),dateRange(end));
+% dataFileName = sprintf('%s_%d-%d_neuralData.mat',subject,dateRange(1),dateRange(end));
+dataFileName = sprintf('%s_%d-%d_neuralData_ks25.mat',subject,dateRange(1),dateRange(end));
 
 % dataFileName = 'lucio_20220923_tempneuralData.mat'; 
 
 load(fullfile(dataPath,dataFileName));
 
+dataStruct = dataStruct([2 3 4 7 9 10 11 12 16 17]);
+
 % inputs to dots3DMP_NeuralStruct_runCleanUp
 parSelect  = {'dots3DMPtuning','dots3DMP'}; 
 minRate    = 5;
-minTrs     = 5;
+minTrs     = [5 10];
 dataStruct = dots3DMP_NeuralStruct_runCleanUp(dataStruct,parSelect,minRate,minTrs);
 
 %% pre-set some things
@@ -40,7 +46,7 @@ deltas = 0;
 % analyses
 
 %% create PSTHs and calculate average activity for units during tuning paradigm
-% useFullDur --> stimOn-stimOff
+% useFullDur --> stimOn-stimOfyf
 % otherwise, middle 1s of stimulus
 
 par     = 'dots3DMPtuning';
@@ -76,7 +82,7 @@ end
 % same for both
 eventInfo.otherEvents = {{'fixation','stimOff'}};
 eventInfo.otherEventnames = {{'FixAcq','stimOff'}};
-eventInfo.binSize = 0.1;
+eventInfo.binSize = 0.2;
 
 % time-resolved psths, separate alignments to stimOn and saccOnset
 TuningeventInfoTR.alignEvent      = {{'stimOn'}};
@@ -102,9 +108,9 @@ condlabels  = {'modality','coherenceInd','heading','correct'}; % use only correc
 TaskeventInfoTR.alignEvent      = {{'stimOn'},{'saccOnset'}};
 TaskeventInfoTR.otherEvents     = {{'fixation','saccOnset'},{'postTargHold'}};
 TaskeventInfoTR.otherEventnames = {{'FixAcq','RT'},{'Wager'}};
-TaskeventInfoTR.tStart          = [-1,-0.8];
-TaskeventInfoTR.tEnd            = [1.5,2.5];
-TaskeventInfoTR.binSize = 0.01;
+TaskeventInfoTR.tStart          = [-1,-0.5];
+TaskeventInfoTR.tEnd            = [1.0,1.0];
+TaskeventInfoTR.binSize = 0.02;
 
 % mean response during stim duration (i.e. stimOn to saccOnset)
 eventInfoMS.alignEvent      = {{'stimOn','saccOnset'}};
@@ -144,7 +150,7 @@ conds_formatted = reshape(condMat,length(hdgVec),[],size(condMat,2));
 condcols = 'kmcrb';
 numUnits = size(auFR_formatted,3);
 
-upp = 56; % units per 'page'
+upp = 80; % units per 'page'
 [p,q] = numSubplots(upp);    
 
 for u=1:numUnits
@@ -211,8 +217,8 @@ xlabel(sprintf('Heading angle [%s]',char(176)))
 
 %% ====== plot time resolved PSTH
 
-% par = 'dots3DMPtuning';
-par = 'dots3DMP';
+par = 'dots3DMPtuning';
+% par = 'dots3DMP';
 
 switch par
     case 'dots3DMPtuning'
@@ -236,9 +242,9 @@ end
 N = length(hdgVec);
 hdgcols = cbrewer('div','RdBu',N*2);
 hdgcols = hdgcols([1:floor(N/2) end-floor(N/2):end],:);
-hdgcols(hdgsTuning==0,:) = [0 0 0];
+hdgcols(hdgVec==0,:) = [0 0 0];
 
-figure('position',[100 100 600 400],'color','w')
+figure('position',[100 100 1000 800],'color','w')
 
 cohs = [1 2];
 if length(cohs)==2
@@ -265,7 +271,7 @@ muFRs = auMat.data.PSTHs;
 % u = 352;
 % u = 292;
 
-u = 135;
+u = 58;
 
 clear tempFR
 for iae=1:length(muFRs)
@@ -291,9 +297,9 @@ for c=1:size(ucond,1)
         evTimes_formatted = reshape(auMat.times.evTimes{iae},N,[],size(auMat.times.evTimes{iae},2),size(auMat.times.evTimes{iae},3));
 
         if iae==1, p1 = pos(1);
-        else p1 = p1 + pos(3)*sprc(1:iae-1)*0.95;
+        else p1 = p1 + pos(3)*sprc(1:iae-1);
         end
-        hh=subplot('position',[p1 pos(2) pos(3)*sprc(iae)*0.9 pos(4)]); %axis off;
+        hh=subplot('position',[p1 pos(2) pos(3)*sprc(iae)*0.95 pos(4)]); %axis off;
         hold on;
 
         temp = squeeze(auFR_formatted(:,c,:,u));
@@ -313,8 +319,8 @@ for c=1:size(ucond,1)
             end
         end
 
-        if c==size(ucond,1)
-            xlabel(sprintf('Time from %s [s]',alignEvent{iae}{1}),'fontsize',14)
+        if ucond(c,1)==max(ucond(:,1))
+            xlabel(hh,sprintf('Time from %s [s]',alignEvent{iae}{1}),'fontsize',14)
         end
         if iae==length(muFRs)
             ht=title(titles{c});
@@ -329,7 +335,7 @@ for c=1:size(ucond,1)
         else
             hh.YAxis.Visible = 'off';
         end
-        if c<3, hh.XTickLabel = []; end
+        hh.XLim = auMat.times.xvec{iae}([1 end]);
 
 
 %         if c==1 && iae==length(muFRs)

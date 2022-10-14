@@ -5,7 +5,7 @@ function unitInfo = getUnitInfo(thisDir, keepMU)
 
 filename = fullfile(thisDir,'cluster_info.tsv');
 fid = fopen(filename);
-hdr      = textscan(fid, '%s%s%s%s%s%s%s%s%s%s%s',1);
+hdr  = textscan(fid, '%s%s%s%s%s%s%s%s%s%s%s',1);
 main = textscan(fid,'%d%f%f%s%f%d%d%f%s%d%d');
 fclose(fid);
 
