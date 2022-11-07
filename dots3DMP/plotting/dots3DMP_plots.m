@@ -10,6 +10,7 @@ D = find(deltas==0);
 clr{1} = {'ko','ro','bo'};
 clr{2} = {'ko','ro','bo'};
 clr{3} = {'ko','yo','go'};
+lh = {'ves','vis','comb'};
 fh(1) = figure(101+D);
 % set(gcf,'Color',[1 1 1],'Position',[300 1000 450+300*(length(cohs)-2) 200+150*(conftask>0)+150*RTtask],'PaperPositionMode','auto'); clf;
 set(gcf,'Color',[1 1 1],'Position',[200 80 700 900],'PaperPositionMode','auto'); clf;
@@ -19,15 +20,15 @@ for c = 1:length(cohs)
     subplot(1+double(conftask>0)+double(RTtask),length(cohs),c); box off; hold on;
     for m = 1:length(mods)     % m c d h
         if parsedData.plotLogistic(m,c,D)
-            h(m) = plot(parsedData.xVals,squeeze(parsedData.yVals(m,c,D,:)),[clr{c}{m}(1) '-'],'linewidth',1.5); hold on;
-            errorbar(hdgs, squeeze(parsedData.pRight(m,c,D,:)), squeeze(parsedData.pRightSE(m,c,D,:)), clr{c}{m},'linewidth',1.5);
+            h(m) = plot(parsedData.xVals,squeeze(parsedData.yVals(m,c,D,:)),[clr{c}{mods(m)}(1) '-'],'linewidth',1.5); hold on;
+            errorbar(hdgs, squeeze(parsedData.pRight(m,c,D,:)), squeeze(parsedData.pRightSE(m,c,D,:)), clr{c}{mods(m)},'linewidth',1.5);
         else
-            h(m) = errorbar(hdgs, squeeze(parsedData.pRight(m,c,D,:)), squeeze(parsedData.pRightSE(m,c,D,:)), [clr{c}{m} '-'],'linewidth',1.5); hold on;
+            h(m) = errorbar(hdgs, squeeze(parsedData.pRight(m,c,D,:)), squeeze(parsedData.pRightSE(m,c,D,:)), [clr{c}{mods(m)} '-'],'linewidth',1.5); hold on;
         end
         ylim([0 1]);
         if length(mods)>1; title(['coh = ' num2str(cohs(c))]); end
     end
-    legend(h,'ves','vis','comb','Location','northwest');
+    legend(h,lh(mods),'Location','northwest');
     xlabel('heading angle (deg)'); ylabel('P(right)');
     try changeAxesFontSize(gca,15,15); catch; end
     
@@ -35,7 +36,7 @@ for c = 1:length(cohs)
     if conftask
         subplot(1+double(conftask>0)+double(RTtask),length(cohs),c+length(cohs)); box off; hold on;
         for m = 1:length(mods)
-            h(m) = errorbar(hdgs, squeeze(parsedData.confMean(m,c,D,:)), squeeze(parsedData.confSE(m,c,D,:)), [clr{c}{m} '-'],'linewidth',1.5);
+            h(m) = errorbar(hdgs, squeeze(parsedData.confMean(m,c,D,:)), squeeze(parsedData.confSE(m,c,D,:)), [clr{c}{mods(m)} '-'],'linewidth',1.5);
             ylim([0 1]); hold on;
         end
         xlabel('heading angle (deg)');
@@ -49,7 +50,7 @@ for c = 1:length(cohs)
     if RTtask
         subplot(1+double(conftask>0)+double(RTtask),length(cohs),c+length(cohs)*2); box off; hold on;
         for m = 1:length(mods)
-            h(m) = errorbar(hdgs, squeeze(parsedData.RTmean(m,c,D,:)), squeeze(parsedData.RTse(m,c,D,:)), [clr{c}{m} '-'],'linewidth',1.5); hold on;
+            h(m) = errorbar(hdgs, squeeze(parsedData.RTmean(m,c,D,:)), squeeze(parsedData.RTse(m,c,D,:)), [clr{c}{mods(m)} '-'],'linewidth',1.5); hold on;
         end
         xlabel('heading angle (deg)'); ylabel('RT (s)');
         yRng = [min(parsedData.RTmean(:)) max(parsedData.RTmean(:))];

@@ -17,10 +17,6 @@ fieldExcludes = {'leftEarly','tooSlow','fixFP','FPHeld','eyeXYs','corrLoopActive
 
 % now search localDir again for matching files and extract the desired variables from PDS
 allFiles = dir(localDir);
-try
-    if addNexonarDataToStruct, allNexFiles = dir([localDirNex '/*.mat']); end
-catch
-end
 
 try if addNexonarDataToStruct, allNexFiles = dir([localDirNex '/*.mat']); end; catch, end
 

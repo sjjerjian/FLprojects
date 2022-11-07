@@ -49,7 +49,7 @@ for d = 1:length(deltas)+1 % add extra column for all trials irrespective of del
         
         n(m,c,d,h) = nansum(J);
 %         if sum(J), keyboard, end
-        pRight(m,c,d,h) = nansum(J & data.choice==2) / n(m,c,d,h); % 2 is rightward!!        
+        pRight(m,c,d,h) = nansum(J & data.choice==2) / n(m,c,d,h); % 2 is rightward!!       
         pCorrect(m,c,d,h) = nansum(J & data.correct) / n(m,c,d,h);
         
         if RTtask
@@ -76,8 +76,9 @@ for d = 1:length(deltas)+1 % add extra column for all trials irrespective of del
             end
             
         elseif conftask==2 % PDW
-            % ignore 1-target trials!! these are just for training purposes
+            % ignore 1-target trials here
             if isfield(data,'oneTargConf')
+                %disp('ignoring one-target confidence trials')
                 J = J & ~data.oneTargConf;
             end
             

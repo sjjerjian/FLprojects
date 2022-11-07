@@ -257,7 +257,7 @@ switch p.histmethod
         
         edges=[edges(end:-1:1) edges1(2:end)];
         ne=length(edges);
-        fr=NaN*ones(Ntr,ne-1);
+        fr=nan(Ntr,ne-1);
 
     case 'causal'
         
@@ -272,7 +272,7 @@ end
 ot=cell(1,Nov);
 for ie=1:Nov
    if isempty(p.otherevents{ie}), continue; end
-   ot{ie}=NaN*ones(1,Ntr);
+   ot{ie}=nan(1,Ntr);
    for itr=tr_start:tr_end
       ot{ie}(itr)=p.otherevents{ie}(itr)-align(itr);
       if p.plotsingletrialevents
