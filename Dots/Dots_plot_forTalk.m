@@ -11,7 +11,7 @@ set(gca,'xtick',-0.5:0.25:0.5,'tickdir','out','box','off');
 ylim([0 1]); xlim([-0.55 0.55]);
 xlabel('Motion strength (coh)'); ylabel('Proportion rightward choices');
 changeAxesFontSize(gca,20,20);
-export_fig('dots_pmf','-eps');
+export_fig('dots_choice','-eps');
 
 figure(106); set(gcf,'Color',[1 1 1],'Position',[50 20 360 320],'PaperPositionMode','auto'); clf;
 plot(xVals,yVals2,'k-','LineWidth',2); hold on;
@@ -24,7 +24,7 @@ set(gca,'xtick',-0.5:0.25:0.5,'tickdir','out','box','off');
 ylim([0 1]); xlim([-0.55 0.55]);
 xlabel('Motion strength (coh)'); ylabel('Proportion rightward choices');
 changeAxesFontSize(gca,20,20);
-export_fig('dots_pmf_split','-eps');
+export_fig('dots_choice_split','-eps');
 
 %% RT
 

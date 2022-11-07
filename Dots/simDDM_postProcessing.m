@@ -37,7 +37,7 @@ RT = DT+Tnd;
 % quick sanity check that params are reasonable
 pCorrect_total = sum(sign(choice)==sign(coh)) / ntrials
 
-% should be >0.95 or else maxDur isn't long enough (or need urgency!)
+% should be >0.95 or else maxDur isn't long enough (or need urgency signal!)
 pHitBound = sum(hitBound)/length(hitBound)
 Z = abs(coh)<0.0001;
 pHitBound_zeroCoh = sum(hitBound(Z))/sum(Z)
@@ -73,5 +73,5 @@ Dots_plot(parsedData,cohs,conftask,RTtask,wFit,forTalk)
 
 %% temp: save data, e.g. for param recovery
 
-save tempsim.mat data origParams allowNonHB
+% save tempsim.mat data origParams allowNonHB
 

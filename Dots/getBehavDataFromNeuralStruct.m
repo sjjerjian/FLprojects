@@ -1,4 +1,4 @@
-
+function data = getBehavDataFromNeuralStruct(dataCell)
 
 data.direction = dataCell{1}.Exp.openEvents.direction';
 data.coherence = dataCell{1}.Exp.openEvents.coherence';
@@ -23,13 +23,5 @@ data.scoh(data.direction==180) = -data.scoh(data.direction==180);
 data.correct = zeros(size(data.RT));
 data.correct(data.direction==0 & data.choice==1 | data.direction==180 & data.choice==0) = 1;
 
-
-RTtask = 1;
-conftask = 2;
-RTCorrOnly = 1;
-forTalk = 1;
-
-parsedData = Dots_parseData(data,conftask,RTtask,RTCorrOnly);
-cohs = unique(data.scoh);
-Dots_plot(parsedData,cohs,conftask,RTtask,0,forTalk);
+end
 

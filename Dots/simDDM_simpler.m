@@ -86,28 +86,22 @@ RT = RT + Tnd;
 pCorrect_total = sum(sign(choice)==sign(coh)) / ntrials
 
 
-%% format data as in experimental data files and generate output structs
+%% plot proportion "rightward" (choice=1) and reaction time as a function of coherence
 
-coh(coh==0) = sign(randn)*eps; % should have no actual zeros, but if so, sign them randomly;
-                               % this is just to assign a direction and correct/error
-data.correct = choice==sign(coh);
-data.direction = nan(ntrials,1);
-data.direction(coh>0) = 0;
-data.direction(coh<0) = 180;
-coh(abs(coh)<1e-6) = 0; % now go back to one 'zero'
-data.coherence = abs(coh);
-data.scoh = coh;
+for c = 1:length(cohs)
+    I = coh==cohs(c);
+    pRight(c,1) = sum(I & choice==1) / sum(I);
+    meanRT(c,1) = mean(RT(I));
+end
 
-data.choice = choice;
-data.choice(data.choice==-1) = 0; % code elsewhere assumes 0s and 1s
-data.RT = RT/1000; % convert to seconds
+figure; set(gcf,'Color',[1 1 1],'Position',[300 500 450 600],'PaperPositionMode','auto');
 
-conftask = 0; RTtask = 1; RTCorrOnly = 0;
-parsedData = Dots_parseData(data,conftask,RTtask,RTCorrOnly);
+subplot(2,1,1); plot(cohs,pRight(:,1),'bo-');
+xlabel('Motion strength (%coh)'); ylabel('Proportion rightward choices');
 
-% plot
-cohs = unique(coh); wFit = 0; forTalk = 0;
-Dots_plot(parsedData,cohs,conftask,RTtask,wFit,forTalk)
+subplot(2,1,2); plot(cohs,meanRT(:,1),'ro-');
+xlabel('Motion strength (%coh)'); ylabel('Reaction time (ms)');
+
 
 
 

@@ -122,7 +122,11 @@ for c = 1:length(cohs)
 
         Lerr = ~isnan(data.PDW) & data.correct==0;
         nPDW3(c) = sum(J & Lerr);
-        pHighErr(c) = sum(J & Lerr & data.PDW==1) / nPDW3(c);
+        if nPDW3(c)>15
+            pHighErr(c) = sum(J & Lerr & data.PDW==1) / nPDW3(c);
+        else % ignore small N (e.g. high coh low bet)
+            pHighErr(c) = NaN;
+        end
     end    
     
     % conf

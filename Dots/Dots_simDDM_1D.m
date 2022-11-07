@@ -1,5 +1,5 @@
 % monte-carlo simulation of 1D drift-diffusion model w/ confidence
-% formerly simDDM_simple; relies on Kiani 09 mapping
+% formerly simDDM_simple_wConf; relies on Kiani 09 mapping
 % CF started it circa 2016(?)
 
 

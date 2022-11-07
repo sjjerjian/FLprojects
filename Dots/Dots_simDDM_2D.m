@@ -8,30 +8,39 @@
 
 %% build expt and hand-pick some model params
 
+
 cd('/Users/chris/Documents/MATLAB/Projects/offlineTools/Dots')
 
 clear all; close all
- 
-allowNonHB = 0; % allow non-hit-bound trials (where RT = max_dur) or not 
 
-confModel = 'evidence+time';
-% confModel = 'evidence_only';
+
+confModel = 'evidence+time'; % default, Kiani 2014 etc
+    % if want to test some alternatives:
+% confModel = 'evidence_only'; 
 % confModel = 'time_only';
-% ^ these require different units for theta, time and evidence respectively
+    % ^ these require different units for theta, time and evidence respectively
 
-ntrials = 75000;
+ntrials = 50000;
 
 dbstop if error
 
+% set of coherences
 cohs = [-0.512 -0.256 -0.128 -0.064 -0.032 -eps eps 0.032 0.064 0.128 0.256 0.512];
 coh = randsample(cohs,ntrials,'true')';
 
+% time step
 dT = 1; % ms
+
+% max duration, 
 max_dur = 3000;
+
+allowNonHB = 0; % allow non-hit-bound trials (where RT = max_dur)? 
+% if a trial lasts longer than max_dur and this is set to 0, it is
+% discarded
 
 
 %% params
-% these are very different from 1D model, k is larger and bound is smaller,
+% these are very different from 1D model: k is larger and bound is smaller,
 % maybe because of the way images_dtb is written (?)
 
 k = 18; % drift rate coeff (conversion from %coh to units of DV)
@@ -49,11 +58,13 @@ alpha = 0.15; % base rate of low bets (offset to PDW curve, as seen in data)
 % theta = 1.6; % threshold for high bet in units of log odds correct (Kiani & Shadlen 09, 14)
 % alpha = 0.15; % base rate of low bets (offset to PDW curve, as seen in data)
 
-TndMean = 300; % non-decision time (ms)
+ % Tnd = non-decision time (ms), to account for sensory/motor latencies
+TndMean = 300;
 TndSD = 0; % 50-100 works well; set to 0 for fixed Tnd 
 TndMin = TndMean/2; % need to truncate the Tnd dist
 TndMax = TndMean+TndMin;
 
+% store the generative parameters, to use in (pre)param recovery
 origParams.k = k;
 origParams.B = B;
 origParams.sigma = sigma;
@@ -65,20 +76,7 @@ origParams.TndMin = TndMin;
 origParams.TndMax  = TndMax;
 
 
-%%
-% momentary evidence is a draw from bivariate normal with mean vector Mu
-% and covariance matrix V.  Start with correlation matrix:
-S = [1 -1/sqrt(2) ; -1/sqrt(2) 1];
-% -1/sqrt(2) is the correlation for our version of images_dtb;
-% can only be changed with an update to the flux file
-
-% convert correlation to covariance matrix
-s = [sigma*sqrt(dT/1000) sigma*sqrt(dT/1000)]; % standard deviaton vector
-         %^ variance is sigma^2*dt, so stdev is sigma*sqrt(dt), in seconds
-V = diag(s)*S*diag(s); % equation for covariance matrix
-
-
-%% calculate log odds corr map using Wolpert MoI method
+%% calculate log odds corr map using Wolpert Method of Images code (van den Berg 2016, after Moreno-Bote 2010)
 tic
 R.t = 0.001:0.001:max_dur/1000; % seconds
 R.Bup = B;
@@ -88,8 +86,28 @@ R.plotflag = 0; % 1 = plot, 2 = plot and export_fig
 P = images_dtb_2d(R);
 toc
 
+
+%%
+% momentary evidence is a draw from bivariate normal distribution
+% with mean Mu (a two-vector) and covariance matrix V (2x2).
+
+% Start with a desired correlation matrix:
+S = [1 -1/sqrt(2) ; -1/sqrt(2) 1];
+% -1/sqrt(2) is the correlation for our version of images_dtb;
+% can only be changed with an update to the 'flux' file
+
+% convert correlation to covariance matrix:
+% s is the standard deviaton vector
+s = [sigma*sqrt(dT/1000) sigma*sqrt(dT/1000)]; 
+         %^ variance is sigma^2*dt, so stdev is sigma*sqrt(dt),
+         % after converting from ms to seconds
+         
+V = diag(s)*S*diag(s); % equation for a covariance matrix
+
+
 %% simulate bounded evidence accumulation
 
+% preallocate
 choice = nan(ntrials,1); % choices (left = -1, right = 1);
 RT = nan(ntrials,1); % reaction time (or time-to-bound for fixed/variable duration task)
 finalV = nan(ntrials,1); % now this is the value of the losing accumulator
@@ -104,14 +122,14 @@ for n = 1:ntrials
     
     Mu = mu(n) * dT/1000; % mean of momentary evidence, scaled by delta-t
     Mu = [Mu; -Mu]'; % mean vector for 2D DV
-    ME = mvnrnd(Mu,V,max_dur-1);
+    ME = mvnrnd(Mu,V,max_dur-1); % bivariate normrnd
     
-% %     % check that it has the desired anticorr:
+% %     % uncomment to check that it has the desired anticorrelation:
 % %     CC = corrcoef(ME); corrcoef_me = CC(1,2)
 
-    dv = [0 0; cumsum(ME)]; % bivariate normrnd
+    dv = [0 0; cumsum(ME)];
     
-    % because Mu is signed according to direction (positive=right),
+    % Note: because Mu is signed according to direction (positive=right),
     % dv(:,1) corresponds to evidence favoring rightward, not evidence
     % favoring the correct decision [as in Kiani eqn. 3 and images_dtb]
 
@@ -120,13 +138,13 @@ for n = 1:ntrials
     cRT2 = find(dv(1:max_dur,2)>=B, 1);
     
     % the possibilities are:
-    % (1) only right accumulator hits bound,
+    % (1) only the 'right' accumulator hits bound,
     if ~isempty(cRT1) && isempty(cRT2)
         RT(n) = cRT1;
         finalV(n) = dv(cRT1,2); % only 1 hit, so 2 is the loser
         hitBound(n) = 1;
         choice(n) = 1;
-    % (2) only left accumulator hits bound,
+    % (2) only the 'left' accumulator hits bound,
     elseif isempty(cRT1) && ~isempty(cRT2)
         RT(n) = cRT2;
         finalV(n) = dv(cRT2,1); % only 2 hit, so 1 is the loser
@@ -191,8 +209,6 @@ for n = 1:ntrials
 end
 toc
 
-simDDM_postProcessing % standardized for 1D and 2D
-
-
-
+% run script for post-processing
+simDDM_postProcessing % (standardized for 1D and 2D models)
 

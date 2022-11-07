@@ -12,13 +12,25 @@ global call_num
 
 % retrieve the full parameter set given the adjustable and fixed parameters 
 param = getParam(param, guess, fixed);
-max_dur = max(data.dur)/1000; % max stimulus duration (s)
+if isfield(data,'dur')
+    max_dur = max(data.dur)/1000; % max stimulus duration (s)
+else
+    max_dur = 3;
+end
 
 k = param(1);
 B = abs(param(2)); % don't accept negative bound heights
 theta = abs(param(3)); % or negative thetas
 alpha = param(4); % base rate of low-conf choices
-Tnd = param(5); % fixed Tnd, can't see any other way in this model
+% % Tnd = param(5); % fixed Tnd, can't see any other way in this model
+if length(param)==5
+    TndR = param(5); 
+    TndL = param(5);
+else
+    TndR = param(5); % optionally, separate Tnds for L and R
+    TndL = param(6);
+end
+
 
 % use method of images to calculate PDFs of DV and mapping to log odds corr
 R.t = 0.001:0.001:max_dur;
@@ -177,7 +189,11 @@ for c = 1:length(cohs) % loop through signed cohs, because that is what defines 
         
     % RT
     nCor(c) = sum(Jdata & (data.correct | data.coherence<1e-6));
-    if options.RTtask            
+    if options.RTtask
+        
+        % different Tnds for different choices, NOT for different cohs,
+        % so we simply take a weighted average based on P(right)
+        Tnd = TndR*pRight + TndL*(1-pRight);
         
         % for param-recov, model RT needs adjusted to account for unabsorbed
         % probability (trials that don't hit the bound, usually only at low
@@ -229,11 +245,13 @@ for c = 1:length(cohs) % loop through signed cohs, because that is what defines 
         sigmaRT_data_trialwise(Jdata) = sigmaRT_data(c); % copy to trials, for alternate LL calculation below
                                                          % (should this be Jdata or I?)            
         % repeat for high/low
-        I = Jdata & usetrs_data & data.PDW_preAlpha==1;
+%         I = Jdata & usetrs_data & data.PDW_preAlpha==1; % preAlpha or not???
+        I = Jdata & usetrs_data & data.PDW==1;
         meanRThigh_data(c) = mean(data.RT(I));
         sigmaRThigh_data(c) = std(data.RT(I))/sqrt(sum(I)); % SD or SEM?
         sigmaRThigh_data_trialwise(Jdata) = sigmaRThigh_data(c); % copy to trials, for alternate LL calculation below
-        I = Jdata & usetrs_data & data.PDW_preAlpha==0;
+%         I = Jdata & usetrs_data & data.PDW_preAlpha==0;
+        I = Jdata & usetrs_data & data.PDW==0;
         meanRTlow_data(c) = mean(data.RT(I));
         sigmaRTlow_data(c) = std(data.RT(I))/sqrt(sum(I)); % SD or SEM?
         sigmaRTlow_data_trialwise(Jdata) = sigmaRTlow_data(c); % copy to trials, for alternate LL calculation below
@@ -279,8 +297,7 @@ if options.RTtask
 end
 
 
-%% Next, calculate error (negative log-likelihood) using binomial/gaussian,
-% assumptions
+%% Next, calculate error (negative log-likelihood) under binomial/gaussian assumptions
 
 % convert data vars to logicals
 choice = logical(data.choice);
@@ -290,9 +307,10 @@ PDW = logical(data.PDW);
 % minP = eps;
 minP = 1e-300;
 pRight_model_trialwise(pRight_model_trialwise==0) = minP; 
-% pRight_model_trialwise(pRight_model_trialwise==1) = 1-minP;
+% % % pRight_model_trialwise(pRight_model_trialwise==1) = 1-minP;
 pHigh_model_trialwise(pHigh_model_trialwise<=0) = minP; 
-% pHigh_model_trialwise(pHigh_model_trialwise>=1) = 1-minP;
+% % % pHigh_model_trialwise(pHigh_model_trialwise>=1) = 1-minP;
+
 
 % CHOICE
 % log likelihood of rightward choice on each trial, under binomial assumptions:
@@ -301,31 +319,43 @@ LL_choice = sum(log(pRight_model_trialwise(choice))) + sum(log(1-pRight_model_tr
 % RT
 if options.RTtask     
     
-%     % likelihood of mean RTs for each coherence, under Gaussian approximation
-% %     L_RT = 1./(sigmaRT_data*sqrt(2*pi)) .* exp(-(meanRT_model-meanRT_data).^2 ./ (2*sigmaRT_data.^2));
-%     L_RT_high = 1./(sigmaRThigh_data*sqrt(2*pi)) .* exp(-(meanRThigh_model-meanRThigh_data).^2 ./ (2*sigmaRThigh_data.^2));
-%     L_RT_low = 1./(sigmaRTlow_data*sqrt(2*pi)) .* exp(-(meanRTlow_model-meanRTlow_data).^2 ./ (2*sigmaRTlow_data.^2));
-%     LL_RT = log(max(minP,L_RT_high)) + log(max(minP,L_RT_low)); % this doesn't seem right; likelihoods are greater than 1
+    % Option 1a:
+    % likelihood of mean RTs for each coherence, under Gaussian
+    % approximation, NOT separated by high/low bet
+    L_RT = 1./(sigmaRT_data*sqrt(2*pi)) .* exp(-(meanRT_model-meanRT_data).^2 ./ (2*sigmaRT_data.^2));
     
-    % OR assign means to trials and sum over those, to keep same order of magnitude as other LLs:
-%     I = usetrs_data;
-%     L_RT = 1./(sigmaRT_data_trialwise(I)*sqrt(2*pi)) .* exp(-(RT_model_trialwise(I) - data.RT(I)).^2 ./ (2*sigmaRT_data_trialwise(I).^2));
-%     L_RT(L_RT==0) = min(L_RT(L_RT~=0)); % this seems weird; there shouldn't be any 0 vals anyway...
-%     LL_RT = nansum(log(L_RT(:))); % sum over all conditions (or trials)    
-    I = usetrs_data & data.PDW_preAlpha==1;
+    % Option 1b:
+    % assign means to trials and sum over those, to keep same order of magnitude as other LLs
+    I = usetrs_data;
+    L_RT = 1./(sigmaRT_data_trialwise(I)*sqrt(2*pi)) .* exp(-(RT_model_trialwise(I) - data.RT(I)).^2 ./ (2*sigmaRT_data_trialwise(I).^2));
+    L_RT(L_RT==0) = min(L_RT(L_RT~=0)); % this seems weird; there shouldn't be any 0 vals anyway...
+    LL_RT = nansum(log(L_RT(:))); % sum over all conditions (or trials)
+    
+    % Option 2a:
+    % separate by high/low bet, fit mean RT for each coherence
+    L_RT_high = 1./(sigmaRThigh_data*sqrt(2*pi)) .* exp(-(meanRThigh_model-meanRThigh_data).^2 ./ (2*sigmaRThigh_data.^2));
+    L_RT_low = 1./(sigmaRTlow_data*sqrt(2*pi)) .* exp(-(meanRTlow_model-meanRTlow_data).^2 ./ (2*sigmaRTlow_data.^2));
+    LL_RT = log(max(minP,L_RT_high)) + log(max(minP,L_RT_low)); % this doesn't seem right; likelihoods are greater than 1
+
+    % Option 2b:
+    % separate by high/low bet and assign to trials, to keep order of mag consistent
+%     I = usetrs_data & data.PDW_preAlpha==1;
+    I = usetrs_data & data.PDW==1;
     L_RT_high = 1./(sigmaRThigh_data_trialwise(I)*sqrt(2*pi)) .* exp(-(RThigh_model_trialwise(I) - data.RT(I)).^2 ./ (2*sigmaRThigh_data_trialwise(I).^2));    
     L_RT_high(L_RT_high==0) = minP;
-    I = usetrs_data & data.PDW_preAlpha==0;    
+%     I = usetrs_data & data.PDW_preAlpha==0;    
+    I = usetrs_data & data.PDW==0;    
     L_RT_low = 1./(sigmaRTlow_data_trialwise(I)*sqrt(2*pi)) .* exp(-(RTlow_model_trialwise(I) - data.RT(I)).^2 ./ (2*sigmaRTlow_data_trialwise(I).^2));
     L_RT_low(L_RT_low==0) = minP;
 
-    LL_RT = nansum(log(L_RT_high(:))) + nansum(log(L_RT_low(:)));
+    
+% % % %     LL_RT = nansum(log(L_RT_high(:))) + nansum(log(L_RT_low(:)));
+% % %     LL_RT = nansum(log(L_RT_high(:))) / 385; % TEMP: ignore RTlow for now, and scale to same order of mag
 
-    % next: fit full distributions  
-
     
+    % Option 3: fit full RT distributions!
     
-    
+        
     
 end
 
@@ -378,18 +408,23 @@ end
 % total -LL
 % err = -(LL_choice + LL_conf + LL_RT);
 % OR
-err = -(LL_multinom + LL_RT);
+err = -(LL_choice + LL_conf);
+% OR
+% err = -(LL_multinom + LL_RT);
+% OR
+% err = -LL_multinom;
 
 
-% to add: a method to fit any pair of these and predict the third
-% (or any one and predict the other two?)
+% OR: fit choice and RT first, then hold those fixed to find theta
+% (Miguel's method)
+% err = -(LL_choice + LL_RT);
 
 
 %% print progress report!
 if options.feedback
     fprintf('\n\n\n****************************************\n');
     fprintf('run %d\n', call_num);
-    fprintf('\tk= %g\n\tB= %g\n\ttheta= %g\n\talpha= %g\n\tTnd= %g\n', k, B, theta, alpha, Tnd);
+    fprintf('\tk= %g\n\tB= %g\n\ttheta= %g\n\talpha= %g\n\tTndR= %g\n\tTndL= %g\n', k, B, theta, alpha, TndR, TndL);
     fprintf('err: %f\n', err);
 end
 if options.feedback==2 && strcmp(options.fitMethod,'fms')
@@ -399,6 +434,13 @@ if options.feedback==2 && strcmp(options.fitMethod,'fms')
 end
 call_num = call_num + 1;
 toc
+
+
+%************
+% temp
+fprintf('\nerrChoice= %g\nerrRT= %g\nerrRTlo= %g\nerrRThi= %g\nerrConf= %g\nerrMult= %g\n', -LL_choice, -LL_RT, -nansum(log(L_RT_low(:))), -nansum(log(L_RT_high(:))), -LL_conf, -LL_multinom);
+% LOW has smaller error than HIGH even though it looks way off by eye!
+%************
 
 
 end
