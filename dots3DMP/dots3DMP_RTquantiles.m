@@ -46,7 +46,8 @@ for c = 1:size(ucond,1)+1 % the extra one is for all conditions pooled
         else
             I = abs(data.heading)==uhdg(h) & data.modality==ucond(c,1) & data.coherence==ucond(c,2);
         end
-        
+        I = I & ~data.oneTargConf;
+
         if plotOption==-1
             theseRT = data.RT(I);
             theseConf = confdata(I);
@@ -68,7 +69,10 @@ for c = 1:size(ucond,1)+1 % the extra one is for all conditions pooled
             % RTs for correct and error trials under each condition
             corrRT   = data.RT(I & (data.correct | data.heading==0));
             errRT    = data.RT(I & (~data.correct | data.heading==0));
-            
+
+            corrRT   = data.RT(I & data.correct);
+            errRT    = data.RT(I & ~data.correct);
+
             % RTs for high and low bets under each condition
             highRT   = data.RT(I & confdata==1);
             lowRT    = data.RT(I & confdata==0);
@@ -76,6 +80,9 @@ for c = 1:size(ucond,1)+1 % the extra one is for all conditions pooled
             % PDW for correct and error under each condition
             corrConf = confdata(I & (data.correct | data.heading==0));
             errConf  = confdata(I & (~data.correct | data.heading==0));
+
+            corrConf = confdata(I & data.correct);
+            errConf  = confdata(I & ~data.correct);
             
             % accuracy for high and low bets under each condition
             highCorr  = data.correct(I & confdata==1);
@@ -129,12 +136,12 @@ mcols = {'Greys','Reds','Reds','Blues','Blues','Purples'};
 fsz = 16;
 
 fh(1)=figure(16);
-set(gcf,'Color',[1 1 1],'Position',[200 200 270*2 170*3],'PaperPositionMode','auto');
+set(gcf,'Color',[1 1 1],'Position',[200 200 950 950],'PaperPositionMode','auto');
 
 for c = 1:size(ucond,1)+1 % the extra one is for all conditions pooled
     
-    cmap = flipud(cbrewer('seq',mcols{c},length(uhdg)*2));
-    cmap = cmap(end-1:-2:1,:);
+    cmap = cbrewer('seq',mcols{c},length(uhdg)*2);
+    cmap = cmap(length(uhdg)+1:end,:);
     subplot(3,2,subplotInd(c));
     
     clear g L
@@ -160,7 +167,7 @@ for c = 1:size(ucond,1)+1 % the extra one is for all conditions pooled
         else % plot correct and errors, separately
             if h<=3 % 
                 g(h) = errorbar(squeeze(X(c,h,:,2)),squeeze(Y(c,h,:,2)),squeeze(Ye(c,h,:,2)),'color',cmap(h,:),'LineWidth', 2,...
-                    'LineStyle','--','Marker','o','MarkerSize',6,'MarkerFaceColor','w'); hold on;
+                    'LineStyle',':','Marker','o','MarkerSize',6,'MarkerFaceColor','w'); hold on;
             end
             k(h) = errorbar(squeeze(X(c,h,:,1)),squeeze(Y(c,h,:,1)),squeeze(Ye(c,h,:,1)),'color',cmap(h,:),'LineWidth', 2,...
                 'LineStyle','-','Marker','o','MarkerSize',6,'MarkerFaceColor',cmap(h,:)); hold on;
@@ -171,7 +178,7 @@ for c = 1:size(ucond,1)+1 % the extra one is for all conditions pooled
 
 %         if c==size(ucond,1)+1
             plot(xRange(2)*0.8+[0.08 0.15],0.9-0.15*h*ones(1,2),'color',cmap(h,:),'linewidth',3);
-            text(xRange(2)*0.8+0.25,0.9-0.15*h,sprintf('%.2g%s',uhdg(h),char(176)),'color','k','fontsize',14,'horizo','center');
+            text(xRange(2)*0.8+0.25,0.9-0.15*h,sprintf('%.2g%s',uhdg(h),char(176)),'color','k','fontsize',fsz,'horizo','center');
 %         end
        
     end
@@ -182,7 +189,7 @@ for c = 1:size(ucond,1)+1 % the extra one is for all conditions pooled
     
     if c<size(ucond,1)+1 
         if ucond(c,1)==3,xlabel('RT (s)');
-        else, set(gca,'xticklabel',[]);
+        %else, set(gca,'xticklabel',[]);
         end
         if ucond(c,1)==2 && ucond(c,2)==ucoh(1)
             ylabel(yLab)
@@ -207,12 +214,12 @@ end
 %% repeat for accuracy vs RT, for high / low bets
 
 fh(2)=figure(17);
-set(gcf,'Color',[1 1 1],'Position',[200 200 270*2 170*3],'PaperPositionMode','auto');
+set(gcf,'Color',[1 1 1],'Position',[200 200 950 950],'PaperPositionMode','auto');
 
 for c = 1:size(ucond,1)+1 % the extra one is for all conditions pooled
     
-    cmap = flipud(cbrewer('seq',mcols{c},length(uhdg)*2));
-    cmap = cmap(end-1:-2:1,:);
+    cmap = cbrewer('seq',mcols{c},length(uhdg)*2);
+    cmap = cmap(length(uhdg)+1:end,:);
     subplot(3,2,subplotInd(c));
     
     clear g L
@@ -232,14 +239,14 @@ for c = 1:size(ucond,1)+1 % the extra one is for all conditions pooled
         else % plot high and low separately
             if h<=3
                 g(h) = errorbar(squeeze(Xc(c,h,:,2)),squeeze(Yc(c,h,:,2)),squeeze(Yce(c,h,:,2)),'color',cmap(h,:),'LineWidth', 2,...
-                    'LineStyle','--','Marker','o','MarkerSize',6,'MarkerFaceColor','w'); hold on;
+                    'LineStyle',':','Marker','o','MarkerSize',6,'MarkerFaceColor','w'); hold on;
             end
             k(h) = errorbar(squeeze(Xc(c,h,:,1)),squeeze(Yc(c,h,:,1)),squeeze(Yce(c,h,:,1)),'color',cmap(h,:),'LineWidth', 2,...
                 'LineStyle','-','Marker','o','MarkerSize',6,'MarkerFaceColor',cmap(h,:)); hold on;
         end
 %         if c==size(ucond,1)+1
             plot(xRange(2)*0.8+[0.08 0.15],0.9-0.15*h*ones(1,2),'color',cmap(h,:),'linewidth',3);
-            text(xRange(2)*0.8+0.3,0.9-0.15*h,sprintf('%.2g%s',uhdg(h),char(176)),'color','k','fontsize',14,'horizo','center');
+            text(xRange(2)*0.8+0.3,0.9-0.15*h,sprintf('%.2g%s',uhdg(h),char(176)),'color','k','fontsize',fsz,'horizo','center');
 %         end
     end
     
@@ -249,7 +256,7 @@ for c = 1:size(ucond,1)+1 % the extra one is for all conditions pooled
     
     if c<size(ucond,1)+1 
         if ucond(c,1)==3,xlabel('RT (s)');
-        else, set(gca,'xticklabel',[]);
+        %else, set(gca,'xticklabel',[]);
         end
         if ucond(c,1)==2 && ucond(c,2)==ucoh(1)
             ylabel('Accuracy')

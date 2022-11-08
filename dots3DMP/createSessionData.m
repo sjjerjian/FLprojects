@@ -46,9 +46,12 @@ for n = 1:length(currentFolderList)
             mountDir = sprintf('/Volumes/homes/fetschlab/data/%s/%s_neuro/%d/%s%d_%d/',subject,subject,info.date,subject,info.date,unique_sets(u));
             
             % 10/09/2022
-            fprintf('using kilosort 2.5 results\n')
-            mountDir = sprintf('/Volumes/homes/fetschlab/data/%s/%s_neuro/%d/%s%d_%d_ks25/',subject,subject,info.date,subject,info.date,unique_sets(u));
 
+            if info.date<20220901
+                fprintf('using kilosort 2.5 results\n')
+                mountDir = sprintf('/Volumes/homes/fetschlab/data/%s/%s_neuro/%d/%s%d_%d_ks25/',subject,subject,info.date,subject,info.date,unique_sets(u));
+            end
+            
             try 
                 disp(mountDir)
                 sp = loadKSdir(mountDir);

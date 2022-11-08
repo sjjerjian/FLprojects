@@ -4,11 +4,10 @@ function au = dots3DMP_FRmatrix_fromDataStruct(dataStruct,par,timingInfo,conds,c
 % rates (within an interval and/or binned around a certain event), for any
 % condition grouping
 
-% TODO check that this works for choice/wager conditions
-
 if ~isfield(opts,'keepMU'), opts.keepMU = 1; end
 if ~isfield(opts,'calcTuning'), opts.calcTuning = 0; end
 if ~isfield(opts,'smoothFR'), opts.smoothFR = 0; end
+if ~isfield(opts,'collapse'), opts.collapse = zeros(size(condlabels)); end
                 
 if opts.smoothFR==1 && ~isfield(opts,'convKernel')
     opts.convKernel = fspecial('average', [1 20]); % N bins wide boxcar (acausal, centered)
@@ -28,6 +27,11 @@ unitInd = 0;
 for ses = 1:length(dataStruct) 
     if ~isfield(dataStruct(ses).data,par), continue, end
     temp = dataStruct(ses).data.(par);
+
+    % kluge for now 11/06/22
+    % stimOn sent from PLDAPS to Ripple is the 'motion' state begin, not
+    % the motionOnsetLatency when actual motion begins...
+    try temp.events.stimOn = temp.events.stimOn + 0.2994; end
     
     if opts.keepMU, unit_inds = find(temp.units.cluster_type<3);
     else,           unit_inds = find(temp.units.cluster_type==2); % SU only
@@ -58,6 +62,11 @@ for ses = 1:length(dataStruct)
         condlist(condlist(:,modCol)==1,cohCol) = min(condlist(:,cohCol));
     end
 
+%     collapsedCondList = condlist;
+%     collapsedCondList(:,logical(opts.collapse)) = -99;
+%     conds(:,logical(opts.collapse))    = -99;
+%     conds = unique(conds,'rows','stable');
+
     % remove any unwanted trials - brfix, or condition not in the conds list
     isInCondList = false(1,Ntr);
     condI        = nan(1,Ntr); % SJ added 09/28/2022!!
@@ -70,7 +79,6 @@ for ses = 1:length(dataStruct)
     % condI stores the condition of each trial by its index in conds
     condI    = condI(goodtrs);
     condlist = condlist(goodtrs,:);
-
 
     % startInd (+1) is the starting ind for units in the current session, unitInd will go from 1:length(unit_inds) for each alignment event
     startInd = unitInd;
@@ -132,12 +140,15 @@ for ses = 1:length(dataStruct)
                 condFR(ic,:)     = nanmean(fr(condI==ic,:),1);
 %                 condFR_sem(ic,:) = nanstd(fr(condI==ic,:),[],1)/sqrt(sum(condI==ic));
 
-                condFR_mean(ic)  = nanmean(fr_mean(condI==ic));
-                condFR_sem(ic)   = nanstd(fr_mean(condI==ic))/sqrt(sum(condI==ic));
+                condFR_mean(ic)  = nanmean(fr_mean(condI==ic),1);
+                condFR_sem(ic)   = nanstd(fr_mean(condI==ic),[],1)/sqrt(sum(condI==ic));
 
+                try
                 % store median time of 'otherEvents' relative to alignment event, for each condition (for marking on PSTHs)
-                au.times.evTimes{iae}(ic,:,unitInd) = nanmedian(oe_times(condI==ic,:));
-
+                au.times.evTimes{iae}(ic,:,unitInd) = nanmedian(oe_times(condI==ic,:),1);
+                catch
+                    keyboard
+                end
                 durs_median(ic)  = nanmedian(durs(condI==c)); % and median duration
 
             end

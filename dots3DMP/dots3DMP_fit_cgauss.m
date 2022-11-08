@@ -82,7 +82,8 @@ for c = 1:length(cohs)
                 I = data.modality==mods(m) & data.coherence==cohs(c) & data.delta==deltas(D);
             end
         end
-        
+        I = I & ~data.oneTargConf;
+
         [beta,fval] = fminsearch(@(x) cgauss_err(x,data.choice(I)==2,data.heading(I)), guess_cgauss,fitOptions);
         [betaUnc,fvalunc,flag,~,~,hessian] = fminunc(@(x) cgauss_err(x,data.choice(I)==2,data.heading(I)), guess_cgauss,fitOptions);
         SE = sqrt(diag(inv(hessian)));
@@ -158,6 +159,8 @@ for c = 1:length(cohs)
                     I = data.modality==mods(m) & data.coherence==cohs(c) & data.delta==deltas(D);
                 end
             end
+            I = I & ~data.oneTargConf;
+
             [beta,fval] = fminsearch(@(x) gauss_err(x,data.RT(I),data.heading(I)), guess_gauss,fitOptions);
             [betaUnc,fvalunc,flag,~,~,hessian] = fminunc(@(x) gauss_err(x,data.RT(I),data.heading(I)), guess_gauss,fitOptions);
             SE = sqrt(diag(inv(hessian)));
@@ -191,7 +194,8 @@ for c = 1:length(cohs)
     % choice
     for d = 1:length(deltas)     % m c d h
         I = data.modality==3 & data.coherence==cohs(c) & data.delta==deltas(d);
-        
+         I = I & ~data.oneTargConf;
+
         [beta,fval] = fminsearch(@(x) cgauss_err(x,data.choice(I)==2,data.heading(I)), guess_cgauss,fitOptions);
         [betaUnc,fvalunc,flag,~,~,hessian] = fminunc(@(x) cgauss_err(x,data.choice(I)==2,data.heading(I)), guess_cgauss,fitOptions);
         SE = sqrt(diag(inv(hessian)));
@@ -250,6 +254,8 @@ for c = 1:length(cohs)
     if RTtask
         for d = 1:length(deltas)
             I = data.modality==3 & data.coherence==cohs(c) & data.delta==deltas(d);
+             I = I & ~data.oneTargConf;
+             
             [beta,fval] = fminsearch(@(x) gauss_err(x,data.RT(I),data.heading(I)), guess_gauss,fitOptions);
             [betaUnc,fvalunc,flag,~,~,hessian] = fminunc(@(x) gauss_err(x,data.RT(I),data.heading(I)), guess_gauss,fitOptions);
             SE = sqrt(diag(inv(hessian)));

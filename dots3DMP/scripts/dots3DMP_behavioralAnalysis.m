@@ -16,6 +16,7 @@ addpath(genpath('/Users/stevenjerjian/Desktop/FetschLab/Analysis/codes/'))
 %% select subject, load the data
 
 subject = 'lucio';
+export_figs = 0;
 
 switch subject
     
@@ -92,7 +93,7 @@ hdgs   = unique(data.heading);
 
 % means per condition, logistic fits
 parsedData = dots3DMP_parseData(data,mods,cohs,deltas,hdgs,conftask,RTtask); 
-dots3DMP_plots(parsedData,mods,cohs,deltas,hdgs,conftask,RTtask)
+% dots3DMP_plots(parsedData,mods,cohs,deltas,hdgs,conftask,RTtask)
 
 %% gaussian fits and plots
 gfit = dots3DMP_fit_cgauss(data,mods,cohs,deltas,conftask,RTtask); 
@@ -100,6 +101,7 @@ gfit = dots3DMP_fit_cgauss(data,mods,cohs,deltas,conftask,RTtask);
 % separate subplots for each coh, with all mods on same subplot
 gfits_fig = dots3DMP_plots_cgauss_byCoh(gfit,parsedData,mods,cohs,deltas,hdgs,conftask,RTtask);
 
+if export_figs, exportgraphics(gfits_fig,'gaussFitBehavior.pdf','Resolution',300); end
 % or...separate subplots for each mod/delta, and all cohs on same subplot - this one needs tidying to look nice if it's going to be used
 % dots3DMP_plots_cgauss_byModDelta(gfit,parsedData,mods,cohs,deltas,hdgs,conftask,RTtask)
 
@@ -136,7 +138,13 @@ end
 % plotOption == 1 - plot correct/high bet only
 % plotOption == 2 - plot correct/error or high/low bet separately
 % plotOption == -1 - plot all trials
-dots3DMP_RTquantiles(data,conftask,0)
+RTquant_fh = dots3DMP_RTquantiles(data,conftask,2);
+
+if export_figs
+    exportgraphics(RTquant_fh(1),'RTquantiles.pdf','Resolution',300,'append',1);
+    exportgraphics(RTquant_fh(2),'RTquantiles.pdf','Resolution',300,'append',1);
+end
+
 
 %% PDW and RT for correct vs incorrect trials
 
@@ -152,24 +160,55 @@ parsedData_byConf = dots3DMP_parseData_byConf(data,mods,cohs,deltas,hdgs,conftas
 gfit_byConf       = dots3DMP_fit_cgauss_byConf(data,mods,cohs,deltas,conftask,RTtask);
 
 % plot it
-dots3DMP_plots_cgauss_byConf(gfit_byConf,parsedData_byConf,mods,cohs,deltas,hdgs,conftask,RTtask)
+fh = dots3DMP_plots_cgauss_byConf(gfit_byConf,parsedData_byConf,mods,cohs,deltas,hdgs,conftask,RTtask);
 
-%%
-
+%% split by reward offered
 rewRatio = data.amountRewardHighConfOffered ./ data.amountRewardLowConfOffered;
-nbins = 3;
+nbins = 4;
 confQ = [0 quantile(rewRatio,nbins-1) inf];
 confGroup = discretize(rewRatio, confQ); 
 
-% this only works if the dataset still includes oneTargConf trials!
+splitPDW = 0;
+removeOneTarg = 0;
+
+clrseqs = {'Greys','Reds','Blues'};
+
+parsedData_conf = dots3DMP_parseData_multiConf(data,mods,cohs,deltas,hdgs,confGroup,conftask,RTtask,removeOneTarg,splitPDW); % don't remove 1-targets, and don't split by hi/lo, so we can plot P(high bet) as function of reward ratio
+nConfGroups = length(parsedData_conf.confGroups);
+
+clear splitcols
+for m = 1:length(mods)
+    if splitPDW
+        splitcols{mods(m)} = cbrewer('seq',clrseqs{m},ceil(nConfGroups/2));
+    else
+        splitcols{mods(m)} = cbrewer('seq',clrseqs{m},nConfGroups);
+    end
+end
+
+% confQ_means = accumarray(confGroup,rewRatio,[nbins 1],@mean);
+
+for b = 1:nbins
+    parsedData_conf.confGroupLabels{b} = num2str(mean(rewRatio(confGroup==b)));
+end
+dots3DMP_plots_multiConf(parsedData_conf,mods,cohs,deltas,hdgs,conftask,RTtask,splitPDW,splitcols)
+
+
+%% split high,low,1-targ (this should supersede above '_byConf')
+% % this only works if the dataset still includes oneTargConf trials!
 confGroup = double(data.PDW)+1;
 confGroup(logical(data.oneTargConf))= 3;
-
 splitPDW = 1;
 removeOneTarg = 0;
-parsedData = dots3DMP_parseData_multiConf(data,mods,cohs,deltas,hdgs,confGroup,conftask,RTtask,removeOneTarg,splitPDW); % don't remove 1-targets, and don't split by hi/lo, so we can plot P(high bet) as function of reward ratio
 
-dots3DMP_plots_multiConf(parsedData,mods,cohs,deltas,hdgs,conftask,RTtask,splitPDW)
+parsedData_conf = dots3DMP_parseData_multiConf(data,mods,cohs,deltas,hdgs,confGroup,conftask,RTtask,removeOneTarg,splitPDW); % don't remove 1-targets, and don't split by hi/lo, so we can plot P(high bet) as function of reward ratio
+nConfGroups = length(parsedData_conf.confGroups);
+
+for m = 1:length(mods)
+        splitcols{mods(m)} = cbrewer('qual','Dark2',nConfGroups);
+end
+
+parsedData_conf.confGroupLabels = {'Low','High','1-targ'};
+dots3DMP_plots_multiConf(parsedData_conf,mods,cohs,deltas,hdgs,conftask,RTtask,splitPDW,splitcols)
 
 
 %% relationship between confidence and cue weights

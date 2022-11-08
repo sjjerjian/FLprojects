@@ -68,8 +68,8 @@ for c = 1:length(cohs)
         
         if sum(I)==0, continue, end
         
-        I_hi = I & hiConf;
-        I_lo = I & ~hiConf;
+        I_hi = I & hiConf & data.oneTargConf==0;
+        I_lo = I & ~hiConf & data.oneTargConf==0;
         
         % for high conf
         beta = fminsearch(@(x) cgauss_err(x,data.choice(I_hi)==2,data.heading(I_hi)), [0 3]);
@@ -112,8 +112,8 @@ for c = 1:length(cohs)
             end
             if sum(I)==0, continue, end
             
-            I_hi = I & hiConf;
-            I_lo = I & ~hiConf;
+            I_hi = I & hiConf & data.oneTargConf==0;
+            I_lo = I & ~hiConf & data.oneTargConf==0;
             
             % high conf
             beta = fminsearch(@(x) gauss_err(x,data.RT(I_hi),data.heading(I_hi)), guess_gauss);

@@ -25,7 +25,7 @@ for s = 1:length(dataStruct)
     % sessions that don't have all pars in parSelect get marked for
     % removal, i.e. unit for sure was not recorded in all selected pars!
     % % but do it at the end so as not to mess up the loop counter
-    if ~all(isfield(dataStruct(s).data,parSelect))
+    if ~all(isfield(dataStruct(s).data,parSelect)) || isempty(dataStruct(s).data.(parSelect{1}).units.cluster_id)
         removeEntireSession(s) = true;
         continue
     end
@@ -37,7 +37,7 @@ for s = 1:length(dataStruct)
 
         parUnits(par,:)  = units.cluster_id;
         numSpikes(par,:) = cellfun(@length,units.spiketimes);
-        numTrials(par,:) = length(events.trStart);
+        numTrials(par,1)   = length(events.trStart);
 
         if contains(parSelect{par},'dots3DMP')
             stimCondList = [events.heading; events.modality; events.coherence; events.delta]';
