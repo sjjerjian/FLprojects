@@ -23,24 +23,76 @@ nreps = 2000; % number of repetitions of each unique trial type
 
 cohs = [0.4 0.8]; % visual coherence levels (these are really just labels, since k's are set manually)
 hdgs = [-12 -6 -3 -1.5 -eps eps 1.5 3 6 12];
-deltas = [-5 0 5]; % conflict angle; positive means vis to the right
+deltas = [-3 0 3]; % conflict angle; positive means vis to the right
 mods = [1 2 3]; % stimulus modalities: ves, vis, comb
-duration = 3000; % stimulus duration (ms)
 
-lose_flag = 1;
-plot_flag = 0;
+dT = 1; % time step, ms
+duration = 2100; % stimulus duration (ms)
+
+%% create acceleration and velocity profiles (arbitrary for now);
+if useVelAcc
+    % SJ 04/2020
+    % Hou et al. 2019, peak vel = 0.37m/s, SD = 210ms
+    % 07/2020 lab settings...160cm in 1.3s, sigma=0.14
+    ampl = 0.16; % movement in metres
+    pos = normcdf(1:duration,duration/2,0.14*duration)*ampl;
+    vel = gradient(pos)*1000; % metres/s
+    acc = gradient(vel);
+
+    % normalize (by max or by mean?) and take abs of acc 
+    vel = vel/mean(vel);
+    acc = abs(acc)/mean(abs(acc));
+    % vel = vel/max(vel);
+    % acc = abs(acc)/max(abs(acc));
+else
+    vel = ones(1,duration);
+    acc = vel;
+end
+
+%% build trial list
+
+[hdg, modality, coh, delta, ntrials] = dots3DMP_create_trial_list(hdgs,mods,cohs,deltas,nreps,0); % don't shuffle
+
+% use constant dur, assuming RT task, or (equivalently, as far as
+% the simulation is concerned) fixed duration with internal bounded
+% process (Kiani et al. 2008)
+dur = ones(ntrials,1) * duration;
+
+% Tnds = muTnd + randn(ntrials,1).*sdTnd; % obs
+
 
 %% PARAMS
 
-kmult = 30; % try to reduce number of params
-kvis  = kmult*cohs; % [20 40];
-kves  = mean(kvis); % for now, assume straddling
-% knoise = [0.07 0.07];
-sigmaVes = 0.04;
-sigmaVis = [sigmaVes sigmaVes];
-B = 1.5; % single bound
-Tnds = [0.1 0.5 0.3]; % ves, vis, comb
-    % ^ with single bound, Tnds must differ across mods to account for data
+% % from Dots:
+% k = 18; % drift rate coeff (conversion from %coh to units of DV)
+% B = 0.7; % bound height
+%     mu = k*coh; % mean of momentary evidence (drift rate)- avg is about 3
+% sigma = 1; % unit variance (Moreno-Bote 2010), not a free param           
+% theta = 1.2; % threshold for high bet in units of log odds correct (Kiani & Shadlen 09, 14)
+% alpha = 0.15; % base rate of low bets (offset to PDW curve, as seen in data)
+
+kmult = 30; % drift rate term
+kvis  = kmult*cohs; % assume drift proportional to coh, reduces nParams
+kves  = mean(kvis); % for now, assume 'straddling'
+knoise = [0.07 0.07]; % unused, for now
+
+% assume momentary evidence is proportional to sin(hdg) and (optionally)
+% scales with vel (vis) or acc (ves) (Drugowitsch et al. 2014)
+muVes = acc * kves * sind(hdg(n)) / 1000; % mean of momentary evidence
+    % (I'm guessing drift rate in images_dtb is per second, hence div by 1000)
+
+% convert correlation to covariance matrix:
+% s is the standard deviaton vector,
+s = [sigmaVes*sqrt(dT/1000) sigmaVes*sqrt(dT/1000)]; 
+         %^ variance is sigma^2*dt, so stdev is sigma*sqrt(dt),
+         % after converting from ms to seconds
+
+
+sigma = 1; % unit variance (Moreno-Bote 2010), not a free param!         
+sigmaVes = sigma; % assume same sigma for all modalities, for now
+sigmaVis = [sigma sigma]; % [at the very least, need to assume their average is 1]
+B = 1.5; % assume a single bound...
+Tnds = [0.1 0.5 0.3]; % ...but different Tnds for ves, vis, comb
 if conftask==2
     timeToConf = 0; % additional processing time for confidence
     theta = 2; % threshold for high bet in logOdds, ignored if conftask==1
@@ -70,54 +122,17 @@ end
 % are their averages, for the purpose of expected logOddsCorr
 k = mean([kves kvis]);
 
-R.t = 0.001:0.001:duration/1000;
+R.t = dT/1000:dT/1000:duration/1000;
 R.Bup = B;
 R.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
 R.lose_flag = 1;
-R.plotflag = 0; % 1 = plot, 2 = plot and export_fig
+R.plotflag = 1; % 1 = plot, 2 = plot and export_fig
 P = images_dtb_2d(R);
 
+%% simulate bounded evidence accumulation
 
-% create acceleration and velocity profiles (arbitrary for now)
-% SJ 04/2020
-% Hou et al. 2019, peak vel = 0.37m/s, SD = 210ms
-% 07/2020 lab settings...160cm in 1.3s, sigma=0.14
-ampl = 0.16; % movement in metres
-pos = normcdf(1:duration,duration/2,0.14*duration)*ampl;
-vel = gradient(pos)*1000; % metres/s
-acc = gradient(vel);
-
-% normalize (by max or by mean?) and take abs of acc 
-vel = vel/mean(vel);
-acc = abs(acc)/mean(abs(acc));
-% vel = vel/max(vel);
-% acc = abs(acc)/max(abs(acc));
-
-if useVelAcc==0
-%     vel = ones(size(vel))*mean(vel);
-    vel = ones(size(vel));
-    acc = vel;
-end
-
-%% build trial list
-
-[hdg, modality, coh, delta, ntrials] = dots3DMP_create_trial_list(hdgs,mods,cohs,deltas,nreps,0); % don't shuffle
-
-% use constant dur, assuming RT task, or (equivalently, as far as
-% the simulation is concerned) fixed duration with internal bounded
-% process (Kiani et al. 2008)
-dur = ones(ntrials,1) * duration;
-
-% Tnds = muTnd + randn(ntrials,1).*sdTnd; % obs
-
-
-%% bounded evidence accumulation
-
-% assume momentary evidence is proportional to sin(heading),
-% as in drugowitsch et al 2014
-
+% preallocate
 % dv_all = cell(ntrials,1); % shouldn't need to store every trial's DV, but if you want to, it's here
-
 choice = nan(ntrials,1);
 RT = nan(ntrials,1);
 finalV = nan(ntrials,1); % now this is the value of the losing accumulator
@@ -131,26 +146,34 @@ doneWith1 = 0;
 doneWith2 = 0;
 doneWith3 = 0;
 
-% ME is now a draw from bivariate normal with mean vector Mu and covariance matrix V
-% start with correlation matrix:
-S = [1 -1/sqrt(2) ; -1/sqrt(2) 1];
-% -1/sqrt(2) is the correlation for our version of images_dtb;
-% can only be changed with an update to the flux file
-
 tic
 for n = 1:ntrials
     
 %     Tnd = Tnds(n) / 1000; % Tnd for nth trial in seconds
     Tnd = Tnds(modality(n));
 
+    % momentary evidence is a draw from bivariate normal distribution
+    % with mean Mu (a two-vector) and covariance matrix V (2x2).
+    % Start with a desired correlation matrix:
+    S = [1 -1/sqrt(2) ; -1/sqrt(2) 1];
+    % -1/sqrt(2) is the correlation for our version of images_dtb;
+    % can only be changed with an update to the 'flux' file
+
+    % the next step depends on modality:
     switch modality(n)
         case 1
+            % assume momentary evidence is proportional to sin(heading) (Drugowitsch14)
             mu = acc .* kves * sind(hdg(n)) / 1000; % mean of momentary evidence
                 % (I'm guessing drift rate in images_dtb is per second, hence div by 1000)
-            s = [sigmaVes sigmaVes]; % standard deviaton vector (see below)
+            
+            % convert correlation to covariance matrix:
+            % s is the standard deviaton vector,
+            s = [sigmaVes*sqrt(dT/1000) sigmaVes*sqrt(dT/1000)]; 
+                     %^ variance is sigma^2*dt, so stdev is sigma*sqrt(dt),
+                     % after converting from ms to seconds
         case 2
             mu = vel .* kvis(cohs==coh(n)) * sind(hdg(n)) / 1000;
-            s = [sigmaVis(cohs==coh(n)) sigmaVis(cohs==coh(n))];
+            s = [sigmaVis(cohs==coh(n))*sqrt(dT/1000) sigmaVis(cohs==coh(n))*sqrt(dT/1000)];
         case 3
             % positive delta defined as ves to the left, vis to the right
             muVes = acc .* kves               * sind(hdg(n)-delta(n)/2) / 1000;
@@ -163,34 +186,26 @@ for n = 1:ntrials
 %             wVes = wVes + randn*knoise(1);
 %             wVis = wVis + randn*knoise(2);
 
+            % or randomize (TMS idea, for Amir grant)
 %             wVes = rand; wVis = 1 - wVes;
 
             mu = wVes.*muVes + wVis.*muVis;
             
-            % clearly brain does not have access to optimal weights at
-            % outset of trial, but must come up with some heuristic version
-            % of these based on inferred reliability from accumulated
-            % evidence? 
-
             % the DV is a sample from a dist with mean = weighted sum of
             % means. thus the variance is the weighted sum of variances
             % (error propagation formula):
             sigmaComb = sqrt(wVes.^2 .* sigmaVes^2 + wVis.^2 .* sigmaVis(cohs==coh(n))^2); % assume zero covariance
-            s = [sigmaComb sigmaComb];
+            s = [sigmaComb*sqrt(dT/1000) sigmaComb*sqrt(dT/1000)];
     end
 
     Mu = [mu; -mu]'; % mean vector for 2D DV
 
     % convert correlation to covariance matrix
     V = diag(s)*S*diag(s);
-%     dv = [0 0; cumsum(mvnrnd(Mu,V,dur(n)-1))]; % bivariate normrnd
-    dv = [0 0; cumsum(mvnrnd(Mu,V))]; % dv is now scaled by physical signal vel/acc
+    dv = [0 0; cumsum(mvnrnd(Mu,V))]; % bivariate normrnd, where Mu is a
 
-    % because Mu is signed according to heading (positive=right),
-    % dv(:,1) corresponds to evidence favoring rightward, not evidence
-    % favoring the correct decision (as in Kiani eqn. 3 and images_dtb)
+%     dv_all{n} = dv; % uncomment if saving DV
 
-%     dv_all{n} = dv;
     % decision outcome
     cRT1 = find(dv(1:dur(n)-timeToConf,1)>=B, 1);
     cRT2 = find(dv(1:dur(n)-timeToConf,2)>=B, 1);

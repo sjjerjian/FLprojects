@@ -1,6 +1,8 @@
 %% simDDM_simple.m
 % simple simulation of a 1D drift-diffusion model in the context of a
-% motion discrimination task (see e.g. Shadlen et al. 2006)
+% choice-RT motion discrimination task (see e.g. Shadlen et al. 2006)
+% [does not include confidence]
+
 % CF circa 2015
 
 clear all; close all;
@@ -8,6 +10,8 @@ clear all; close all;
 ntrials = 5000;
 
 % different levels of motion strength ('coherence')
+% we use +/- eps instead of zero so that there is a direction (and hence a
+% correct answer) associated with zero coh
 cohs = [-0.512 -0.256 -0.128 -0.064 -0.032 -eps eps 0.032 0.064 0.128 0.256 0.512];
 
 % delta-T (time step, in ms)
@@ -31,7 +35,7 @@ Tnd = 300; %non-decision time
 %% simulate the diffusion process
 
 % initialize variables
-dv = nan(ntrials,length(timeAxis)); % the DV as a function of n and time
+dv = nan(ntrials,length(timeAxis)); % the decision variable, DV, as a function of time, for each trial
 choice = nan(ntrials,1); % vector to store choices: 2=right=positive, 1=left=negative
 RT = nan(ntrials,1); % reaction time
 finalV = nan(ntrials,1); % endpoint of the DV
@@ -39,17 +43,17 @@ hitBound = nan(ntrials,1);
 
 tic
 for n = 1:ntrials
-    % mean of momentary evidence
-    mu = k * coh(n);
+    
+    mu = k * coh(n); % mean of momentary evidence
 
     % diffusion process: slow version***
     if n==1 % ***run this once, for illustration purposes
         momentaryEvidence = nan(maxdur,1);
         for t = 1:maxdur
-            momentaryEvidence(t) = randn*sigma + mu; % random sample with mean=mu, s.d.=sigma
+            momentaryEvidence(t) = randn*sigma + mu; % sample from normal dist with mean=mu, s.d.=sigma
         end
-        dv(n,1) = 0;
-        dv(n,2:maxdur+1) = cumsum(momentaryEvidence);
+        dv(n,1) = 0; % dv starts at zero (boundary condition)
+        dv(n,2:maxdur+1) = cumsum(momentaryEvidence); % then evolves as the cumulative sum of M.E.
         figure; plot(dv(n,:)); hold on; 
         plot(1:length(dv),ones(1,length(dv))*B,'g-');
         plot(1:length(dv),ones(1,length(dv))*-B,'r-');

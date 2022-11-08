@@ -47,8 +47,7 @@ ngrid=500; %grid size can change
 
 dt=R.t(2)-R.t(1); %sampling interval
 
-% g=linspace(-7,0,ngrid);  %dv values can change lower
-g=linspace(-4*R.Bup,0,ngrid); % CF: why hard-coded as -7? try 4x bound
+g=linspace(-4*R.Bup,0,ngrid); %plausible range of dv values
 
 dg=g(2)-g(1); %grid spacing
 
@@ -96,7 +95,6 @@ end
 P.y=g;
 P.dy=dg;
 
-
 % CF: log posterior odds of a correct response (Eq. 3 in Kiani et al. 2014)
 I = R.drift>=0; % In case drift is signed, calculate only for positives,
                 % then the kluge with separate marginals (Pxt's) can be done elsewhere
@@ -107,51 +105,6 @@ odds(odds<1) = 1; % fix some stray negatives/zeros (what about infs?)
 odds(isinf(odds)) = nan;
 P.logOddsCorrMap = log(odds);
 P.logOddsCorrMap = P.logOddsCorrMap';
-
-
-% % alternative, modeled after 1D (Kiani09,certstim) code:
-% Pxt_marginal = zeros(ngrid, nt, 2); % xmesh * time * motion_direction
-% for id=1:ndrift %loop over drifts
-%     F = R.drift_freq(id);
-%     Pxt = squeeze(P.up.distr_loser(id,:,:))';
-%     Pxt_marginal(:,:,1) = Pxt_marginal(:,:,1) + F*Pxt; % xmesh * time
-% 
-%     Pxt = squeeze(P.lo.distr_loser(id,:,:))';
-%     Pxt_marginal(:,:,2) = Pxt_marginal(:,:,2) + F*Pxt; % xmesh * time
-% end
-% % odds = (Pxt_marginal(:,:,2)./Pxt_marginal(:,:,1));
-% odds = (Pxt_marginal(:,:,1)./Pxt_marginal(:,:,2));
-% odds(odds<1) = 1; % fix some stray negatives/zeros (what about infs?)
-% odds(isinf(odds)) = nan;
-% P.logOddsCorrMap = log(odds);
-%     %^ not strictly identical, off by a total of ~0.27, but close enough(?)
-
-
-% okay, well, maybe we need both R and L (even for unsigned?)
-    % R/corr
-I = R.drift>=0; % In case drift is signed, calculate only for positives,
-                % then the kluge with separate marginals (Pxt's) can be done elsewhere
-odds = (squeeze(sum(P.up.distr_loser(I,:,:),1)) / length(R.drift(I))) ./ ...
-       (squeeze(sum(P.lo.distr_loser(I,:,:),1)) / length(R.drift(I)));
-odds(odds<1) = 1; % fix some stray negatives/zeros (what about infs?)
-P.logOddsCorrMapR = log(odds);
-P.logOddsCorrMapR = P.logOddsCorrMapR';
-    % L/incorr
-odds = (squeeze(sum(P.lo.distr_loser(I,:,:),1)) / length(R.drift(I))) ./ ...
-       (squeeze(sum(P.up.distr_loser(I,:,:),1)) / length(R.drift(I)));
-odds(odds<1) = 1; % fix some stray negatives/zeros (what about infs?)
-P.logOddsCorrMapL = log(odds);
-P.logOddsCorrMapL = P.logOddsCorrMapL';
-
-
-% % % % from 1D code:
-% % % I = xmesh>0;
-% % % logPosteriorOddsRight = log(Pxt_marginal(I,:,1)./Pxt_marginal(I,:,2));
-% % % bet_high_xt(I,:) = logPosteriorOddsRight > theta;
-% % % I = xmesh<0;
-% % % logPosteriorOddsLeft = log(Pxt_marginal(I,:,2)./Pxt_marginal(I,:,1));
-% % % bet_high_xt(I,:) = logPosteriorOddsLeft > theta2;
-
 
 if R.plotflag
 
@@ -176,11 +129,8 @@ if R.plotflag
     [~,h] = contourf(R.t,P.y,logPmap,n); colormap(jet);
     caxis([0 1]); % because we log transformed such that 10^-q is 0 and 1 is 1
     colorbar('YTick',0:.2:1,'YTickLabel',{['10^-^{' num2str(q) '}']; ['10^-^{' num2str(q*.8) '}']; ['10^-^{' num2str(q*.6) '}']; ['10^-^{' num2str(q*.4) '}']; ['10^-^{' num2str(q*.2) '}']; '1'}); 
-        % manually, for now:
-%     colorbar('YTick',0:.2:1,'YTickLabel',{'10^-^5^0'; '10^-^4^0'; '10^-^3^0'; '10^-^2^0'; '10^-^1^0'; '1'}); 
     set(gca,'XLim',[0 R.t(end)],'XTick',0:0.5:floor(R.t(end)*2)/2,'TickDir','out');
-%     set(gca,'YLim',[-4*R.Bup 0],'YTick',floor(-4*R.Bup):round(R.Bup*2)/2:0); 
-    set(gca,'YLim',[-2*Bup 0],'YTick',-2*Bup:Bup/2:0,'YtickLabel',{num2str(-Bup) '' '0' '' num2str(Bup)});
+    set(gca,'YLim',[-4*R.Bup 0],'YTick',floor(-4*R.Bup):round(R.Bup*2)/2:0);
     set(h,'LineColor','none');
     xlabel('Time (s)'); ylabel('Accumulated evidence of losing accumulator');
     title('Probability density of losing accumulator');
@@ -198,12 +148,11 @@ if R.plotflag
     else
         figure(c*1000); set(gcf, 'Color', [1 1 1], 'Position', [700 400 450 700/R.plotflag], 'PaperPositionMode', 'auto');
     end
-    [~,h] = contourf(R.t,P.y,P.logOddsCorrMap,n); colormap(parula);
+    [~,h] = contourf(R.t,P.y,P.logOddsCorrMap,n); % colormap(parula);
     caxis([0 3]);
     colorbar('YTick',0:0.5:3); 
     set(gca,'XLim',[0 R.t(end)],'XTick',0:0.5:floor(R.t(end)*2)/2,'TickDir','out');
-%     set(gca,'YLim',[-4*R.Bup 0],'YTick',floor(-4*R.Bup):round(R.Bup*2)/2:0); 
-    set(gca,'YLim',[-2*Bup 0],'YTick',-2*Bup:Bup/2:0,'YtickLabel',{num2str(-Bup) '' '0' '' num2str(Bup)});
+    set(gca,'YLim',[-4*R.Bup 0],'YTick',floor(-4*R.Bup):round(R.Bup*2)/2:0); 
     set(h,'LineColor','none');
     xlabel('Time (s)'); ylabel('Accumulated evidence of losing accumulator');
     title('Log odds correct vs. state of losing accumulator');

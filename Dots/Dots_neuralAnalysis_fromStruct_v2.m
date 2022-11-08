@@ -1,13 +1,27 @@
 % NEW: load/plot data from Miguel struct
 
+
 clear
 close all
 % load('/Users/chris/Documents/MATLAB/Fall2020_Dataset.mat');
 load('/Users/chris/Documents/MATLAB/Fall2020_Dataset_With_Fall2021');
 dbstop if error
 
-%%
-plotBehavFromNeuralStruct
+
+% %% optional: plot behavior
+% 
+% getBehavDataFromNeuralStruct(dataCell)
+% 
+% conftask = 2;
+% RTCorrOnly = 0;
+% RTtask = 1;
+% parsedData = Dots_parseData(data,conftask,RTtask,RTCorrOnly);
+% 
+% cohs = unique(data.scoh);
+% wFit = 0;
+% forTalk = 0;
+% Dots_plot(parsedData,cohs,conftask,RTtask,wFit,forTalk);
+
 
 %%
 
@@ -94,7 +108,8 @@ psth_xlim2 = [-300 100];
 maxCoh = 0; % maximum coherence for inclusion in CP+confP and choice/conf-cond PSTH
 % should be 0! unless testing code / sanity checks, or calcuating residuals
 
-minRT = 500; % NEW March 2022: short RT can muck things up in several ways
+
+minRT = 300; % NEW March 2022: short RT can muck things up in several ways
 
 Dots_neuralAnalysis_prelims
 
@@ -298,7 +313,7 @@ for n = 1:30 % length(dataCell)
         mEnd = dataCell{n}.Exp.openEvents.motionEnd';
         RT = round((mEnd-mStart)*1000);
         dur=RT;
-% % %             invalidTr = dur > 2400; % exclude super long RTs which must have been invalid 
+%         invalidTr = dur > 1400; % exclude super long RTs which must have been invalid 
         dir = dataCell{n}.Exp.openEvents.direction;
         dirs = unique(dir);
         
@@ -307,9 +322,11 @@ for n = 1:30 % length(dataCell)
         trialLen = endTrial - startTrial; % in seconds
         nTr = nTrials_exp(n);
         spRate_exp = nan(nTr,1);
-        spCount_exp = nan(nTr,1);
+% % %         spCount_exp = nan(nTr,1);
+        spCountFixedWin = nan(nTr,1);
         
         for t = 1:nTr
+            if dur>1400; continue; end % exclude super long RTs which must have been invalid 
             % raster, align dotsOn (& spike counts/rates)
             if round(trialLen(t)*1000)<size(raster_dotsOn,3)
                 raster_dotsOn(C,t,1:round(trialLen(t)*1000)) = 0; % init bins to zero but keep nans after RT+extRaster(2)
@@ -324,7 +341,8 @@ for n = 1:30 % length(dataCell)
                     a = latency(1)+extRaster(1);
                     b = a + dur(t) - latency(1) + latency(2);
                     spRate_exp(t) = sum(raster_dotsOn(C,t,a:b)) / ((b-a+1)/1000);
-                    spCount_exp(t) = sum(raster_dotsOn(C,t,a:b));
+% % %                     spCount_exp(t) = sum(raster_dotsOn(C,t,a:b));
+                    spCountFixedWin(t) = sum(raster_dotsOn(C,t,a:a+minRT-latency(1)-20)); % try to avoid any interference with end of trial
                 end
             end % else, trial exceeds the max length specified in prealloc (will stay nans)
                         
@@ -363,47 +381,52 @@ for n = 1:30 % length(dataCell)
         % count distributions may not be equal under the null hypothesis,
         % if RT isn't perfectly symmetric for the two choices.
         
+        % which data?
+        respForCP = spCountFixedWin;
+%         respForCP = spRate_exp;
+        
         % weak motion only, or else there's a confound (later we'll pool across cohs)
             %   NEW: also enforce a min RT
         J = abs(dataCell{n}.Exp.openEvents.coherence)<=maxCoh & RT' >= minRT;
 
         % there are 4 choices available, so CP and ConfP each come in 2 flavors
         I = J & dataCell{n}.Exp.openEvents.choice==pref & dataCell{n}.Exp.openEvents.pdw==1;
-            X = spRate_exp(I); % pref-high        
+            X = respForCP(I); % pref-high        
         I = J & dataCell{n}.Exp.openEvents.choice~=pref & dataCell{n}.Exp.openEvents.pdw==1;
-            Y = spRate_exp(I); % null-high
+            Y = respForCP(I); % null-high
         CP_high(C) = rocN(X(~isnan(X)),Y(~isnan(Y)),100);
                 
         I = J & dataCell{n}.Exp.openEvents.choice==pref & dataCell{n}.Exp.openEvents.pdw==0;
-            X = spRate_exp(I); % pref-low        
+            X = respForCP(I); % pref-low        
         I = J & dataCell{n}.Exp.openEvents.choice~=pref & dataCell{n}.Exp.openEvents.pdw==0;
-            Y = spRate_exp(I); % null-low
+            Y = respForCP(I); % null-low
         CP_low(C) = rocN(X(~isnan(X)),Y(~isnan(Y)),100);
         
         I = J & dataCell{n}.Exp.openEvents.choice==pref;
-            X = spRate_exp(I); % pref-all        
+            X = respForCP(I); % pref-all        
         I = J & dataCell{n}.Exp.openEvents.choice~=pref;
-            Y = spRate_exp(I); % null-all
+            Y = respForCP(I); % null-all
         CP_all(C) = rocN(X(~isnan(X)),Y(~isnan(Y)),100);
         
         I = J & dataCell{n}.Exp.openEvents.choice==pref & dataCell{n}.Exp.openEvents.pdw==1;
-            X = spRate_exp(I); % pref-high        
+            X = respForCP(I); % pref-high        
         I = J & dataCell{n}.Exp.openEvents.choice==pref & dataCell{n}.Exp.openEvents.pdw==0;
-            Y = spRate_exp(I); % pref-low
+            Y = respForCP(I); % pref-low
         ConfP_pref(C) = rocN(X(~isnan(X)),Y(~isnan(Y)),100);
         
         I = J & dataCell{n}.Exp.openEvents.choice~=pref & dataCell{n}.Exp.openEvents.pdw==1;
-            X = spRate_exp(I); % null-high        
+            X = respForCP(I); % null-high        
         I = J & dataCell{n}.Exp.openEvents.choice~=pref & dataCell{n}.Exp.openEvents.pdw==0;
-            Y = spRate_exp(I); % null-low
+            Y = respForCP(I); % null-low
         ConfP_null(C) = rocN(X(~isnan(X)),Y(~isnan(Y)),100);
         
         I = J & dataCell{n}.Exp.openEvents.pdw==1;
-            X = spRate_exp(I); % all-high        
+            X = respForCP(I); % all-high        
         I = J & dataCell{n}.Exp.openEvents.pdw==0;
-            Y = spRate_exp(I); % all-low
+            Y = respForCP(I); % all-low
         ConfP_all(C) = rocN(X(~isnan(X)),Y(~isnan(Y)),100);
                 
+        
 % % grab an example pair of dists, eg for talk figure
 % if n==17 && c==3
 %     keyboard
@@ -418,7 +441,6 @@ for n = 1:30 % length(dataCell)
 %     export_fig('ConfP_example_dists', '-eps');
 % end
         
-
 
 
 %         % Next, repeat the above but separately for each coh (within each
@@ -441,24 +463,29 @@ for n = 1:30 % length(dataCell)
         % PSTHs
         
         % aligned dots-on
-        clear psth;
+        clear psth
+        % first, irrespective of choice/PDW, to subtract for residuals
+        psthAll = smoothRaster(nanmean(squeeze(raster_dotsOn(C,J,:)))*1e3, convKernel);
+        % now condition on each outcome
         I = J & dataCell{n}.Exp.openEvents.choice==pref & dataCell{n}.Exp.openEvents.pdw==1; % pref-high
-        psth(1,:) = smoothRaster(nanmean(squeeze(raster_dotsOn(C,I,:)))*1e3, convKernel);
+        psth(1,:) = smoothRaster(nanmean(squeeze(raster_dotsOn(C,I,:)))*1e3, convKernel);        
         I = J & dataCell{n}.Exp.openEvents.choice==pref & dataCell{n}.Exp.openEvents.pdw==0; % pref-low
         psth(2,:) = smoothRaster(nanmean(squeeze(raster_dotsOn(C,I,:)))*1e3, convKernel);
         I = J & dataCell{n}.Exp.openEvents.choice~=pref & dataCell{n}.Exp.openEvents.pdw==1; % null-high
-        psth(3,:) = smoothRaster(nanmean(squeeze(raster_dotsOn(C,I,:)))*1e3, convKernel);
+        psth(3,:) = smoothRaster(nanmean(squeeze(raster_dotsOn(C,I,:)))*1e3, convKernel);        
         I = J & dataCell{n}.Exp.openEvents.choice~=pref & dataCell{n}.Exp.openEvents.pdw==0; % null-low
         psth(4,:) = smoothRaster(nanmean(squeeze(raster_dotsOn(C,I,:)))*1e3, convKernel);
+        
         rMax = max(max(psth(:,1:300)));
         psthNorm_dotsOn_one(C,:) = psth(1,:)/rMax;
         psthNorm_dotsOn_two(C,:) = psth(2,:)/rMax;
         psthNorm_dotsOn_three(C,:) = psth(3,:)/rMax;
         psthNorm_dotsOn_four(C,:) = psth(4,:)/rMax;
-
-        
-        
-        
+        % and the residuals
+        psthResid_dotsOn_one(C,:) = (psth(1,:)-psthAll)/rMax;
+        psthResid_dotsOn_two(C,:) = (psth(2,:)-psthAll)/rMax;
+        psthResid_dotsOn_three(C,:) = (psth(3,:)-psthAll)/rMax;
+        psthResid_dotsOn_four(C,:) = (psth(4,:)-psthAll)/rMax;
         
         if plotEverythingElse
             figure(n*10); subplot(1,nU(n),c);
@@ -480,8 +507,12 @@ for n = 1:30 % length(dataCell)
             end
         end
 
+        
         % aligned RT
         clear psth
+        % first, irrespective of choice/PDW, to subtract for residuals
+        psthAll = smoothRaster(nanmean(squeeze(raster_RT(C,J,:)))*1e3, convKernel);
+        % now condition on each outcome
         I = J & dataCell{n}.Exp.openEvents.choice==pref & dataCell{n}.Exp.openEvents.pdw==1; % pref-high
         psth(1,:) = smoothRaster(nanmean(squeeze(raster_RT(C,I,:)))*1e3, convKernel);
         I = J & dataCell{n}.Exp.openEvents.choice==pref & dataCell{n}.Exp.openEvents.pdw==0; % pref-low
@@ -494,6 +525,11 @@ for n = 1:30 % length(dataCell)
         psthNorm_RT_two(C,:) = psth(2,:)/rMax;
         psthNorm_RT_three(C,:) = psth(3,:)/rMax;
         psthNorm_RT_four(C,:) = psth(4,:)/rMax;
+        % and the residuals
+        psthResid_RT_one(C,:) = (psth(1,:)-psthAll)/rMax;
+        psthResid_RT_two(C,:) = (psth(2,:)-psthAll)/rMax;
+        psthResid_RT_three(C,:) = (psth(3,:)-psthAll)/rMax;
+        psthResid_RT_four(C,:) = (psth(4,:)-psthAll)/rMax;
 
         if plotEverythingElse
             figure(n*100); subplot(1,nU(n),c);
@@ -523,24 +559,14 @@ end
 %% save
 
 clear dataCell raster_dotsOn raster_RT raster_map
-% save neuralAnalysis.mat
-save neuralAnalysis_minRT500.mat
+save(['/Users/chris/Documents/MATLAB/neuralAnalysis_MT_minRT' num2str(minRT) '.mat']);
 
 
 %% reload
 
 clear
-% load neuralAnalysis.mat
-load neuralAnalysis_minRT500.mat
-
-
-% randos
-
-figure;hist(prefDir_fit,18);
-xlabel('Preferred direction (deg)');
-ylabel('Number of units');
-set(gca,'xlim',[0 360],'xtick',0:60:360);
-changeAxesFontSize(gca,16,16);
+minRT = 400;
+load(['/Users/chris/Documents/MATLAB/neuralAnalysis_MT_minRT' num2str(minRT) '.mat']);
 
 
 
@@ -548,10 +574,15 @@ changeAxesFontSize(gca,16,16);
 
     % aligned dotsOn
 clear psth
-psth(1,:) = nanmean(psthNorm_dotsOn_one);
-psth(2,:) = nanmean(psthNorm_dotsOn_two);
-psth(3,:) = nanmean(psthNorm_dotsOn_three);
-psth(4,:) = nanmean(psthNorm_dotsOn_four);
+
+I = abs(cosd(prefDir_fit)) > sqrt(2)/2; % within +/- 45 deg of 0 or 180
+%I = abs(cosd(prefDir_fit)) <= sqrt(2)/2; % within +/- 45 deg of 90 or 270
+% I = ~isnan(prefDir_fit); % all cells
+
+psth(1,:) = nanmean(psthNorm_dotsOn_one(I,:));
+psth(2,:) = nanmean(psthNorm_dotsOn_two(I,:));
+psth(3,:) = nanmean(psthNorm_dotsOn_three(I,:));
+psth(4,:) = nanmean(psthNorm_dotsOn_four(I,:));
 
 figure(5000); set(gcf, 'Color', 'w', 'Position', [1 220 700 450], 'PaperPositionMode', 'auto');
 tAxis = -extRaster(1) : psth_xlim1;
@@ -568,15 +599,15 @@ xlabel('Time from dots on (ms)');
 ylabel('Firing rate (normalized)');
 changeAxesFontSize(gca, 22, 22);
 h = legend('pref choice, high bet','pref choice, low bet','null choice, high bet','null choice, low bet','Location','Northeast'); legend('boxoff');
-export_fig('psthNorm_dotsOn_coh0', '-eps');
+% export_fig('psthNorm_dotsOn_coh0', '-eps');
 export_fig('psthNorm_dotsOn_coh32', '-eps');
 
     % aligned RT
 clear psth
-psth(1,:) = nanmean(psthNorm_RT_one);
-psth(2,:) = nanmean(psthNorm_RT_two);
-psth(3,:) = nanmean(psthNorm_RT_three);
-psth(4,:) = nanmean(psthNorm_RT_four);
+psth(1,:) = nanmean(psthNorm_RT_one(I,:));
+psth(2,:) = nanmean(psthNorm_RT_two(I,:));
+psth(3,:) = nanmean(psthNorm_RT_three(I,:));
+psth(4,:) = nanmean(psthNorm_RT_four(I,:));
 
 figure(5001); set(gcf, 'Color', 'w', 'Position', [350 220 700 450], 'PaperPositionMode', 'auto');
 % subplot(1,2,2);
@@ -591,10 +622,66 @@ end
 set(gca, 'XLim', XLim, 'YLim', YLim, 'TickDir','out', 'YAxisLocation', 'Right'); box off;
 xlabel('Time from saccade (ms)');
 changeAxesFontSize(gca, 22, 22);
-export_fig('psthNorm_RT_coh0', '-eps');
-export_fig('psthNorm_RT_coh0_extended', '-eps');
+% export_fig('psthNorm_RT_coh0', '-eps');
 export_fig('psthNorm_RT_coh32', '-eps');
-export_fig('psthNorm_RT_coh32_extended', '-eps');
+
+
+
+%% plot average choice/conf-conditioned PSTH, RESIDUALS
+
+    % aligned dotsOn
+clear psth
+
+I = abs(cosd(prefDir_fit)) > sqrt(2)/2; % within +/- 45 deg of 0 or 180
+%I = abs(cosd(prefDir_fit)) <= sqrt(2)/2; % within +/- 45 deg of 90 or 270
+%I = ~isnan(prefDir_fit); % all cells
+
+psth(1,:) = nanmean(psthResid_dotsOn_one(I,:));
+psth(2,:) = nanmean(psthResid_dotsOn_two(I,:));
+psth(3,:) = nanmean(psthResid_dotsOn_three(I,:));
+psth(4,:) = nanmean(psthResid_dotsOn_four(I,:));
+
+figure(5000); set(gcf, 'Color', 'w', 'Position', [1 220 700 450], 'PaperPositionMode', 'auto');
+tAxis = -extRaster(1) : psth_xlim1;
+tAxis = tAxis + length(convKernel)/2+1; % offset for causal
+clr = {'b-', 'b--', 'r-', 'r--'};            
+XLim = [tAxis(1) psth_xlim1];
+YLim = [-0.06 0.06];
+hold on;
+for p = 1:size(psth,1)
+    plot(tAxis, psth(p,1:length(tAxis)), clr{p},'LineWidth',2);
+end
+set(gca, 'XLim', XLim, 'YLim', YLim, 'TickDir','out'); box off;
+xlabel('Time from dots on (ms)');
+ylabel('Residual firing rate (normalized)');
+changeAxesFontSize(gca, 22, 22);
+% h = legend('pref choice, high bet','pref choice, low bet','null choice, high bet','null choice, low bet','Location','Northeast'); legend('boxoff');
+% export_fig('psthNorm_dotsOn_coh0', '-eps');
+export_fig('psthResid_dotsOn_coh32', '-eps');
+
+    % aligned RT
+clear psth
+psth(1,:) = nanmean(psthResid_RT_one(I,:));
+psth(2,:) = nanmean(psthResid_RT_two(I,:));
+psth(3,:) = nanmean(psthResid_RT_three(I,:));
+psth(4,:) = nanmean(psthResid_RT_four(I,:));
+
+figure(5001); set(gcf, 'Color', 'w', 'Position', [350 220 700 450], 'PaperPositionMode', 'auto');
+% subplot(1,2,2);
+tAxis = -(rasterLen_exp+sum(extRaster)-extRaster(2)-1) : extRaster(2);
+tAxis = tAxis + length(convKernel)/2+1; % offset for causal
+XLim = [-400 20];
+YLim = [-0.06 0.06];
+hold on;
+for p = 1:size(psth,1)
+    plot(tAxis, psth(p,:), clr{p},'LineWidth',2);
+end
+set(gca, 'XLim', XLim, 'YLim', YLim, 'TickDir','out', 'YAxisLocation', 'Right'); box off;
+xlabel('Time from saccade (ms)');
+changeAxesFontSize(gca, 22, 22);
+% export_fig('psthNorm_RT_coh0', '-eps');
+export_fig('psthResid_RT_coh32', '-eps');
+
 
 
 %% CP and ConfP, vs each other and as a func of prefDir
@@ -609,15 +696,15 @@ nanmean(ConfP_all(:))
 
 %% choose
 
-% CP = CP_high;
+CP = CP_high;
 % or
-CP = CP_low;
+% CP = CP_low;
 % or
 % CP = CP_all;
 
-% ConfP = ConfP_pref;
+ConfP = ConfP_pref;
 % or
-ConfP = ConfP_null;
+% ConfP = ConfP_null;
 % or
 % ConfP = ConfP_all;
 
@@ -662,7 +749,7 @@ export_fig('ConfPbar_coh0', '-eps');
 
 
 %%
-if any(isnan(prefDir_fit)); keyboard; end
+if any(isnan(prefDir_fit)); warning('some nans'); end
 prefDir = prefDir_fit(~nans);
 
 figure; set(gcf, 'Color', 'w', 'Position', [400 200 450 450], 'PaperPositionMode', 'auto');
@@ -678,7 +765,8 @@ xlabel('prefDir'); ylabel('ConfP');
 I = cosd(prefDir)>sqrt(2)/2 | cosd(prefDir)<-sqrt(2)/2; % within +/- 45 deg of 0 or 180
 CP_within45 = mean(CP(I))
 CP_outside45 = mean(CP(~I))
-% whaaaat!
+ConfP_within45 = mean(ConfP(I))
+ConfP_utside45 = mean(ConfP(~I))
 
 
 %%
@@ -699,9 +787,7 @@ h(1) = plot(x_,y_,'k-','LineWidth',2); hold on;
 h(2) = plot(x_,y_,'r-','LineWidth',2);
 
 
-
 % SWITCH TO POLAR PLOTS?
-
 
 
 plot([0 360],[0.5 0.5],'k--');
@@ -725,6 +811,15 @@ changeAxesFontSize(gca, 16, 16);
 
 % [actually make that a toggle above]
 
+
+
+%% randos
+
+figure;hist(prefDir_fit,18);
+xlabel('Preferred direction (deg)');
+ylabel('Number of units');
+set(gca,'xlim',[0 360],'xtick',0:60:360);
+changeAxesFontSize(gca,16,16);
 
 
 

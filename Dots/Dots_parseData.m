@@ -20,7 +20,9 @@ switch conftask
         data.conf= nan(size(data.choice));
 end
 
-if ~isfield(data,'PDW_preAlpha') % before alpha offset, for choice/RT splits
+% before alpha offset, for choice/RT splits 
+% [this is weird; see note in simDDM_postProcessing]
+if ~isfield(data,'PDW_preAlpha') 
     data.PDW_preAlpha = data.PDW;
 end
 
@@ -79,57 +81,71 @@ for c = 1:length(cohs)
 
     pCorrect(c) = sum(J & data.correct==1) / n1(c); 
     
-    Jhi = data.scoh==cohs(c) & data.PDW_preAlpha==1;
-    n2(c) = sum(Jhi);
-    pRightHigh(c) = sum(Jhi & data.choice==1) / n2(c); 
+    if conftask==1
+        Jhi = data.scoh==cohs(c) & data.conf>=median(data.conf);
+        Jlo = data.scoh==cohs(c) & data.conf<median(data.conf);
+    elseif conftask==2
+        Jhi = data.scoh==cohs(c) & data.PDW_preAlpha==1;
+        Jlo = data.scoh==cohs(c) & data.PDW_preAlpha==0;
+    end
+    if conftask
+        n2(c) = sum(Jhi);
+        pRightHigh(c) = sum(Jhi & data.choice==1) / n2(c); 
+        n3(c) = sum(Jlo);
+        pRightLow(c) = sum(Jlo & data.choice==1) / n3(c);        
+    end
     
-    Jlo = data.scoh==cohs(c) & data.PDW_preAlpha==0;
-    n3(c) = sum(Jlo);
-    pRightLow(c) = sum(Jlo & data.choice==1) / n3(c);
-        
     % RT
     nRT1(c) = sum(J & K);
     RTmean(c) = mean(data.RT(J & K));
     RTse(c) = std(data.RT(J & K))/sqrt(nRT1(c));
     
-    nRT2(c) = sum(Jhi & K);
-    RTmeanHigh(c) = mean(data.RT(Jhi & K));
-    RTseHigh(c) = std(data.RT(Jhi & K))/sqrt(nRT2(c));
+    if conftask
+        nRT2(c) = sum(Jhi & K);
+        RTmeanHigh(c) = mean(data.RT(Jhi & K));
+        RTseHigh(c) = std(data.RT(Jhi & K))/sqrt(nRT2(c));
 
-    nRT3(c) = sum(Jlo & K);
-    RTmeanLow(c) = mean(data.RT(Jlo & K));
-    RTseLow(c) = std(data.RT(Jlo & K))/sqrt(nRT3(c));
+        nRT3(c) = sum(Jlo & K);
+        RTmeanLow(c) = mean(data.RT(Jlo & K));
+        RTseLow(c) = std(data.RT(Jlo & K))/sqrt(nRT3(c));
+    end
     
     % pdw
-    L = ~isnan(data.PDW);
-    nPDW1(c) = sum(J & L);
-    pHigh(c) = sum(J & L & data.PDW==1) / nPDW1(c); % 1 is high-bet
+    if conftask==2
+        L = ~isnan(data.PDW);
+        nPDW1(c) = sum(J & L);
+        pHigh(c) = sum(J & L & data.PDW==1) / nPDW1(c); % 1 is high-bet
 
-    Lcor = ~isnan(data.PDW) & data.correct==1;
-    nPDW2(c) = sum(J & Lcor);
-    pHighCorr(c) = sum(J & Lcor & data.PDW==1) / nPDW2(c);
+        Lcor = ~isnan(data.PDW) & data.correct==1;
+        nPDW2(c) = sum(J & Lcor);
+        pHighCorr(c) = sum(J & Lcor & data.PDW==1) / nPDW2(c);
 
-    Lerr = ~isnan(data.PDW) & data.correct==0;
-    nPDW3(c) = sum(J & Lerr);
-    pHighErr(c) = sum(J & Lerr & data.PDW==1) / nPDW3(c);
-    
+        Lerr = ~isnan(data.PDW) & data.correct==0;
+        nPDW3(c) = sum(J & Lerr);
+        if nPDW3(c)>15
+            pHighErr(c) = sum(J & Lerr & data.PDW==1) / nPDW3(c);
+        else % ignore small N (e.g. high coh low bet)
+            pHighErr(c) = NaN;
+        end
+    end    
     
     % conf
-    M = ~isnan(data.conf);
-    nConf1(c) = sum(J & M);
-    confMean(c) = mean(data.conf(J & M));
-    confSE(c) = std(data.conf(J & M))/sqrt(nConf1(c));
-    
-    MM = ~isnan(data.conf) & data.correct==1;
-    nConf2(c) = sum(J & MM);
-    confMeanCorr(c) = mean(data.conf(J & MM));
-    confSEcorr(c) = std(data.conf(J & MM))/sqrt(nConf2(c));
+    if conftask==1
+        M = ~isnan(data.conf);
+        nConf1(c) = sum(J & M);
+        confMean(c) = mean(data.conf(J & M));
+        confSE(c) = std(data.conf(J & M))/sqrt(nConf1(c));
 
-    MMM = ~isnan(data.conf) & data.correct==0;
-    nConf3(c) = sum(J & MMM);
-    confMeanErr(c) = mean(data.conf(J & MMM));
-    confSEerr(c) = std(data.conf(J & MMM))/sqrt(nConf3(c));
-    
+        MM = ~isnan(data.conf) & data.correct==1;
+        nConf2(c) = sum(J & MM);
+        confMeanCorr(c) = mean(data.conf(J & MM));
+        confSEcorr(c) = std(data.conf(J & MM))/sqrt(nConf2(c));
+
+        MMM = ~isnan(data.conf) & data.correct==0;
+        nConf3(c) = sum(J & MMM);
+        confMeanErr(c) = mean(data.conf(J & MMM));
+        confSEerr(c) = std(data.conf(J & MMM))/sqrt(nConf3(c));
+    end    
 end
 
 pRightSE = sqrt( (pRight.*(1-pRight)) ./ n1 );
@@ -148,24 +164,31 @@ X = data.scoh;
 y = data.choice==1; % 1 is right
 [B1, ~, stats1] = glmfit(X, y, 'binomial');
 yVals1 = glmval(B1,xVals,'logit');
-
-if conftask==2
-    % high bet only
+    % high conf/bet
+if conftask==1
+    I = data.conf>=median(data.conf);
+elseif conftask==2
     I = data.PDW_preAlpha==1;
-    X = data.scoh(I);
-    y = data.choice(I)==1;
-    [B2, ~, stats2] = glmfit(X, y, 'binomial');
-    yVals2 = glmval(B2,xVals,'logit');
-
-    % low bet only
-    I = data.PDW_preAlpha==0;
-    X = data.scoh(I);
-    y = data.choice(I)==1;
-    [B3, ~, stats3] = glmfit(X, y, 'binomial');
-    yVals3 = glmval(B3,xVals,'logit');
 else
-    B2 = NaN; yVals2 = NaN; stats2 = NaN; B3 = NaN; yVals3 = NaN; stats3 = NaN;
+    I = false(size(data.PDW));
 end
+X = data.scoh(I);
+y = data.choice(I)==1;
+[B2, ~, stats2] = glmfit(X, y, 'binomial');
+yVals2 = glmval(B2,xVals,'logit');
+    % low conf/bet
+if conftask==1
+    I = data.conf<median(data.conf);
+elseif conftask==2
+    I = data.PDW_preAlpha==0;
+else
+    I = false(size(data.PDW));
+end
+X = data.scoh(I);
+y = data.choice(I)==1;
+[B3, ~, stats3] = glmfit(X, y, 'binomial');
+yVals3 = glmval(B3,xVals,'logit');
+     
 
 parsedData = struct();
 parsedData.n = n;

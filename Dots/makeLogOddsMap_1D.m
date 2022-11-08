@@ -147,8 +147,11 @@ bet_high_tb(:,2) = log(Ptb_marginal(:,2,2)./Ptb_marginal(:,2,1)) > theta;     %u
 
 TBint1 = find(bet_high_tb(:,1)==0,1,'first'); % theta-bound intersection point
 TBint2 = find(bet_high_tb(:,2)==0,1,'first');
-if ~isempty(TBint1); TBint(1) = TBint1; else TBint(1) = NaN; end
-if ~isempty(TBint2); TBint(2) = TBint2; else TBint(2) = NaN; end
+
+% if empty, it means theta does not intersect the bound, ie bound crossing
+% always results in a high bet; in that case, assign max_dur plus 1 
+if ~isempty(TBint1); TBint(1) = TBint1; else TBint(1) = size(bet_high_tb,1)+1; end
+if ~isempty(TBint2); TBint(2) = TBint2; else TBint(2) = size(bet_high_tb,1)+1; end
     % WARNING: these intersections don't quite match up to where
     % logOddsCorrMap > theta just below the bound (seems not to matter??)
 
