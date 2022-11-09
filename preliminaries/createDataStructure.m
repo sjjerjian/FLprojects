@@ -206,6 +206,9 @@ if isfield(data,'oneConfTargTrial')
 end
 
 
+% fix correct trials issue
+% data.correct = dots3DMPCorrectTrials(data.choice,data.heading,data.delta);
+
 
 disp('done.');
 

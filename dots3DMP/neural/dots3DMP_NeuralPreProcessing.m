@@ -1,7 +1,7 @@
 % Fetsch Lab
 % S. J. Jerjian
 % Created May 2022
-% Last updated August 2022
+% Last updated Oct 2022
 %
 % generate a struct containing spike sorted units and task data from rigB (dots3DMP recordings)
 % user should specify the subject, dateRange, and paradigms
@@ -27,20 +27,16 @@
 % 
 % **** A few notes for the user ****
 % 
-% Each unique row of dataStruct pertains to an individual 'set' of
+% 1. Each unique row of dataStruct pertains to an individual 'set' of
 % recordings, i.e. data recorded at a particular location. 
-% % A 'good' recording day will likely only have one set, but 
+% % A 'good' recording day with a full run of the task will likely only have one set, but 
 % % in principle, there could be more than one set for a given day.
-% Recordings are grouped by set, so multiple dots3DMP paradigms recorded in
+% 
+% 2. Recordings are grouped by set, so multiple dots3DMP paradigms recorded in
 % one set will be combined, whether the actual recording was done in
 % multiple Trellis files or a single one - the "rec_group" group field in info struct is therefore critical!
-% The timestamps for concatenated recordings are shifted according to the
-% length of the overall data so that the range of events and spikes is
-% matched for a given recording (nsEvents.analogData.timeStamps).
-% i.e. if a recording is the first in the set, it's timestamps should start from around 0, whereas 
-% % if it is later in the set they will start from some other time >0. The
-% spiketimes will be matched accordingly, so the range of spiketimes should
-% approximately match the range of e.g. nsEvents.Events.trStart.
+% 
+% 
 %
 % SJ 08-2022 added in metadata (getUnitInfo.m)
 % SJ 08-2022 cleanUp option - to sub-select desirable units
@@ -60,6 +56,10 @@
 % distances between contacts
 % could put this into the kilosort chanmap directly...instead of the
 % unitless 1:32 currently used
+%
+% I should add to nsEventConditions to fix up the cohInd so that >0.5 coh
+% is always '2' in the index? and ves is always low coh, or lowest within
+% the set
 
 % clear all
 close all
@@ -73,19 +73,13 @@ paradigms = {'dots3DMPtuning','dots3DMP','RFMapping','VesMapping'};
 % at the end, will discard any units whose gross spike rate is <minRate spikes
 % per second, or the number of trials of any of the unique stimulus
 
-runCleanUp = 0;
-
-% inputs to dots3DMP_NeuralStruct_runCleanUp
-parSelect  = {'dots3DMPtuning','dots3DMP'}; 
-minRate    = 5;
-minTrs     = 5;
-
 subject = 'lucio';
 
 % dateRange = [20220223:20220331 20220512:20220531];
-% dateRange = 20220805:20220902;
+dateRange = 20220805:20221003;
+
 % dateRange = 20220901:20220902;
-dateRange = 20220913;
+% dateRange = 20221003;
 
 dateStr = num2str(dateRange(1));
 for d = 2:length(dateRange)
@@ -95,7 +89,7 @@ end
 %%
 keepMU = 1;           % include all SU and MU
 useSCP = 1;
-useVPN = 1;
+useVPN = 0;
 overwriteLocalFiles = 0; % set to 1 to always use the server copy
 
 % SJ 04-2022
@@ -123,6 +117,14 @@ getNeuralEventsInfo;
 createSessionData;   
 
 %% exclude cells which were not adequately recorded in ALL fundamental experiments
+
+runCleanUp = 0; % don't do this here, do it later before analysis
+
+
+% inputs to dots3DMP_NeuralStruct_runCleanUp
+parSelect  = {'dots3DMPtuning','dots3DMP','RFmapping','VesMapping'}; 
+minRate    = 5;
+minTrs     = 5;
 
 if runCleanUp
     dots3DMP_NeuralStruct_runCleanUp(dataStruct,parSelect,minRate,minTrs);

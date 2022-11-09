@@ -45,8 +45,8 @@ for d = 1:length(deltas)+1 % add extra column for all trials irrespective of del
             J = data.modality==mods(m) & data.coherence==cohs(c) & data.heading==hdgs(h) & data.delta==deltas(d);
         end
 
-        Jhi = J & hiConf;
-        Jlo = J & ~hiConf;
+        Jhi = J & hiConf & data.oneTargConf==0;
+        Jlo = J & ~hiConf & data.oneTargConf==0;
         
         n(m,c,d,h,1) = sum(Jhi);
         n(m,c,d,h,2) = sum(Jlo);
@@ -85,7 +85,7 @@ for d = 1:length(deltas)+1 % add extra column for all trials irrespective of del
     else
         K = data.modality==mods(m) & data.coherence==cohs(c) & data.delta==deltas(d);
     end
-    Khi = K & hiConf;
+    Khi = K & hiConf & data.oneTargConf==0;
 
     if sum(~isnan(data.heading(Khi)))>=3*length(hdgs) && length(hdgs)>5
         X = data.heading(Khi);
@@ -97,7 +97,7 @@ for d = 1:length(deltas)+1 % add extra column for all trials irrespective of del
         plotLogistic(m,c,d,1) = 0;
     end
     
-    Klo = K & ~hiConf;
+    Klo = K & ~hiConf & data.oneTargConf==0;
     if sum(~isnan(data.heading(Klo)))>=3*length(hdgs) && length(hdgs)>5
         X = data.heading(Klo);
         y = data.choice(Klo)==2; % 2 is rightward

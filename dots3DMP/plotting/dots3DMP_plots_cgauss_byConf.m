@@ -1,4 +1,4 @@
-function dots3DMP_plots_cgauss_byConf(gfit,parsedData,mods,cohs,deltas,hdgs,conftask,RTtask)
+function fh = dots3DMP_plots_cgauss_byConf(gfit,parsedData,mods,cohs,deltas,hdgs,conftask,RTtask)
 
 % few options for how to plot this...
 % same way as for regular fits i.e. one plot with all three modalities for
@@ -17,6 +17,8 @@ elseif conftask==0
     error('cannot plot confidence-based curves for non-confidence task, doh!');
 end
 
+fsz = 20;
+
 %% first, for all trials irrespective of delta
 D = length(deltas)+1; % (the extra column we made for pooling across deltas)
 % OR select just delta=0:
@@ -29,12 +31,12 @@ clr{1} = {'ko','ro','bo'};
 clr{2} = {'kd','rd','bd'};
 fclr{1} = 'krb';
 fclr{2} = 'www';
-clnstl = '-:'; % high low conf line style
+clnstl = {'-','--'}; % high low conf line style
 
 
 % CHOICES i.e. pRight
-figure(201+D);
-set(gcf,'Color',[1 1 1],'Position',[300 500 180+300*(length(cohs)-1) 600],'PaperPositionMode','auto'); clf;
+fh(1) = figure(201+D);
+set(gcf,'Color',[1 1 1],'Position',[300 500 250+300*(length(cohs)-1) 600],'PaperPositionMode','auto'); clf;
 for c=1:length(cohs)
     for m=1:length(mods)
         subplot(length(mods),length(cohs),c+(m-1)*length(cohs))
@@ -49,10 +51,10 @@ for c=1:length(cohs)
             
         for cc=1:2
             beta = [gfit.choice.mu(m,c,D,cc) gfit.choice.sigma(m,c,D,cc)];
-            h(cc) = plot(parsedData.xVals, gfit.choice.func(beta,parsedData.xVals), clr{cc}{m}(1),'linestyle',clnstl(cc),'linewidth',1.5); hold on;
-            errorbar(hdgs, squeeze(parsedData.pRight(m,c,D,:,cc)), squeeze(parsedData.pRightSE(m,c,D,:,cc)), clr{cc}{m},'linewidth',1.5,'markerfacecolor',fclr{cc}(m));
+            h(cc) = plot(parsedData.xVals, gfit.choice.func(beta,parsedData.xVals), clr{cc}{m}(1),'linestyle',clnstl{cc},'linewidth',2); hold on;
+            errorbar(hdgs, squeeze(parsedData.pRight(m,c,D,:,cc)), squeeze(parsedData.pRightSE(m,c,D,:,cc)), clr{cc}{m},'linewidth',2,'markerfacecolor',fclr{cc}(m));
         end
-        set(gca,'xtick',xt);
+        set(gca,'xtick',hdgs,'xticklabel',{'-12','-6','-3','','0','','3','6','12'});
         set(gca,'ytick',0:0.25:1,'yticklabel',{'0','.25','.5','.75','1'});
         ylim([0 1]);
         if m>1
@@ -60,14 +62,14 @@ for c=1:length(cohs)
             ht=title([modlabels{m} ', coh = ' num2str(cohs(c))]); set(ht,'color',clr{1}{m}(1)); 
         else
             ht=title(modlabels{m}); set(ht,'color',clr{1}{m}(1)); 
-            hL=legend(h,'High Bet','Low Bet','Location','northwest','box','off');
+%             hL=legend(h,'High Bet','Low Bet','Location','northwest','box','off','fontsize',fsz);
         end
         
         end
         
     if m==length(mods), xlabel(xLab); end
     if c==1, ylabel('P(right)'); end
-    try changeAxesFontSize(gca,15,15); tidyaxes; catch; end
+    try changeAxesFontSize(gca,fsz,fsz); tidyaxes; catch; end
     end
 end
 
@@ -76,8 +78,8 @@ end
 
 if RTtask
     
-figure(201+D+1);
-set(gcf,'Color',[1 1 1],'Position',[300 500 180+300*(length(cohs)-1) 600],'PaperPositionMode','auto'); clf;
+fh(2) = figure(201+D+1);
+set(gcf,'Color',[1 1 1],'Position',[300 500 250+300*(length(cohs)-1) 600],'PaperPositionMode','auto'); clf;
 for c=1:length(cohs)
     for m=1:length(mods)
         subplot(length(mods),length(cohs),c+(m-1)*length(cohs))
@@ -86,24 +88,27 @@ for c=1:length(cohs)
         
         for cc=1:2
             beta = [gfit.RT.ampl(m,c,D,cc) gfit.RT.mu(m,c,D,cc) gfit.RT.sigma(m,c,D,cc) gfit.RT.bsln(m,c,D,cc)];
-            h(cc) = plot(parsedData.xVals, gfit.RT.func(beta,parsedData.xVals), clr{cc}{m}(1),'linestyle',clnstl(cc),'linewidth',1.5); hold on;
-            errorbar(hdgs, squeeze(parsedData.RTmean(m,c,D,:,cc)), squeeze(parsedData.RTse(m,c,D,:,cc)), clr{cc}{m},'linewidth',1.5,'markerfacecolor',fclr{cc}(m));
+            h(cc) = plot(parsedData.xVals, gfit.RT.func(beta,parsedData.xVals), clr{cc}{m}(1),'linestyle',clnstl{cc},'linewidth',2); hold on;
+            errorbar(hdgs, squeeze(parsedData.RTmean(m,c,D,:,cc)), squeeze(parsedData.RTse(m,c,D,:,cc)), clr{cc}{m},'linewidth',2,'markerfacecolor',fclr{cc}(m));
         end
-        set(gca,'xtick',xt);
+        set(gca,'xtick',hdgs,'xticklabel',{'-12','-6','-3','','0','','3','6','12'});
+        set(gca,'ytick',0:0.1:2,'yticklabel',{'0','','.2','','.4','','.6','','.8','','1','','1.2','','1.4','','1.6','','1.8','','2'});
+
         if conftask==1
             ylim([0.8 2]);
-        else    
-            ylim([0.45 0.9]);
+        else   
+            if mods(m)==2, ylim([0.7 1.1])
+            else, ylim([0.5 0.85]); end
         end
         if m>1
             ht=title([modlabels{m} ', coh = ' num2str(cohs(c))]); set(ht,'color',clr{1}{m}(1)); 
         else
             ht=title(modlabels{m}); set(ht,'color',clr{1}{m}(1)); 
-            legend(h,'High Bet','Low Bet','Location','northwest','box','off');
+            legend(h,'High Bet','Low Bet','Location','northwest','box','off','fontsize',fsz);
         end
     if m==length(mods), xlabel(xLab); end
     if c==1, ylabel('RT (s)'); end
-    try changeAxesFontSize(gca,15,15); tidyaxes; catch; end
+    try changeAxesFontSize(gca,fsz,fsz); tidyaxes; catch; end
     end
 end
 

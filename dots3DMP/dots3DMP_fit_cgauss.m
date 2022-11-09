@@ -17,19 +17,20 @@ cgauss_err = @(param,choice,hdg) -(sum(log(cgauss(param,hdg(choice))))+sum(log(1
 if conftask==1 % continuous, sacc endpoint
     % for continuous values, error is sum squared error
     flippedGauss = @(b,hdg) 1 - ( b(1) .* exp(-(hdg-b(2)).^2 ./ (2*b(3).^2)) + b(4));
-    flippedGauss_err = @(param,SEP,hdg) nansum((flippedGauss(param,hdg)-SEP).^2);
+    flippedGauss_err = @(param,SEP,hdg) sum((flippedGauss(param,hdg)-SEP).^2);
 elseif conftask==2 % PDW, probabilities
     
     % dont force min/max 0,1... resulting in non-invertible Hessians
-    flippedGauss = @(b,hdg) 1 - ( min(max(b(1),0),1) .* exp(-(hdg-b(2)).^2 ./ (2*b(3).^2)) + min(max(b(4),0),1));
-%     flippedGauss = @(b,hdg) 1 - ( b(1) .* exp(-(hdg-b(2)).^2 ./ (2*b(3).^2)) + b(4));
+%     flippedGauss = @(b,hdg) 1 - ( min(max(b(1),0),1) .* exp(-(hdg-b(2)).^2 ./ (2*b(3).^2)) + min(max(b(4),0),1));
+    flippedGauss = @(b,hdg) 1 - ( b(1) .* exp(-(hdg-b(2)).^2 ./ (2*b(3).^2)) + b(4));
 
-    % negative log likelihood of observing PDW data
-    % log prob of observing high bet on all trials where subj bet
-    % high, + log prob of low bet on trials where subj bet low
-    % equivalent to cgauss error function
+    % minimize negative log likelihood of observing PDW data
+    % log prob of observing high bet on all trials where subj bet high, + log prob of low bet on trials where subj bet low
+    % equivalent to cgauss error function but with PDW in place of choice
     flippedGauss_err = @(param,pdw,hdg) -( sum(log(flippedGauss(param,hdg(pdw)))) + sum(log(1-flippedGauss(param,hdg(~pdw)))) );
 end
+
+% tbh, could just use the same gaussian function as RT, and PDW==0...
 
 % RT - Gaussian, error is sum squared because RT is cont variable
 gauss = @(b,hdg) b(1) .* exp(-(hdg-b(2)).^2 ./ (2*b(3).^2)) + b(4);
@@ -39,10 +40,10 @@ unc = 0; % saves biases from fminunc instead of fminsearch (SEs always are fminu
 
 % parameter initial guesses
 guess_cgauss = [0 2];
-guess_fgauss = [0.2 0 4 0.4];
+guess_fgauss = [0.05 0 4 0.5];
 guess_gauss  = [0.5 0 6 1];
 
-fitOptions = optimset('display','none','MaxFunEvals',1000,'MaxIter',1000);
+fitOptions = optimset('display','final','MaxFunEvals',1e6,'MaxIter',1e6,'TolFun',1e-20);
 
 %% first, for all trials irrespective of delta
 D = length(deltas)+1; % (the extra column we made for pooling across deltas)
@@ -72,7 +73,7 @@ fvalRT = n;
 for c = 1:length(cohs)
     % choice
     for m = 1:length(mods)     % m c d h
-        if m==1
+        if mods(m)==1
             I = data.modality==mods(m);
         else
             if D==length(deltas)+1
@@ -81,7 +82,8 @@ for c = 1:length(cohs)
                 I = data.modality==mods(m) & data.coherence==cohs(c) & data.delta==deltas(D);
             end
         end
-        
+        I = I & ~data.oneTargConf;
+
         [beta,fval] = fminsearch(@(x) cgauss_err(x,data.choice(I)==2,data.heading(I)), guess_cgauss,fitOptions);
         [betaUnc,fvalunc,flag,~,~,hessian] = fminunc(@(x) cgauss_err(x,data.choice(I)==2,data.heading(I)), guess_cgauss,fitOptions);
         SE = sqrt(diag(inv(hessian)));
@@ -102,7 +104,7 @@ for c = 1:length(cohs)
     % conf
     if conftask
         for m = 1:length(mods)
-            if m==1
+            if mods(m)==1
                 I = data.modality==mods(m);
             else
                 if D==length(deltas)+1
@@ -111,7 +113,10 @@ for c = 1:length(cohs)
                     I = data.modality==mods(m) & data.coherence==cohs(c) & data.delta==deltas(D);
                 end
             end
+            I = I & ~data.oneTargConf;
+           
             
+%             fprintf('Fitting PDW for mod %d\n',mods(m))
             if conftask==1 % sacc endpoint
                 [beta,fval] = fminsearch(@(x) flippedGauss_err(x,data.conf(I),data.heading(I)), guess_fgauss,fitOptions);
                 [betaUnc,fvalunc,flag,~,~,hessian] = fminunc(@(x) flippedGauss_err(x,data.conf(I),data.heading(I)), guess_fgauss,fitOptions);
@@ -145,7 +150,7 @@ for c = 1:length(cohs)
     % RT
     if RTtask
         for m = 1:length(mods)
-            if m==1
+            if mods(m)==1
                 I = data.modality==mods(m);
             else
                 if D==length(deltas)+1
@@ -154,6 +159,8 @@ for c = 1:length(cohs)
                     I = data.modality==mods(m) & data.coherence==cohs(c) & data.delta==deltas(D);
                 end
             end
+            I = I & ~data.oneTargConf;
+
             [beta,fval] = fminsearch(@(x) gauss_err(x,data.RT(I),data.heading(I)), guess_gauss,fitOptions);
             [betaUnc,fvalunc,flag,~,~,hessian] = fminunc(@(x) gauss_err(x,data.RT(I),data.heading(I)), guess_gauss,fitOptions);
             SE = sqrt(diag(inv(hessian)));
@@ -187,7 +194,8 @@ for c = 1:length(cohs)
     % choice
     for d = 1:length(deltas)     % m c d h
         I = data.modality==3 & data.coherence==cohs(c) & data.delta==deltas(d);
-        
+         I = I & ~data.oneTargConf;
+
         [beta,fval] = fminsearch(@(x) cgauss_err(x,data.choice(I)==2,data.heading(I)), guess_cgauss,fitOptions);
         [betaUnc,fvalunc,flag,~,~,hessian] = fminunc(@(x) cgauss_err(x,data.choice(I)==2,data.heading(I)), guess_cgauss,fitOptions);
         SE = sqrt(diag(inv(hessian)));
@@ -209,7 +217,8 @@ for c = 1:length(cohs)
     if conftask
         for d = 1:length(deltas)
             I = data.modality==3 & data.coherence==cohs(c) & data.delta==deltas(d);
-            
+            I = I & ~data.oneTargConf;
+
             if conftask==1 % sacc endpoint
                 [beta,fval] = fminsearch(@(x) flippedGauss_err(x,data.conf(I),data.heading(I)), guess_fgauss,fitOptions);
                 [betaUnc,fvalunc,flag,~,~,hessian] = fminunc(@(x) flippedGauss_err(x,data.conf(I),data.heading(I)), guess_fgauss,fitOptions);
@@ -245,6 +254,8 @@ for c = 1:length(cohs)
     if RTtask
         for d = 1:length(deltas)
             I = data.modality==3 & data.coherence==cohs(c) & data.delta==deltas(d);
+             I = I & ~data.oneTargConf;
+             
             [beta,fval] = fminsearch(@(x) gauss_err(x,data.RT(I),data.heading(I)), guess_gauss,fitOptions);
             [betaUnc,fvalunc,flag,~,~,hessian] = fminunc(@(x) gauss_err(x,data.RT(I),data.heading(I)), guess_gauss,fitOptions);
             SE = sqrt(diag(inv(hessian)));
