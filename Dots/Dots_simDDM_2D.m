@@ -8,11 +8,8 @@
 
 %% build expt and hand-pick some model params
 
-
 cd('/Users/chris/Documents/MATLAB/Projects/offlineTools/Dots')
-
 clear all; close all
-
 
 confModel = 'evidence+time'; % default, Kiani 2014 etc
     % if want to test some alternatives:
@@ -39,7 +36,7 @@ allowNonHB = 0; % allow non-hit-bound trials (where RT = max_dur)?
 % discarded
 
 
-%% params
+%% PARAMS
 % these are very different from 1D model: k is larger and bound is smaller,
 % maybe because of the way images_dtb is written (?)
 
@@ -64,7 +61,7 @@ TndSD = 0; % 50-100 works well; set to 0 for fixed Tnd
 TndMin = TndMean/2; % need to truncate the Tnd dist
 TndMax = TndMean+TndMin;
 
-% store the generative parameters, to use in (pre)param recovery
+% store the generative parameters, to use e.g. for (pre)param recovery
 origParams.k = k;
 origParams.B = B;
 origParams.sigma = sigma;

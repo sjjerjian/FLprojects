@@ -5,10 +5,10 @@
 % heavily modified early 2019
 % switched to 2D accumulator model 06/2020
 
-% build expt and hand-pick some model params
+%% build expt and hand-pick some model params
 
-clear
-close all
+cd('/Users/chris/Documents/MATLAB/Projects/offlineTools/dots3DMP/behav_models')
+clear all; close all
 
 RTtask = 1;
 conftask = 2; % 1 - sacc endpoint, 2 - PDW
@@ -17,9 +17,9 @@ useVelAcc = 0;
 
 plotExampleTrials = 0;
 
-nreps = 2000; % number of repetitions of each unique trial type
-            % start small to verify it's working, then increase
-            % (ntrials depends on num unique trial types)
+nreps = 1000; % number of repetitions of each unique trial type
+              % start small to verify it's working, then increase
+              % (ntrials depends on num unique trial types)
 
 cohs = [0.4 0.8]; % visual coherence levels (these are really just labels, since k's are set manually)
 hdgs = [-12 -6 -3 -1.5 -eps eps 1.5 3 6 12];
@@ -27,7 +27,13 @@ deltas = [-3 0 3]; % conflict angle; positive means vis to the right
 mods = [1 2 3]; % stimulus modalities: ves, vis, comb
 
 dT = 1; % time step, ms
-duration = 2100; % stimulus duration (ms)
+max_dur = 2100; % stimulus duration (ms)
+
+% build trial list
+[hdg, modality, coh, delta, ntrials] = dots3DMP_create_trial_list(hdgs,mods,cohs,deltas,nreps,0); % don't shuffle
+
+dur = ones(ntrials,1) * max_dur;
+
 
 %% create acceleration and velocity profiles (arbitrary for now);
 if useVelAcc
@@ -35,7 +41,7 @@ if useVelAcc
     % Hou et al. 2019, peak vel = 0.37m/s, SD = 210ms
     % 07/2020 lab settings...160cm in 1.3s, sigma=0.14
     ampl = 0.16; % movement in metres
-    pos = normcdf(1:duration,duration/2,0.14*duration)*ampl;
+    pos = normcdf(1:max_dur,max_dur/2,0.14*max_dur)*ampl;
     vel = gradient(pos)*1000; % metres/s
     acc = gradient(vel);
 
@@ -45,21 +51,9 @@ if useVelAcc
     % vel = vel/max(vel);
     % acc = abs(acc)/max(abs(acc));
 else
-    vel = ones(1,duration);
+    vel = ones(1,max_dur);
     acc = vel;
 end
-
-%% build trial list
-
-[hdg, modality, coh, delta, ntrials] = dots3DMP_create_trial_list(hdgs,mods,cohs,deltas,nreps,0); % don't shuffle
-
-% use constant dur, assuming RT task, or (equivalently, as far as
-% the simulation is concerned) fixed duration with internal bounded
-% process (Kiani et al. 2008)
-dur = ones(ntrials,1) * duration;
-
-% Tnds = muTnd + randn(ntrials,1).*sdTnd; % obs
-
 
 %% PARAMS
 
@@ -71,27 +65,14 @@ dur = ones(ntrials,1) * duration;
 % theta = 1.2; % threshold for high bet in units of log odds correct (Kiani & Shadlen 09, 14)
 % alpha = 0.15; % base rate of low bets (offset to PDW curve, as seen in data)
 
-kmult = 30; % drift rate term
+kmult = 80; % drift rate term (~3x larger, because mu=k*sin(hdg) not k*c
 kvis  = kmult*cohs; % assume drift proportional to coh, reduces nParams
 kves  = mean(kvis); % for now, assume 'straddling'
-knoise = [0.07 0.07]; % unused, for now
-
-% assume momentary evidence is proportional to sin(hdg) and (optionally)
-% scales with vel (vis) or acc (ves) (Drugowitsch et al. 2014)
-muVes = acc * kves * sind(hdg(n)) / 1000; % mean of momentary evidence
-    % (I'm guessing drift rate in images_dtb is per second, hence div by 1000)
-
-% convert correlation to covariance matrix:
-% s is the standard deviaton vector,
-s = [sigmaVes*sqrt(dT/1000) sigmaVes*sqrt(dT/1000)]; 
-         %^ variance is sigma^2*dt, so stdev is sigma*sqrt(dt),
-         % after converting from ms to seconds
-
-
+% knoise = [0.07 0.07]; % additional variability added to drift rate; unused for now
 sigma = 1; % unit variance (Moreno-Bote 2010), not a free param!         
 sigmaVes = sigma; % assume same sigma for all modalities, for now
 sigmaVis = [sigma sigma]; % [at the very least, need to assume their average is 1]
-B = 1.5; % assume a single bound...
+B = 1; % assume a single bound...
 Tnds = [0.1 0.5 0.3]; % ...but different Tnds for ves, vis, comb
 if conftask==2
     timeToConf = 0; % additional processing time for confidence
@@ -99,8 +80,9 @@ if conftask==2
 else
     timeToConf = 0;
 end
-duration = duration + timeToConf;
+max_dur = max_dur + timeToConf;
 
+% store the generative parameters, to use e.g. for (pre)param recovery
 origParams.kmult = kmult;
 origParams.kvis = kvis;
 origParams.kves = kves;
@@ -115,14 +97,14 @@ else
     origParams.theta = nan; 
 end
 
-%% calculate log odds corr maps using Wolpert MoI method
+%% calculate log odds corr map using Wolpert Method of Images code (van den Berg 2016, after Moreno-Bote 2010)
 
 % assume the mapping is based on an equal amount of experience with the 
 % *three* levels of reliability (ves, vis-low, vis-high) hence k and sigma
 % are their averages, for the purpose of expected logOddsCorr
 k = mean([kves kvis]);
 
-R.t = dT/1000:dT/1000:duration/1000;
+R.t = dT/1000:dT/1000:max_dur/1000;
 R.Bup = B;
 R.drift = k * sind(hdgs(hdgs>=0)); % takes only unsigned drift rates
 R.lose_flag = 1;
@@ -153,7 +135,8 @@ for n = 1:ntrials
     Tnd = Tnds(modality(n));
 
     % momentary evidence is a draw from bivariate normal distribution
-    % with mean Mu (a two-vector) and covariance matrix V (2x2).
+    % with mean Mu (2 x time) and covariance matrix V (2x2).
+    
     % Start with a desired correlation matrix:
     S = [1 -1/sqrt(2) ; -1/sqrt(2) 1];
     % -1/sqrt(2) is the correlation for our version of images_dtb;
@@ -163,8 +146,7 @@ for n = 1:ntrials
     switch modality(n)
         case 1
             % assume momentary evidence is proportional to sin(heading) (Drugowitsch14)
-            mu = acc .* kves * sind(hdg(n)) / 1000; % mean of momentary evidence
-                % (I'm guessing drift rate in images_dtb is per second, hence div by 1000)
+            mu = acc * kves * sind(hdg(n)) * dT/1000; % mean of momentary evidence, scaled by delta-t
             
             % convert correlation to covariance matrix:
             % s is the standard deviaton vector,
@@ -291,7 +273,7 @@ for n = 1:ntrials
             hold on; box off;
             xlabel('Time (ms)');
             ylabel('Accum. evidence');
-            ylim([-1.25 1.5].*B); xlim([0 duration]);
+            ylim([-1.25 1.5].*B); xlim([0 max_dur]);
             %             set(gca,'yTick',-0.5:0.5:2);
             set(gca,'xTick',0:500:2000);
             changeAxesFontSize(gca,18,18);
@@ -397,8 +379,7 @@ end
 
 
 %% save it
-% cd('/Users/chris/Documents/MATLAB')
-cd('/Users/stevenjerjian/Desktop/FetschLab/Analysis')
+cd('/Users/chris/Documents/MATLAB')
 save(sprintf('2DAccSim_conftask%d_%dtrs.mat',conftask,ntrials),'data','cohs','deltas','hdgs','mods','origParams','RTtask','conftask','subject')
 
 
