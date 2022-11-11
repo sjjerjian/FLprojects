@@ -30,20 +30,20 @@ for c = 1:length(cohs)
     end
     legend(h,lh(mods),'Location','northwest');
     xlabel('heading angle (deg)'); ylabel('P(right)');
-    try changeAxesFontSize(gca,15,15); catch; end
+    try changeAxesFontSize(gca,20,20); catch; end
     
     % CONFIDENCE
     if conftask
         subplot(1+double(conftask>0)+double(RTtask),length(cohs),c+length(cohs)); box off; hold on;
         for m = 1:length(mods)
             h(m) = errorbar(hdgs, squeeze(parsedData.confMean(m,c,D,:)), squeeze(parsedData.confSE(m,c,D,:)), [clr{c}{mods(m)} '-'],'linewidth',1.5);
-            ylim([0 1]); hold on;
+            ylim([0.4 1]); hold on;
         end
         xlabel('heading angle (deg)');
          if conftask==1, ylim([0 1.25]); ylabel('SEP (''confidence'', %)');
-        elseif conftask==2, ylim([0 1]); ylabel('P(high bet)');
+        elseif conftask==2, ylim([0.4 1]); ylabel('P(high bet)');
         end
-        try changeAxesFontSize(gca,15,15); catch; end
+        try changeAxesFontSize(gca,20,20); catch; end
     end
     
     % RT
@@ -56,7 +56,7 @@ for c = 1:length(cohs)
         yRng = [min(parsedData.RTmean(:)) max(parsedData.RTmean(:))];
         ylim(yRng.*[0.9 1.1])
     end
-    try changeAxesFontSize(gca,15,15); catch; end
+    try changeAxesFontSize(gca,20,20); catch; end
 end
 
 
@@ -87,7 +87,7 @@ for c = 1:length(cohs)
     end
     legend(h,L,'location','northwest');
     xlabel('heading angle (deg)'); ylabel('P(right)');
-    try changeAxesFontSize(gca,15,15); catch; end
+    try changeAxesFontSize(gca,20,20); catch; end
     
     if conftask
         subplot(1+double(conftask>0)+double(RTtask),length(cohs),c+length(cohs)); box off; hold on;
@@ -98,9 +98,9 @@ for c = 1:length(cohs)
         
         xlabel('heading angle (deg)'); 
         if conftask==1, ylim([0 1.25]); ylabel('SEP (''confidence'', %)');
-        elseif conftask==2, ylim([0 1]); ylabel('P(high bet)');
+        elseif conftask==2, ylim([0.4 1]); ylabel('P(high bet)');
         end
-        try changeAxesFontSize(gca,15,15); catch; end
+        try changeAxesFontSize(gca,20,20); catch; end
     end 
     
     if RTtask
@@ -112,7 +112,7 @@ for c = 1:length(cohs)
         yRng = [min(parsedData.RTmean(:)) max(parsedData.RTmean(:))];
         ylim(yRng.*[0.9 1.1])
     end
-    try changeAxesFontSize(gca,15,15); catch; end
+    try changeAxesFontSize(gca,20,20); catch; end
 end
 
 end

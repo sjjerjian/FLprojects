@@ -1,14 +1,68 @@
-%% now try fitting the fake data to recover the generative parameters
+% dots3DMP_fitDDM_wrapper.m
 
-clear
-close all
-% load 2DAccSim_conftask2_90000trs_sigma05.mat
-load 2DAccSim_conftask2_180000trs_sigma04.mat
+% Generalized wrapper script for Dots DDM fitting, formerly a part of
+% Dots_offlineAnalysis.m
 
-% convert to 0:1
+% requires a struct data with at minimum a variable for choice and one for
+% signed coherence
+
+% CF updated 12/2021, again in 07/2022
+
+clear; close all;
+
+
+%% try fitting simulated data to recover the generative parameters
+
+load tempsim.mat
+
+%% or real data
+
+load lucio_20220301-20221006_clean
+
+
+%% some bookkeeping, then parse data, and plot if desired
+
+if ~exist('allowNonHB','var'); allowNonHB=0; end
+
+if allowNonHB==0
+% ignore unabsorbed probability, ie no need for weighted sum with max_dur
+% in RT calculation, e.g. when sim excluded trials that failed to hit bound
+    options.ignoreUnabs = 1;
+else
+    options.ignoreUnabs = 0;    
+end
+
+options.RTtask = 1;
+options.conftask = 2; % 1=continuous/rating, 2=PDW
+
+% parse trial data into aggregated and other support vars
+mods   = unique(data.modality);
+cohs   = unique(data.coherence);
+deltas = unique(data.delta);
+hdgs   = unique(data.heading);
+RTCorrOnly = 0;
+if ~exist('parsedData','var')  % e.g., if simulation was run
+    parsedData = dots3DMP_parseData(data,mods,cohs,deltas,hdgs,options.conftask,options.RTtask);
+end
+
+% **** 
+% optional [data will be plotted below regardless, along with the fits]
+forTalk = 0;
+% plot it
+dots3DMP_plots(parsedData,mods,cohs,deltas,hdgs,options.conftask,options.RTtask)
+
+% convert choice (back) to 0:1
 if max(data.choice(~isnan(data.choice)))==2
     data.choice = logical(data.choice-1);    
 end
+
+
+%% now the fitting itself
+
+
+%****** first select which model to fit ********
+modelID=1; options.errfcn = @errfcn_DDM_2D_wConf_noMC; % 2D DDM aka anticorrelated race, for RT+conf [Kiani 14 / van den Berg 16 (uses Wolpert's images_dtb_2d (method of images, from Moreno-Bote 2010))]
+%***********************************************
 
 % options.errfun = 'dots3DMP_fit_2Dacc_err_sepbounds_noMC';
 % options.errfun = 'dots3DMP_fit_2Dacc_err_singlebound_noMC_unsigned';

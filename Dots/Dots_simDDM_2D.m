@@ -8,8 +8,12 @@
 
 %% build expt and hand-pick some model params
 
-cd('/Users/chris/Documents/MATLAB/Projects/offlineTools/Dots')
-clear all; close all
+clear; close all
+
+datafolder = '/Users/chris/Documents/MATLAB';
+codefolder = '/Users/chris/Documents/MATLAB/Projects/offlineTools/dots3DMP/behav_models';
+
+cd(codefolder)
 
 confModel = 'evidence+time'; % default, Kiani 2014 etc
     % if want to test some alternatives:
@@ -31,9 +35,10 @@ dT = 1; % ms
 % max duration, 
 max_dur = 3000;
 
-allowNonHB = 0; % allow non-hit-bound trials (where RT = max_dur)? 
-% if a trial lasts longer than max_dur and this is set to 0, it is
-% discarded
+allowNonHB = 0; % allow non-hit-bound trials? if set to 0 and a trial lasts
+% longer than max_dur, it is discarded. If set to 1, those trials are
+% assigned RT = max_dur (affects comparison with mean RT in images_dtb, 
+% which is calculated only for bound crossings)
 
 
 %% PARAMS
@@ -189,7 +194,6 @@ for n = 1:ntrials
                 thisV = find(diffV==min(diffV));
                 thisT = find(diffT==min(diffT));
                 logOddsCorr(n) = P.logOddsCorrMap(thisV(1), thisT(1));
-
                 expectedPctCorr(n) = logistic(logOddsCorr(n)); % convert to pct corr
                 conf(n) = 2*expectedPctCorr(n) - 1; % convert to 0..1
                 pdw(n) = logOddsCorr(n) > theta;

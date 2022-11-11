@@ -8,8 +8,9 @@
 
 % CF updated 12/2021, again in 07/2022
 
-% if running this standalone, load a data file, parse and plot it
 clear all; close all;
+
+
 
 %% 'Doubt' dataset, Marton et al.
 load doubtconf.mat
