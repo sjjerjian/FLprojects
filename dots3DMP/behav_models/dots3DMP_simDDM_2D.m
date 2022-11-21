@@ -9,10 +9,10 @@
 
 clear; close all
 
-datafolder = '/Users/chris/Documents/MATLAB';
-codefolder = '/Users/chris/Documents/MATLAB/Projects/offlineTools/dots3DMP/behav_models';
+% datafolder = '/Users/chris/Documents/MATLAB';
+% codefolder = '/Users/chris/Documents/MATLAB/Projects/offlineTools/dots3DMP/behav_models';
 
-cd(codefolder)
+% cd(codefolder)
 
 RTtask = 1;
 conftask = 2; % 1 - sacc endpoint, 2 - PDW
@@ -31,7 +31,6 @@ hdgs = [-12 -6 -3 -1.5 0 1.5 3 6 12];
 % deltas = [-3 0 3]; % conflict angle; positive means vis to the right
 deltas = 0; % conflict angle; positive means vis to the right
 mods = [1 2 3]; % stimulus modalities: ves, vis, comb
-gitk
 
 dT = 1; % time step, ms
 max_dur = 2100; % stimulus duration (ms)
@@ -107,7 +106,7 @@ end
 % *three* levels of reliability (ves, vis-low, vis-high) hence k and sigma
 % are their averages, for the purpose of expected logOddsCorr
     %... but only if all three mods are present!
-if all(mods)==1
+if all(mods==1)
     k = kves;
 else
     k = mean([kves kvis]);
@@ -123,14 +122,14 @@ P = images_dtb_2d(R);
 
 % preallocate
 % dv_all = cell(ntrials,1); % shouldn't need to store every trial's DV, but if you want to, it's here
-choice = nan(ntrials,1); % choices (left = -1, right = 1);
-RT = nan(ntrials,1); % reaction time (or time-to-bound for fixed/variable duration task)
-finalV = nan(ntrials,1); % now this is the value of the losing accumulator
-hitBound = zeros(1,ntrials); % hit bound or not on that trial
-logOddsCorr = nan(ntrials,1); % log odds correct
+choice          = nan(ntrials,1); % choices (left = -1, right = 1);
+RT              = nan(ntrials,1); % reaction time (or time-to-bound for fixed/variable duration task)
+finalV          = nan(ntrials,1); % now this is the value of the losing accumulator
+hitBound        = zeros(1,ntrials); % hit bound or not on that trial
+logOddsCorr     = nan(ntrials,1); % log odds correct
 expectedPctCorr = nan(ntrials,1); % expected probability correct (converted to confidence rating)
-conf = nan(ntrials,1); % confidence rating
-pdw = nan(ntrials,1); % post-decision wager
+conf            = nan(ntrials,1); % confidence rating
+pdw             = nan(ntrials,1); % post-decision wager
 
 % for plotting example trials
 doneWith1 = 0;
@@ -160,12 +159,13 @@ for n = 1:ntrials
                      %^ variance is sigma^2*dt, so stdev is sigma*sqrt(dt),
                      % after converting from ms to seconds
         case 2
-            mu = vel .* kvis(cohs==coh(n)) * sind(hdg(n)) / 1000;
+            mu = vel .* kvis(cohs==coh(n)) * sind(hdg(n)) * dT/1000;
             s = [sigmaVis(cohs==coh(n))*sqrt(dT/1000) sigmaVis(cohs==coh(n))*sqrt(dT/1000)];
         case 3
             % positive delta defined as ves to the left, vis to the right
-            muVes = acc .* kves               * sind(hdg(n)-delta(n)/2) / 1000;
-            muVis = vel .* kvis(cohs==coh(n)) * sind(hdg(n)+delta(n)/2) / 1000;
+            muVes = acc .* kves               * sind(hdg(n)-delta(n)/2) * dT/1000;
+            muVis = vel .* kvis(cohs==coh(n)) * sind(hdg(n)+delta(n)/2) * dT/1000;
+            
             % optimal weights (Drugo et al.)
             wVes = sqrt( kves^2 / (kvis(cohs==coh(n))^2 + kves^2) );
             wVis = sqrt( kvis(cohs==coh(n))^2 / (kvis(cohs==coh(n))^2 + kves^2) );
@@ -175,7 +175,7 @@ for n = 1:ntrials
 %             wVis = wVis + randn*knoise(2);
 
             % or randomize (TMS idea, for Amir grant)
-%             wVes = rand; wVis = 1 - wVes;
+%             wVes = rand; wVis = 1 - wVes;       
 
             mu = wVes.*muVes + wVis.*muVis;
             
@@ -217,9 +217,9 @@ for n = 1:ntrials
         if allowNonHB
             RT(n) = dur(n);
 
-                % which DV matters for confidence if neither hits bound? 
-                % SJ 07/2020 logOddsCorrMap is fixed, so just shift finalV up
-                % so that 'winner' did hit bound,
+            % which DV matters for confidence if neither hits bound? 
+            % SJ 07/2020 logOddsCorrMap is fixed, so just shift finalV up
+            % so that 'winner' did hit bound,
             whichWon = dv(dur(n),:)==max(dv(dur(n),:));
             finalV(n) = dv(end,~whichWon) + B-dv(end,whichWon);
             % ^  shifting the losing dv up by whatever the
@@ -324,7 +324,7 @@ pHitBound_zeroHdg = sum(hitBound(Z))/sum(Z)
 
 %% format data as in experimental data files and generate output structs
 
-coh(coh==0) = sign(randn)*eps; % should have no actual zeros, but if so, sign them randomly;
+choice(choice==0) = sign(randn)*eps; % should have no actual zeros, but if so, sign them randomly;
                                % this is just to assign a direction and correct/error
 choice(choice==1) = 2; choice(choice==-1) = 1; % 1=left, 2=right
 data.modality = modality;
@@ -361,6 +361,6 @@ end
 
 %% save it
 % cd(datafolder)
-% save tempsim.mat data origParams allowNonHB
+save tempsim.mat data origParams allowNonHB
 % save(sprintf('2DAccSim_conftask%d_%dtrs.mat',conftask,ntrials),'data','cohs','deltas','hdgs','mods','origParams','RTtask','conftask','subject')
 
