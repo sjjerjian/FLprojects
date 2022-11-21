@@ -16,19 +16,27 @@ modlabels = {'Ves','Vis','Comb'};
 xLab = sprintf('heading angle (%s)',char(176));
 
 if conftask==1 
-    yLab = 'SaccEP'; confYlims = [0.2 0.9]; RTyt = 0:0.25:2; 
+    yLab = 'SaccEP'; confYlims = [0.4 0.8];
     if all(mods==1), RTylims = [0.9 1.5]; 
     else,            RTylims = [0.9 1.7]; 
     end
-    xt = -10:2.5:10;
-     if length(mods)>1, cohlabs = {'Low Coh','High Coh'}; end
+    
+    if sum(hdgs==0)
+        xtlab = {'-10','-3.5','','0','','3.5','10'};
+    else
+        xtlab = {'-10','-3.5','-1.25','1.25','3.5','10'};
+    end
+    yt = 0:0.2:2; ytlab = {'0','','0.4','','0.8','','1.2','','1.6','','2.0'}; % for RT plots
+    if length(mods)>1, cohlabs = {'Low Coh','High Coh'}; end
+
 elseif conftask==2
-    yLab = 'P(High Bet)'; confYlims = [0.4 1.0]; RTyt = 0:0.1:2; 
+    yLab = 'P(High Bet)'; confYlims = [0.4 1.0];
     if all(mods==1), RTylims = [0.5 0.72]; 
     else,            RTylims = [0.5 0.9]; 
     end
-    xt = -12:3:12;
-    if length(mods)>1, 
+    xtlab = {'-12','-6','-3','','0','','3','6','12'};
+    yt = 0:0.1:1;  ytlab = {'0','','0.2','','0.4','','0.6','','0.8','','1.0'}; % for RT plots
+    if length(mods)>1 
 %         cohlabs = {sprintf('coh = %.1f',cohs(1)),sprintf('coh = %.1f',cohs(2))}; 
         cohlabs = {'Low Coh','High Coh'};
     end
@@ -41,11 +49,13 @@ clr{1} = {'ko','ro','bo'};
 clr{2} = {'ko','ro','bo'};
 clr{3} = {'ko','yo','go'};
 clr{4} = clr{1};
+
 fh(1)=figure(101+D);
-% set(gcf,'Color',[1 1 1],'Position',[300 1000 230+300*(length(cohs)-1) 200+150*(conftask>0)+150*RTtask],'PaperPositionMode','auto'); clf;
 set(gcf,'Color',[1 1 1],'Position',[200 80 650 100+250*(double(conftask>0)+double(RTtask))],'PaperPositionMode','auto'); clf;
+
 for c = 1:length(cohs)
-    % choice
+    
+    % *** choice ***
     subplot(spRows,length(cohs),c); box off; hold on;
     for m = 1:length(mods)     % m c d h
         beta = [gfit.choice.mu(m,c,D) gfit.choice.sigma(m,c,D)];
@@ -56,13 +66,13 @@ for c = 1:length(cohs)
     end
     if length(mods)>1; title(cohlabs{c}); end
     ylim([0 1]);
-    set(gca,'xtick',hdgs,'xticklabel',{'-12','-6','-3','','0','','3','6','12'});
-    set(gca,'ytick',0:0.25:1,'yticklabel',{'0','.25','.5','.75','1'});
+    set(gca,'xtick',hdgs,'xticklabel',xtlab);
+    set(gca,'ytick',0:0.25:1,'yticklabel',{'0','','.5','','1'});
     if ~conftask && ~RTtask, xlabel(xLab); end
     if c==1, ylabel('P(right)'); end
     try changeAxesFontSize(gca,fsz,fsz); tidyaxes(gca,fsz); catch; disp('plot clean up skipped'); end
     
-        % conf
+    % *** conf ***
     if conftask
         subplot(spRows,length(cohs),c+length(cohs)); box off; hold on;
         for m = 1:length(mods)
@@ -71,7 +81,7 @@ for c = 1:length(cohs)
             errorbar(hdgs, squeeze(parsedData.confMean(m,c,D,:)), squeeze(parsedData.confSE(m,c,D,:)), clr{c}{m},'linewidth',2);
         end
 %         if length(mods)>1; title(cohlabs{1}); end
-        set(gca,'xtick',hdgs,'xticklabel',{'-12','-6','-3','','0','','3','6','12'});
+        set(gca,'xtick',hdgs,'xticklabel',xtlab);
         set(gca,'ytick',0:0.1:1,'yticklabel',{'0','','.2','','.4','','.6','','.8','','1.0'});
 
         ylim(confYlims);
@@ -81,7 +91,7 @@ for c = 1:length(cohs)
         try changeAxesFontSize(gca,fsz,fsz); tidyaxes(gca,fsz); catch; disp('plot clean up skipped'); end
     end
     
-    % RT
+    % *** RT ***
     if RTtask
         subplot(spRows,length(cohs),c+length(cohs)*(2-double(conftask==0))); box off; hold on;
         for m = 1:length(mods)        
@@ -90,9 +100,9 @@ for c = 1:length(cohs)
             errorbar(hdgs, squeeze(parsedData.RTmean(m,c,D,:)), squeeze(parsedData.RTse(m,c,D,:)), clr{c}{m},'linewidth',2);
         end
 %         if length(mods)>1; title(cohlabs{1}); end
-        set(gca,'xtick',hdgs,'xticklabel',{'-12','-6','-3','','0','','3','6','12'});
-        set(gca,'ytick',0:0.1:1,'yticklabel',{'0','','.2','','.4','','.6','','.8','','1.0'});
-%         ylim(RTylims)
+        set(gca,'xtick',hdgs,'xticklabel',xtlab);
+        set(gca,'ytick',yt,'yticklabel',ytlab);
+        ylim(RTylims)
         xlabel(xLab); 
         if c==1, ylabel('RT (s)'); end
         try changeAxesFontSize(gca,fsz,fsz); tidyaxes(gca,fsz); catch; disp('plot clean up skipped'); end
@@ -100,7 +110,7 @@ for c = 1:length(cohs)
 end
 
 
-%% now separate by delta
+%% now repeat, but just separate combined condition by delta
 
 if length(deltas)>1 && any(mods==3)
     
@@ -115,13 +125,12 @@ clr{4} = {'bd','cd','gd'};
 % clr{3} = {'bo','go'};
 % clr{4} = {'bd','gd'};
 
-
 clear L;
 fh(2) = figure(208);
-% set(gcf,'Color',[1 1 1],'Position',[50 20 230+300*(length(cohs)-1) 200+150*(conftask>0)+150*RTtask],'PaperPositionMode','auto'); clf;
-set(gcf,'Color',[1 1 1],'Position',[900 80 650 100+250*(double(conftask>0))+double(RTtask)],'PaperPositionMode','auto'); clf;
+set(gcf,'Color',[1 1 1],'Position',[800 80 650 100+250*(double(conftask>0)+double(RTtask))],'PaperPositionMode','auto'); clf;
+
 for c = 1:length(cohs)
-    % choice
+    % *** choice ***
     subplot(spRows,length(cohs),c); box off; hold on;
     for d = 1:length(deltas)     % m c d h
         beta = [gfit.choice.mu(3,c,d) gfit.choice.sigma(3,c,d)];
@@ -131,15 +140,15 @@ for c = 1:length(cohs)
         text(hdgs(1)+1,1.0-d*0.16,L{d},'color',clr{c}{d}(1),'fontsize',fsz);
     end
     if length(mods)>1; title(cohlabs{c}); end
-    set(gca,'xtick',hdgs,'xticklabel',{'-12','-6','-3','','0','','3','6','12'});
-    set(gca,'ytick',0:0.25:1,'yticklabel',{'0','.25','.5','.75','1'});
+    set(gca,'xtick',hdgs,'xticklabel',xtlab);
+    set(gca,'ytick',0:0.25:1,'yticklabel',{'0','','.5','','1'});
     ylim([0 1]);
 %     lh=legend(h,L,'location','southeast'); set(lh,'box','off');
 %     xlabel(xLab); 
     if c==1, ylabel('P(Right)'); end
     try changeAxesFontSize(gca,fsz,fsz); tidyaxes(gca,fsz); catch; disp('plot clean up skipped'); end
 
-    % conf
+    % *** conf ***
     if conftask
         subplot(spRows,length(cohs),c+length(cohs)); box off; hold on;
         for d = 1:length(deltas)
@@ -149,18 +158,15 @@ for c = 1:length(cohs)
             L{d} = sprintf('?=%d',deltas(d));
         end
 %         if length(mods)>1; title(cohlabs{c}); end
-        set(gca,'xtick',hdgs,'xticklabel',{'-12','-6','-3','','0','','3','6','12'});
+        set(gca,'xtick',hdgs,'xticklabel',xtlab);
         set(gca,'ytick',0:0.1:1,'yticklabel',{'0','','.2','','.4','','.6','','.8','','1.0'});
-
         ylim(confYlims);
-    %     legend(h,L,'location','northwest');
-%         xlabel(xLab); 
+
         if c==1, ylabel(yLab); end
-        set(gca,'ytick',0:0.25:1,'yticklabel',{'0','.25','.5','.75','1'});
         try changeAxesFontSize(gca,fsz,fsz); tidyaxes(gca,fsz); catch; disp('plot clean up skipped'); end
     end
 
-    % RT
+    % *** RT ***
     if RTtask
         subplot(spRows,length(cohs),c+length(cohs)*(2-double(conftask==0))); box off; hold on;
         for d = 1:length(deltas)
@@ -170,11 +176,11 @@ for c = 1:length(cohs)
             L{d} = sprintf('?=%d',deltas(d));
         end
 %         if length(mods)>1; title(cohlabs{c}); end
-        set(gca,'xtick',hdgs,'xticklabel',{'-12','-6','-3','','0','','3','6','12'});
-        set(gca,'ytick',0:0.1:1,'yticklabel',{'0','','.2','','.4','','.6','','.8','','1.0'});
+        set(gca,'xtick',hdgs,'xticklabel',xtlab);
+        set(gca,'ytick',yt,'yticklabel',ytlab);
         xlabel(xLab); 
         if c==1, ylabel('RT (s)'); end
-%         ylim(RTylims);
+        ylim(RTylims);
         try changeAxesFontSize(gca,fsz,fsz); tidyaxes(gca,fsz);catch; end
     end    
 
