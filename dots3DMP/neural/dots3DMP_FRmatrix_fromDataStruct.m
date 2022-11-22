@@ -137,6 +137,7 @@ for ses = 1:length(dataStruct)
 
             for ic = 1:size(conds,1)
                 
+                cond_ntrs(ic)     = sum(condI==ic);
                 condFR(ic,:)     = nanmean(fr(condI==ic,:),1);
 %                 condFR_sem(ic,:) = nanstd(fr(condI==ic,:),[],1)/sqrt(sum(condI==ic));
 
@@ -204,9 +205,11 @@ for ses = 1:length(dataStruct)
             temp_xvec{iae}{unitInd} = x;
             temp_psth{iae}{unitInd} = condFR;
             
+
             au.data.muFRs{iae}(:,unitInd) = condFR_mean;
             au.data.seFRs{iae}(:,unitInd) = condFR_sem;
-            au.data.durs{iae}(:,unitInd)  = durs_median;       
+            au.data.durs{iae}(:,unitInd)  = durs_median; 
+            au.data.condntrs{iae}(:,unitInd) = cond_ntrs;
         end
     end
 end
