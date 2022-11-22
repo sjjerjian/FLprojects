@@ -61,7 +61,7 @@ end
 
 
 %****** first select which model to fit ********
-modelID=1; options.errfcn = @errfcn_DDM_2D_wConf_noMC; % 2D DDM aka anticorrelated race, for RT+conf [Kiani 14 / van den Berg 16 (uses Wolpert's images_dtb_2d (method of images, from Moreno-Bote 2010))]
+modelID=1; options.errfcn = @dots3DMP_errfcn_DDM_2D_wConf_noMC; % 2D DDM aka anticorrelated race, for RT+conf [Kiani 14 / van den Berg 16 (uses Wolpert's images_dtb_2d (method of images, from Moreno-Bote 2010))]
 %***********************************************
 
 % options.errfun = 'dots3DMP_fit_2Dacc_err_sepbounds_noMC';
@@ -80,12 +80,7 @@ options.fitMethod = 'fms'; %'fms','global','multi','pattern','bads'
 % options.fitMethod = 'pattern';
 % options.fitMethod = 'bads';
 
-% pass in orig params from sim as initial guess (or hand-tune if fixed=1)
-if strfind(options.errfun,'singlebound') %%% paramNames = {'kves','kvisLo','kvisHi','B','TndVes','TndVis','TndComb','T2Conf','theta'};
-    guess = [origParams.kves origParams.kvis(1) origParams.kvis(2) origParams.B/2 origParams.Tnds(1) origParams.Tnds(2) origParams.Tnds(3) origParams.ttc origParams.theta];
-elseif strfind(options.errfun,'sepbounds') %%% paramNames = {'kves','kvisLo','kvisHi','BVes','BVis','BComb','muTnd','T2Conf','theta'};
-    guess = [origParams.kves origParams.kvis(1) origParams.kvis(2) origParams.Bves origParams.Bvis origParams.Bcomb origParams.muTnd origParams.ttc origParams.theta];
-end
+guess = [origParams.kmult, origParam.B, origParams.theta,origParams.alpha, origParams.TndMean/1000]
 % fixed = [0 0 0 0 0 0 0 0 0];
 fixed = zeros(1,length(guess));
 
@@ -96,8 +91,8 @@ fixed(:)=1;
 
 % plot error trajectory (prob doesn't work with parallel fit methods)
 options.ploterr  = 1;
-options.RTtask   = RTtask;
-options.conftask = conftask; % 1 - sacc endpoint, 2 - PDW
+options.plot     = 1;
+options.feedback = 2;
 
 if options.ploterr, options.fh = 400; end
 

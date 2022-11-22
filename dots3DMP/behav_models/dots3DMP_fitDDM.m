@@ -27,14 +27,14 @@ else
         case 'fms'
             fitOptions = optimset('Display', 'iter', 'MaxFunEvals', 100*sum(fixed==0), 'MaxIter', ... 
                 100*sum(fixed==0), 'TolX',1e-2,'TolFun',100,'UseParallel','Always');
-            [X, fval, ~] = fminsearch(@(x) feval(options.errfun,x,guess,fixed,data,options), guess(fixed==0), fitOptions);
-    %         [X, fval, exitflag] = fminunc(@(x) feval(options.errfun,x,guess,fixed,data,options), guess(fixed==0), fitOptions);
+            [X, fval, ~] = fminsearch(@(x) feval(options.errfcn,x,guess,fixed,data,options), guess(fixed==0), fitOptions);
+    %         [X, fval, exitflag] = fminunc(@(x) feval(options.errfcn,x,guess,fixed,data,options), guess(fixed==0), fitOptions);
     %         fprintf('fval: %f\n', fval);
 
         case 'fmsbnd'
             fitOptions = optimset('Display', 'iter', 'MaxFunEvals', 100*sum(fixed==0), 'MaxIter', ... 
                 100*sum(fixed==0), 'TolX',1e-1,'TolFun',1e-1,'UseParallel','Always');
-            [X, fval, ~] = fminsearchbnd(@(x) feval(options.errfun,x,guess,fixed,data,options), guess(fixed==0), LB(fixed==0), UB(fixed==0), fitOptions);
+            [X, fval, ~] = fminsearchbnd(@(x) feval(options.errfcn,x,guess,fixed,data,options), guess(fixed==0), LB(fixed==0), UB(fixed==0), fitOptions);
 
         case 'global'
             % GlobalSearch from Global Optimization Toolbox
@@ -44,7 +44,7 @@ else
                 'FinDiffRelStep',1e-4,...
                 'UseParallel','always');
             problem = createOptimProblem('fmincon','x0',guess(fixed==0),'objective',...
-                @(x) feval(options.errfun,x,guess,fixed,data,options),'lb',LB(fixed==0),...
+                @(x) feval(options.errfcn,x,guess,fixed,data,options),'lb',LB(fixed==0),...
                 'ub',UB(fixed==0),'options',fitOptions);
             gs = GlobalSearch;
             [X,~,~,~,~] = run(gs,problem);      
@@ -57,7 +57,7 @@ else
                 'FinDiffRelStep',1e-1,...
                 'UseParallel','always');
             problem = createOptimProblem('fmincon','x0',guess(fixed==0),'objective',...
-                @(x) feval(options.errfun,x,guess,fixed,data,options),'lb',LB(fixed==0),...
+                @(x) feval(options.errfcn,x,guess,fixed,data,options),'lb',LB(fixed==0),...
                 'ub',UB(fixed==0),'options',fitOptions);
             ms = MultiStart('FunctionTolerance',1e3,'XTolerance',1,...
                 'StartPointsToRun','bounds-ineqs','UseParallel','always');
@@ -71,7 +71,7 @@ else
     %         [X,~,~,~] = patternsearch(@(x) dots3DMP_fitDDM_err(x,data,options),...
     %             guess(fixed==0),[],[],[],[],LB(fixed==0),UB(fixed==0),[],fitOptions);
 
-            [X,~,~,~] = patternsearch(@(x) feval(options.errfun,x,guess,fixed,data,options),...
+            [X,~,~,~] = patternsearch(@(x) feval(options.errfcn,x,guess,fixed,data,options),...
                 guess(fixed==0),[],[],[],[],LB(fixed==0),UB(fixed==0),[],fitOptions);
 
         case 'bads'
@@ -162,7 +162,7 @@ end
 % error value and model-generated data points (trial outcomes)
 options.ploterr = 0;
 options.dummyRun = 0;
-[err_final, fit] = feval(options.errfun,X,X,true(size(X)),data,options);
+[err_final, fit] = feval(options.errfcn,X,X,true(size(X)),data,options);
 
 
 % THIS SHOULD ALL BECOME OBSOLETE, NO MORE MC!
@@ -214,7 +214,7 @@ end
 % [~,fitInterp] = dots3DMP_fitDDM_err(X,Dfit);
 fixed = true(size(X)); % fix all params
 options.dummyRun = 1;
-[~, fitInterp] = feval(options.errfun,X,X,fixed,Dfit,options);
+[~, fitInterp] = feval(options.errfcn,X,X,fixed,Dfit,options);
 
 else
     fitInterp = fit;
