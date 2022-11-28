@@ -16,8 +16,6 @@ dataFileName = sprintf('%s_%d-%d_neuralData_ks25.mat',subject,dateRange(1),dateR
 
 load(fullfile(dataPath,dataFileName));
 
-% dataStruct = dataStruct([2 3 4 7 9 10 11 12 16 17]);
-
 % inputs to dots3DMP_NeuralStruct_runCleanUp
 parSelect  = {'dots3DMPtuning','dots3DMP'}; 
 minRate    = 5;
@@ -98,9 +96,14 @@ allUnitsTuning_timeResolved = dots3DMP_FRmatrix_fromDataStruct(dataStruct,par,Tu
 
 par = 'dots3DMP';
 hdgsTask = [-12 -6 -3 -1.5 0 1.5 3 6 12];
+% hdgsTask = [-3 -1.5 0 1.5 3];
 
 [hdg,modality,coh,delta,~] = dots3DMP_create_trial_list(hdgsTask,mods,cohs,deltas,1,0);
-condsTask = [modality,coh,hdg,ones(size(hdg))];
+condsTask = [modality,coh,hdg,ones(size(hdg))]; 
+% condsTask = [modality,coh,hdg,zeros(size(hdg))]; % errors only!
+
+% ah, but for zero heading we want to keep both 'correct' (rew) and
+% unrewarded trials
 condlabels  = {'modality','coherenceInd','heading','correct'}; % use only correct trials
 
 % time-resolved psths, separate alignments to stimOn and saccOnset
@@ -127,8 +130,8 @@ allUnitsTask_timeResolved = dots3DMP_FRmatrix_fromDataStruct(dataStruct,par,Task
 
 % select tuning or Task
 
-% par = 'dots3DMPtuning';
-par = 'dots3DMP';
+par = 'dots3DMPtuning';
+% par = 'dots3DMP';
 
 switch par
     case 'dots3DMPtuning'
@@ -205,7 +208,7 @@ switch par
 end
 
 
-iu = 28; % which unit
+iu = 44; % which unit
 
 iae = 1;
 auFR_formatted  = reshape(auMat.data.muFRs{iae},length(hdgVec),[],size(auMat.data.muFRs{iae},2));
@@ -231,7 +234,7 @@ set(hl,'box','off','location','northeast')
 % hl.Position(2) = 0.5;
 set(gca,'tickdir','out')
 ylim([0 1.25 * max(max(auFR_formatted(:,:,iu)))])
-ylabel('Firing rate [spikes per sec]','fontsize',20)
+ylabel('Firing rate (sp/s)','fontsize',20)
 xlabel(sprintf('Heading angle [%s]',char(176)))
            
 
@@ -239,20 +242,18 @@ xlabel(sprintf('Heading angle [%s]',char(176)))
 %% ====== plot time resolved PSTH
 
 par = 'dots3DMPtuning';
-% par = 'dots3DMP';
+par = 'dots3DMP';
 
 % 2022-10-18 units of interest
 % tuning
 % 310, 311
 
-% in dots3DMP task
+% in dots3DMP task (old)
 % 14, 15, 20, 28, 36, 42, 44, 46, 47, 58, 60, 61, 75, 90, 92, 105, 106, 125, 151, 153, 157, 158, 159, 161,
 % 163, 166,184, 187, 207, 217, 226, 233, 236, 242, 247, 257, 260, 262, 263, 264, 265, 272, 275, 278, 282, 284
 % 157 could be MU, two different units, did I do visual first?
 
-% u = 352;
-% u = 292;
-u = 48;
+u = 21;
 
 fsz = 20;
 
@@ -280,10 +281,18 @@ hdgcols = cbrewer('div','RdBu',N*2);
 hdgcols = hdgcols([1:floor(N/2) end-floor(N/2):end],:);
 hdgcols(hdgVec==0,:) = [0 0 0];
 
-figure('position',[100 100 1000 800],'color','w')
-% figure('position',[100 100 700 300],'color','w')
+% N = 9;
+% hdgcols = cbrewer('div','RdBu',N*2);
+% hdgcols = hdgcols([1:floor(N/2) end-floor(N/2):end],:);
+% hdgcols(ceil(N/2),:) = [0 0 0];
+% 
+% hdgcols = hdgcols(3:7,:);
 
-cohs = [1 2];
+
+N = length(hdgVec);
+
+% figure('position',[100 100 1000 800],'color','w')
+figure('position',[100 100 900 500],'color','w')
 
 if length(cohs)==2
     ucond = [1 cohs(1); 2 cohs(1); 2 cohs(2); 3 cohs(1); 3 cohs(2)];
@@ -294,13 +303,11 @@ else
     titles = {'Ves';'Vis';'Comb'};
     subplotInd = [1 2 3];
 end
-% 
+
 % ucond = [1 cohs(1); 2 cohs(1); 2 cohs(2)];
 % titles = {'Ves';'Vis (Low Coh)';'Vis (High Coh)'};
 % subplotInd = [1 2 3];
-
-% ucond = [1 cohs(1)];
-% titles = {'Ves'};
+subplotInd = [1 2 4 3 5];
 
 % mcols = {'Greys','Reds','Reds','Blues','Blues','Purples'};
 
@@ -321,9 +328,12 @@ if my==0, my = 10; end
 xlens = cellfun(@range,auMat.times.xvec);
 sprc  = xlens./sum(xlens);
 
-for c=1:size(ucond,1)
+for c=[1 2 4]%1:size(ucond,1)
+
 %     axMain = gca;
-    axMain = subplot(3,2,subplotInd(c));
+%     axMain = subplot(3,2,subplotInd(c));
+    axMain = subplot(3,1,subplotInd(c));
+
 
     pos=get(axMain,'Position');
 
@@ -348,15 +358,17 @@ for c=1:size(ucond,1)
 
         hh.XTick = [fliplr(-0.5:-0.5:thisTmin) 0:0.5:thisTmax];
         hh.XTickLabelRotation = 0;
-        plot([0 0],[0 my],'k','linestyle','-');
+        plot([0 0],[0 my],'k','linestyle','-','linewidth',2);
 
         for ioe = 1:size(auMat.times.evTimes{iae},2)
             evMu = mean(evTimes_formatted(:,c,ioe,u)); % what are we averaging over here??
 
             if evMu<thisTmax && evMu > thisTmin
-                plot([evMu evMu],[0 my],'k','linestyle','--');
-                text(evMu*0.99,my*1,otherEventnames{iae}{ioe},'fontsize',fsz,'horizo','right','verti','bottom','rotation',90);
+                plot([evMu evMu],[0 my],'k','linestyle','--','linewidth',2);
+                if c==1
+                    text(evMu*0.99,my*1,otherEventnames{iae}{ioe},'fontsize',fsz,'horizo','right','verti','bottom','rotation',90);
                 %             text(evTimes{iae}(c,ioe,u),my*1.02,otherEventnames{iae}{ioe},'fontsize',12,'horizo','center','verti','bottom');
+                end
             end
         end
 
@@ -370,9 +382,9 @@ for c=1:size(ucond,1)
         end
 
         if iae==1
-            if ucond(c,2)==cohs(1) && (ucond(c,1)==2 || size(ucond,1)==1)
-                ylabel('Firing rate [spikes per sec]','fontsize',14)
-            end
+%             if ucond(c,2)==cohs(1) && (ucond(c,1)==2 || size(ucond,1)==1)
+                ylabel('Firing rate (sp/s)','fontsize',14)
+%             end
         else
             hh.YAxis.Visible = 'off';
         end
@@ -402,6 +414,8 @@ end
 %     axes('position',[0.7 0.35 0.35 0.35])
 % end
 
+
+%%
 figure('position',[1000 100 600 600],'color','w')
 if max(hdgVec)==12
     sc = 3; len = 3;

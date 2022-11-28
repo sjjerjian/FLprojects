@@ -1,4 +1,4 @@
-function gfit = dots3DMP_fit_cgauss_byConf(data,mods,cohs,deltas,conftask,RTtask)
+function gfit = dots3DMP_fit_cgauss_byConf(data,mods,cohs,deltas,conftask,RTtask,D)
 
 % same as dots3DMP_fit_cgauss, but for splits by high and low confidence
 % SJ 07-2021 converted to function for cleanear workspace
@@ -37,9 +37,13 @@ end
 
 
 %% first, for all trials irrespective of delta
-D = length(deltas)+1; % (the extra column we made for pooling across deltas)
-% OR select just delta=0:
-% D = find(deltas==0);
+
+% SJ add D as option, 11/21/2022
+if isempty(D) || nargin < 7
+    D = length(deltas)+1; % (the extra column we made for pooling across deltas)
+    % OR select just delta=0:
+%     D = find(deltas==0);
+end
 
 % initialize vars for storing param fits
 % deal func looks nicer, but is slow for some reason...
@@ -161,6 +165,8 @@ end
 
 
 %% now separate by delta
+
+% this needs work to fix, if we want to bother showing it...
 
 %{
 for c = 1:length(cohs)
