@@ -1,0 +1,23 @@
+Variable Name,Variable Label,Value,Value Label,Notes
+,,,,
+ID,Identification #,,,Participants completed the RDM task many times 
+AGELT50,Age less than 50 years,1,No,
+,,2,Yes,
+Groupx2,Disorder Group,1,Control,
+,,2,OCD,
+Test,Test condition,test0,Practice test,
+,,test1,Monetary feedback,
+,,test2,Subject confidence,
+,,test3,Monetary penalty,
+Coherence,Coherence level,0.03,2.5% dot coherence,
+,,0.05,5.0% dot coherence,
+,,0.10,10% dot coherence,
+,,0.15,15% dot coherence,
+,,0.25,25% dot coherence,
+,,0.35,35% dot coherence,
+,,0.45,45% dot coherence,
+,,0.70,70% dot coherence,
+Reaction Time,Reaction Time (msec),,,
+Confidence,Confidence rating,,,Visual analog self-rating of confidence that decision was correct
+Correct,Correctness of decision,1,Incorrect,
+,,2,Correct,
