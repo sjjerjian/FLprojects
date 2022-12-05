@@ -297,7 +297,7 @@ if options.RTtask
 end
 
 
-%% Next, calculate error (negative log-likelihood) under binomial/gaussian assumptions
+%% Next, calculate error (negative log-likelihood)
 
 % convert data vars to logicals
 choice = logical(data.choice);
@@ -319,31 +319,32 @@ LL_choice = sum(log(pRight_model_trialwise(choice))) + sum(log(1-pRight_model_tr
 % RT
 if options.RTtask     
     
-    % Option 1a:
-    % likelihood of mean RTs for each coherence, under Gaussian
-    % approximation, NOT separated by high/low bet
+    % Option 1a: means, not sep
+    % (fit mean RTs for each coh under Gaussian approximation,
+    % NOT separated by high/low bet)
     L_RT = 1./(sigmaRT_data*sqrt(2*pi)) .* exp(-(meanRT_model-meanRT_data).^2 ./ (2*sigmaRT_data.^2));
     
-    % Option 1b:
-    % assign means to trials and sum over those, to keep same order of magnitude as other LLs
+    % Option 1b: trials, not sep
+    % (assign means to trials and sum over those, to keep same order of
+    % magnitude as other LLs)
     I = usetrs_data;
     L_RT = 1./(sigmaRT_data_trialwise(I)*sqrt(2*pi)) .* exp(-(RT_model_trialwise(I) - data.RT(I)).^2 ./ (2*sigmaRT_data_trialwise(I).^2));
     L_RT(L_RT==0) = min(L_RT(L_RT~=0)); % this seems weird; there shouldn't be any 0 vals anyway...
     LL_RT = nansum(log(L_RT(:))); % sum over all conditions (or trials)
     
-    % Option 2a:
-    % separate by high/low bet, fit mean RT for each coherence
+    % Option 2a: means, sep hi/lo
+    % (fit mean RT for each coherence, separately for high/low bet)
     L_RT_high = 1./(sigmaRThigh_data*sqrt(2*pi)) .* exp(-(meanRThigh_model-meanRThigh_data).^2 ./ (2*sigmaRThigh_data.^2));
     L_RT_low = 1./(sigmaRTlow_data*sqrt(2*pi)) .* exp(-(meanRTlow_model-meanRTlow_data).^2 ./ (2*sigmaRTlow_data.^2));
     LL_RT = log(max(minP,L_RT_high)) + log(max(minP,L_RT_low)); % this doesn't seem right; likelihoods are greater than 1
 
-    % Option 2b:
-    % separate by high/low bet and assign to trials, to keep order of mag consistent
-%     I = usetrs_data & data.PDW_preAlpha==1;
+    % Option 2b: trials, sep hi/lo
+    % (separate by high/low bet and assign to trials, to keep order of mag)
+%     I = usetrs_data & data.PDW_preAlpha==1; %??
     I = usetrs_data & data.PDW==1;
     L_RT_high = 1./(sigmaRThigh_data_trialwise(I)*sqrt(2*pi)) .* exp(-(RThigh_model_trialwise(I) - data.RT(I)).^2 ./ (2*sigmaRThigh_data_trialwise(I).^2));    
     L_RT_high(L_RT_high==0) = minP;
-%     I = usetrs_data & data.PDW_preAlpha==0;    
+%     I = usetrs_data & data.PDW_preAlpha==0; %??
     I = usetrs_data & data.PDW==0;    
     L_RT_low = 1./(sigmaRTlow_data_trialwise(I)*sqrt(2*pi)) .* exp(-(RTlow_model_trialwise(I) - data.RT(I)).^2 ./ (2*sigmaRTlow_data_trialwise(I).^2));
     L_RT_low(L_RT_low==0) = minP;
@@ -353,9 +354,7 @@ if options.RTtask
 % % %     LL_RT = nansum(log(L_RT_high(:))) / 385; % TEMP: ignore RTlow for now, and scale to same order of mag
 
     
-    % Option 3: fit full RT distributions!
-    
-        
+    % Option 3: fit full RT distributions! requires MC, I think...
     
 end
 

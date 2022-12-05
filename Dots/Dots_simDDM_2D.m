@@ -11,7 +11,7 @@
 clear; close all
 
 datafolder = '/Users/chris/Documents/MATLAB';
-codefolder = '/Users/chris/Documents/MATLAB/Projects/offlineTools/dots3DMP/behav_models';
+codefolder = '/Users/chris/Documents/MATLAB/git/FLprojects/Dots/';
 
 cd(codefolder)
 
@@ -50,7 +50,7 @@ B = 0.7; % bound height
     mu = k*coh; % mean of momentary evidence (drift rate)
 sigma = 1; % unit variance (Moreno-Bote 2010), not a free param           
 theta = 1.2; % threshold for high bet in units of log odds correct (Kiani & Shadlen 09, 14)
-alpha = 0.15; % base rate of low bets (offset to PDW curve, as seen in data)
+alpha = 0.1; % base rate of low bets (offset to PDW curve, as seen in data)
 
 % % alternate slate of params, to check robustness of fitting code (pre-param recovery)
 % k = 8; % drift rate coeff (conversion from %coh to units of DV)

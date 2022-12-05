@@ -11,15 +11,18 @@
 clear all; close all;
 
 
+%% Simulated data
+load tempsim.mat % e.g. for (pre)param recovery
+
 
 %% 'Doubt' dataset, Marton et al.
-load doubtconf.mat
+% load doubtconf.mat
 
 
 %% Hanzo
 % load Hanzo_data_fall2020
 % or
-load Hanzo_data_fall2020_withFall2021
+% load Hanzo_data_fall2020_withFall2021
 
 
 %% Genji
@@ -35,10 +38,6 @@ load Hanzo_data_fall2020_withFall2021
 % data.RT = fittingGenji.RT(I)';
 % data.correct = (data.choice==1 & data.direction==0) | (data.choice==0 & data.direction==180);
 % clear I fittingGenji;
-
-
-%% Simulated data
-% load tempsim.mat % e.g. for (pre)param recovery
 
 
 %% some bookkeeping, then parse data, and plot if desired
@@ -63,10 +62,12 @@ if ~exist('parsedData','var')  % e.g., if simulation was run
     parsedData = Dots_parseData(data,options.conftask,options.RTtask,RTCorrOnly);
 end
 
+
 % **** 
 % optional [data will be plotted below regardless, along with the fits]
-forTalk = 0;
-Dots_plot(parsedData,cohs,options.conftask,options.RTtask,0,forTalk)
+% forTalk = 0;
+% Dots_plot(parsedData,cohs,options.conftask,options.RTtask,0,forTalk)
+
 
 
 %% now the fitting itself
@@ -134,13 +135,13 @@ switch modelID
             end
         else
             
-            % HANZO BEST BY EYE
-            k= 26;
-            B= .52;
-            theta= 0.99;
-            alpha= 0.14;
-            TndR= 0.30;
-            TndL= 0.37;
+%             % HANZO BEST BY EYE
+%             k= 26;
+%             B= .52;
+%             theta= 0.99;
+%             alpha= 0.14;
+%             TndR= 0.30;
+%             TndL= 0.37;
 
 %             % GENJI BEST BY EYE
 % %             k= 18;
@@ -152,13 +153,13 @@ switch modelID
 %             TndR= 0.29;
 %             TndL= 0.29;
             
-%             % DoubtConf rough guess
-%             k= 4;
-%             B= 2.15;
-%             theta= 2.5;
-%             alpha= 0.12;
-%             TndR= 0.58;
-%             TndL= 0.58;
+            % DoubtConf rough guess
+            k= 4;
+            B= 2.15;
+            theta= 2.5;
+            alpha= 0.12;
+            TndR= 0.58;
+            TndL= 0.58;
 
         end
         guess = [k B theta alpha TndR TndL];
