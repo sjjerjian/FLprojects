@@ -47,6 +47,8 @@ for n=1:length(numfile)
             % what we want is an eyeRT that corresponds to numfile{n}.RT,
             % but we can't get that currently because we don't have time of
             % dots onset or saccade onset (only FP onset and targ acquire).
+            
+            
         end
         RT(Tr) = round(numfile{n}.RT(Tr)*1000);
     end

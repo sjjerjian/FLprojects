@@ -21,6 +21,8 @@ pdw_preAlpha = pdw;
     % practice it is irrelevant because we cannot disentangle this in data.
     % Yet the pre-param recovery misses if we don't use this, in both the
     % 'data' and model calculations...
+    % [The reason is that RT|high and |low come from the conditional Pxt's
+    % (above and below theta), which cannot be adjusted for alpha]
 
 pdw(pdw==1 & rand(length(pdw),1)<alpha) = 0;
 

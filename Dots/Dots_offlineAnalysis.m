@@ -169,8 +169,10 @@ if sum(isnan(data.RT))<0.8*length(data.RT) % arbitrary minimum proportion of RT 
     %                      % strength into units of momentary evidence
     % B = 20; % height of the bound, or threshold, for decision termination
     % Tnd = 225; %?
+    
 
     % or just take vals from sim
+    
     k = 0.3; % 'drift rate' or sensitivity term: a constant converting stimulus
              % strength into units of momentary evidence
     B = 25; % height of the bound, or threshold, for decision termination

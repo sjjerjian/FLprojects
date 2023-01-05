@@ -105,10 +105,11 @@ choice=logical(choice);
 % calculate expected probability of rightward choice given model params
 % Eq. from Shadlen et al. 2006 book chapter:
 Pr_model = 1 ./ (1 + exp(-2*k*B*stimval));
-% % meanPr_model = 1 ./ (1 + exp(-2*k*B*unique(stimval)));
 
+% expected mean RT, also from Shadlen et al. 2006
 meanRT_model = B./(k*unique(stimval)) .* tanh(k*B*unique(stimval)) + Tnd;
 meanRT_model(unique(stimval)==0) = B^2 + Tnd; % limit as stimval->0
+
 
 % likelihood is the expected Pright for trials with a rightward choice,
 % plus 1-Pright for trials with a leftward choice. The joint probability
@@ -117,20 +118,23 @@ LL_choice = sum(log(Pr_model(choice))) + sum(log(1-Pr_model(~choice)));
 
 
 % *****************************
-% Alternatively, you can compute LL on the proportions, not individual
-% trials. In general this is not ideal, but it may be necessary in this
-% case because we're fitting the mean RTs and combining LL for RT and
-% choice (see below)
-us = unique(stimval);
+% % Alternatively, you can compute LL on the proportions, not individual
+% % trials. In general this is not ideal, but it may be necessary in this
+% % case because we're fitting the mean RTs and combining LL for RT and
+% % choice (see below)
+% 
+us = unique(stimval); % leave these lines uncommented, as some are used below
 for s = 1:length(us)
     r(s) = sum(choice(stimval==us(s)));
     n(s) = sum(stimval==us(s));
 end
-% Palmer et al 2005, eq. 4:
-% LL_choice = sum(log( (factorial(n) ./ (factorial(r).*factorial(n-r))) .* meanPr_model'.^(r) .* (1-meanPr_model').^(n-r) ))
-    % ^ n's are generally too big for explicit factorial; approximate with gammaln
-% % % LL_choice = sum( gammaln(n+1) - gammaln(r+1) - gammaln(n-r+1) + r.*log(meanPr_model'+eps) + (n-r).*log(1-meanPr_model'+eps) );
-    % ^ comment out for now, see below
+% 
+% % Palmer et al 2005, eq. 4:
+% meanPr_model = 1 ./ (1 + exp(-2*k*B*unique(stimval)));
+% LL_choice = sum(log( (factorial(n) ./ (factorial(r).*factorial(n-r))) .* meanPr_model'.^(r) .* (1-meanPr_model').^(n-r) ));
+%     % ^ n's are generally too big for explicit factorial; approximate with gammaln
+% % LL_choice = sum( gammaln(n+1) - gammaln(r+1) - gammaln(n-r+1) + r.*log(meanPr_model'+eps) + (n-r).*log(1-meanPr_model'+eps) );
+%     % ^ comment out for now, see below
 % *****************************
 
     
@@ -140,31 +144,56 @@ end
 % binomial distribution for n = 1).
 
 % For RT it's harder because we don't know the underlying distribution of
-% the random variable of which each RT is a realization. The sampling
+% the random variable for which each RT is a realization. The sampling
 % distribution of *mean* RT is, conveniently, Gaussian, by the central
 % limit theorem. So we'll use the Gaussian approximation to calculate
 % likelihood of mean RTs under the model params.
 
-% Palmer et al. 2005, Eq. 3 & A.34+A.35 (assume zero variance in Tr aka Tnd
+% Palmer et al 2005, Eq. 3 & A.34+A.35 (assume zero variance in Tr aka Tnd)
 mu = abs(k*us); % this is mu-prime in Palmer
 VarRT = (B*tanh(B*mu) - B*mu.*sech(B*mu)) ./ mu.^3; 
 VarRT(us==0) = 2/3 * B^4; % Eq. limiting case for coh=0
 sigmaRT = sqrt(VarRT./n'); % equation in text above Eq 3
 
+
 % **********************
 % or, simply grab the standard error of the mean from the data, which we 
 % passed into this function (not sure when this is okay)
-% sigmaRT = sigmaRT_fromData;
+% sigmaRT = sigmaRT_fromData; % *but do you need to square it? it seems off
+                              % *of the theoretical value by about a ^2
 % **********************
 
+
+
+% % % % TEMP: simulate a bunch of different RT deviations and plot LL versus sum
+% % % % squared diff, to make sure it is well-behaved
+% % % % figure;
+% % % meanRTorig = meanRT;
+% % % for q = 1:400
+% % % % TEMP
+% % % meanRT = meanRTorig*rand*2;
+
+    
 % either way, LL is calculated with the Gaussian equation (Palmer Eq 3):
+minP = 1e-300;
 L_RT = 1./(sigmaRT*sqrt(2*pi)) .* exp(-(meanRT_model - meanRT).^2 ./ (2*sigmaRT.^2));
     % kluge to remove zeros, which are matlab's response to  exp(-[too large a number])
     % otherwise the log will give you infinity
-    L_RT(L_RT==0) = min(L_RT(L_RT~=0));
+    L_RT(L_RT==0) = minP;
 LL_RT = sum(log(L_RT));
-     % alternate version: don't know where this comes from
-% LL_RT = -( sum((meanRT - meanRT_model).^2./(2.*sigmaRT.^2)) + length(meanRT)./2.*log(2.*pi) + sum(log(sigmaRT)) )
+
+% % % %TEMP
+% % % plot(sum((meanRT_model - meanRT).^2),-LL_RT,'x'); hold on;
+% % % % [meanRT meanRT_model]
+% % % % sse = sqrt(sum((meanRT_model - meanRT).^2))
+% % % % -LL_RT
+% % % % pause;
+
+% should be in range 0..1!
+% % % if max(L_RT)>1 || min(L_RT)<0
+% % %     keyboard
+% % % end
+% % % end
 
 
 % Lastly, although we want to maximize the likelihood, optimization

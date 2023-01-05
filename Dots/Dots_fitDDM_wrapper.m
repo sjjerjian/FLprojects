@@ -12,11 +12,11 @@ clear all; close all;
 
 
 %% Simulated data
-load tempsim.mat % e.g. for (pre)param recovery
+% load tempsim.mat % e.g. for (pre)param recovery
 
 
 %% 'Doubt' dataset, Marton et al.
-% load doubtconf.mat
+load doubtconf.mat
 
 
 %% Hanzo
@@ -62,11 +62,15 @@ if ~exist('parsedData','var')  % e.g., if simulation was run
     parsedData = Dots_parseData(data,options.conftask,options.RTtask,RTCorrOnly);
 end
 
+if ~exist('data.PDW_preAlpha','var')
+    data.PDW_preAlpha = data.PDW;
+end
 
-% **** 
+% ********
 % optional [data will be plotted below regardless, along with the fits]
-% forTalk = 0;
-% Dots_plot(parsedData,cohs,options.conftask,options.RTtask,0,forTalk)
+forTalk = 0;
+Dots_plot(parsedData,cohs,options.conftask,options.RTtask,0,forTalk)
+% ********
 
 
 
@@ -153,7 +157,7 @@ switch modelID
 %             TndR= 0.29;
 %             TndL= 0.29;
             
-            % DoubtConf rough guess
+%             % DoubtConf rough guess
             k= 4;
             B= 2.15;
             theta= 2.5;
@@ -171,7 +175,13 @@ end
 
 % ************************************
 % set all fixed to 1 for hand-tuning or "pre-param-recovery"
-fixed(:)=1;
+% fixed(:)=1;
+
+% % temp: directed perturbations to see if effect on LL is sensible
+% guess(3) = 0.7; % affects LL for choice_low more than _high, although not as big a diff as might expect (also affects conf and RT, both curves)
+% guess(4) = 0; % affects LL for conf only
+% guess(5) = 0.6; guess(6) = 0.6; % affects LL for RT only
+
 
 % Randomize guess, for true param recovery
 % guess = guess.*(rand(1,length(guess))+0.5);

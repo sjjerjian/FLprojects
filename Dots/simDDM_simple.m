@@ -7,7 +7,7 @@
 
 clear all; close all;
 
-ntrials = 5000;
+ntrials = 50000;
 
 % different levels of motion strength ('coherence')
 % we use +/- eps instead of zero so that there is a direction (and hence a

@@ -22,7 +22,7 @@ end
 
 % before alpha offset, for choice/RT splits 
 % [this is weird; see note in simDDM_postProcessing]
-if ~isfield(data,'PDW_preAlpha') 
+if ~isfield(data,'PDW_preAlpha') % TEMP: try this
     data.PDW_preAlpha = data.PDW;
 end
 
@@ -31,17 +31,17 @@ if cohs(end)==1; cohs(end)=[]; end % one or more files had a few stray 100% coh 
 
 n = nan(length(cohs),1);
 
-n1 = n; % all
-n2 = n; % high
-n3 = n; % low
+n_all = n; % all
+n_high = n; % high
+n_low = n; % low
 pRight = n;
 pCorrect = n;
 pRightHigh = n;
 pRightLow = n;
 
-nRT1 = n; % all
-nRT2 = n; % high
-nRT3 = n; % low
+nRT_all = n; % all
+nRT_high = n; % high
+nRT_low = n; % low
 RTmean = n;
 RTse = n;
 RTmeanHigh = n;
@@ -49,16 +49,16 @@ RTseHigh = n;
 RTmeanLow = n;
 RTseLow = n;
 
-nPDW1 = n; % all
-nPDW2 = n; % corr
-nPDW3 = n; % err
+nPDW_all = n; % all
+nPDW_corr = n; % corr
+nPDW_err = n; % err
 pHigh = n;
 pHighCorr = n;
 pHighErr = n;
 
-nConf1 = n; % all
-nConf2 = n; % corr
-nConf3 = n; % err
+nConf_all = n; % all
+nConf_corr = n; % corr
+nConf_err = n; % err
 confMean = n;
 confSE = n;
 confMeanCorr = n;
@@ -76,10 +76,10 @@ if RTCorrOnly; K = K & data.correct==1; end
 for c = 1:length(cohs)
     % choice
     J = data.scoh==cohs(c);
-    n1(c) = sum(J);
-    pRight(c) = sum(J & data.choice==1) / n1(c); % 0 is left, 1 is right
+    n_all(c) = sum(J);
+    pRight(c) = sum(J & data.choice==1) / n_all(c); % 0 is left, 1 is right
 
-    pCorrect(c) = sum(J & data.correct==1) / n1(c); 
+    pCorrect(c) = sum(J & data.correct==1) / n_all(c); 
     
     if conftask==1
         Jhi = data.scoh==cohs(c) & data.conf>=median(data.conf);
@@ -89,41 +89,41 @@ for c = 1:length(cohs)
         Jlo = data.scoh==cohs(c) & data.PDW_preAlpha==0;
     end
     if conftask
-        n2(c) = sum(Jhi);
-        pRightHigh(c) = sum(Jhi & data.choice==1) / n2(c); 
-        n3(c) = sum(Jlo);
-        pRightLow(c) = sum(Jlo & data.choice==1) / n3(c);        
+        n_high(c) = sum(Jhi);
+        pRightHigh(c) = sum(Jhi & data.choice==1) / n_high(c); 
+        n_low(c) = sum(Jlo);
+        pRightLow(c) = sum(Jlo & data.choice==1) / n_low(c);        
     end
     
     % RT
-    nRT1(c) = sum(J & K);
+    nRT_all(c) = sum(J & K);
     RTmean(c) = mean(data.RT(J & K));
-    RTse(c) = std(data.RT(J & K))/sqrt(nRT1(c));
+    RTse(c) = std(data.RT(J & K))/sqrt(nRT_all(c));
     
     if conftask
-        nRT2(c) = sum(Jhi & K);
+        nRT_high(c) = sum(Jhi & K);
         RTmeanHigh(c) = mean(data.RT(Jhi & K));
-        RTseHigh(c) = std(data.RT(Jhi & K))/sqrt(nRT2(c));
+        RTseHigh(c) = std(data.RT(Jhi & K))/sqrt(nRT_high(c));
 
-        nRT3(c) = sum(Jlo & K);
+        nRT_low(c) = sum(Jlo & K);
         RTmeanLow(c) = mean(data.RT(Jlo & K));
-        RTseLow(c) = std(data.RT(Jlo & K))/sqrt(nRT3(c));
+        RTseLow(c) = std(data.RT(Jlo & K))/sqrt(nRT_low(c));
     end
     
     % pdw
     if conftask==2
         L = ~isnan(data.PDW);
-        nPDW1(c) = sum(J & L);
-        pHigh(c) = sum(J & L & data.PDW==1) / nPDW1(c); % 1 is high-bet
+        nPDW_all(c) = sum(J & L);
+        pHigh(c) = sum(J & L & data.PDW==1) / nPDW_all(c); % 1 is high-bet
 
         Lcor = ~isnan(data.PDW) & data.correct==1;
-        nPDW2(c) = sum(J & Lcor);
-        pHighCorr(c) = sum(J & Lcor & data.PDW==1) / nPDW2(c);
+        nPDW_corr(c) = sum(J & Lcor);
+        pHighCorr(c) = sum(J & Lcor & data.PDW==1) / nPDW_corr(c);
 
         Lerr = ~isnan(data.PDW) & data.correct==0;
-        nPDW3(c) = sum(J & Lerr);
-        if nPDW3(c)>15
-            pHighErr(c) = sum(J & Lerr & data.PDW==1) / nPDW3(c);
+        nPDW_err(c) = sum(J & Lerr);
+        if nPDW_err(c)>15
+            pHighErr(c) = sum(J & Lerr & data.PDW==1) / nPDW_err(c);
         else % ignore small N (e.g. high coh low bet)
             pHighErr(c) = NaN;
         end
@@ -132,30 +132,30 @@ for c = 1:length(cohs)
     % conf
     if conftask==1
         M = ~isnan(data.conf);
-        nConf1(c) = sum(J & M);
+        nConf_all(c) = sum(J & M);
         confMean(c) = mean(data.conf(J & M));
-        confSE(c) = std(data.conf(J & M))/sqrt(nConf1(c));
+        confSE(c) = std(data.conf(J & M))/sqrt(nConf_all(c));
 
         MM = ~isnan(data.conf) & data.correct==1;
-        nConf2(c) = sum(J & MM);
+        nConf_corr(c) = sum(J & MM);
         confMeanCorr(c) = mean(data.conf(J & MM));
-        confSEcorr(c) = std(data.conf(J & MM))/sqrt(nConf2(c));
+        confSEcorr(c) = std(data.conf(J & MM))/sqrt(nConf_corr(c));
 
         MMM = ~isnan(data.conf) & data.correct==0;
-        nConf3(c) = sum(J & MMM);
+        nConf_err(c) = sum(J & MMM);
         confMeanErr(c) = mean(data.conf(J & MMM));
-        confSEerr(c) = std(data.conf(J & MMM))/sqrt(nConf3(c));
+        confSEerr(c) = std(data.conf(J & MMM))/sqrt(nConf_err(c));
     end    
 end
 
-pRightSE = sqrt( (pRight.*(1-pRight)) ./ n1 );
-pCorrectSE = sqrt( (pCorrect.*(1-pCorrect)) ./ n1 );
-pRightSEhigh = sqrt( (pRightHigh.*(1-pRightHigh)) ./ n2 );
-pRightSElow = sqrt( (pRightLow.*(1-pRightLow)) ./ n3 );
+pRightSE = sqrt( (pRight.*(1-pRight)) ./ n_all );
+pCorrectSE = sqrt( (pCorrect.*(1-pCorrect)) ./ n_all );
+pRightSEhigh = sqrt( (pRightHigh.*(1-pRightHigh)) ./ n_high );
+pRightSElow = sqrt( (pRightLow.*(1-pRightLow)) ./ n_low );
 
-pHighSE = sqrt( (pHigh.*(1-pHigh)) ./ nPDW1 );
-pHighSEcorr = sqrt( (pHighCorr.*(1-pHighCorr)) ./ nPDW2 );
-pHighSEerr = sqrt( (pHighErr.*(1-pHighErr)) ./ nPDW3 );
+pHighSE = sqrt( (pHigh.*(1-pHigh)) ./ nPDW_all );
+pHighSEcorr = sqrt( (pHighCorr.*(1-pHighCorr)) ./ nPDW_corr );
+pHighSEerr = sqrt( (pHighErr.*(1-pHighErr)) ./ nPDW_err );
 
 
 % fit logistic regression
@@ -191,7 +191,20 @@ yVals3 = glmval(B3,xVals,'logit');
      
 
 parsedData = struct();
-parsedData.n = n;
+
+parsedData.n_all = n_all;
+parsedData.n_high = n_high;
+parsedData.n_low = n_low;
+parsedData.nRT_all = nRT_all;
+parsedData.nRT_high = nRT_high;
+parsedData.nRT_low = nRT_low;
+parsedData.nPDW_all = nPDW_all;
+parsedData.nPDW_corr = nPDW_corr;
+parsedData.nPDW_err = nPDW_err;
+parsedData.nConf_all = nConf_all;
+parsedData.nConf_corr = nConf_corr;
+parsedData.nConf_err = nConf_err;
+
 parsedData.pRight = pRight;
 parsedData.pRightHigh = pRightHigh;
 parsedData.pRightLow = pRightLow;
