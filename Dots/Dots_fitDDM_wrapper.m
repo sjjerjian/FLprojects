@@ -12,11 +12,11 @@ clear all; close all;
 
 
 %% Simulated data
-% load tempsim.mat % e.g. for (pre)param recovery
+load tempsim.mat % e.g. for (pre)param recovery
 
 
 %% 'Doubt' dataset, Marton et al.
-load doubtconf.mat
+% load doubtconf.mat
 
 
 %% Hanzo
@@ -68,8 +68,8 @@ end
 
 % ********
 % optional [data will be plotted below regardless, along with the fits]
-forTalk = 0;
-Dots_plot(parsedData,cohs,options.conftask,options.RTtask,0,forTalk)
+% forTalk = 0;
+% Dots_plot(parsedData,cohs,options.conftask,options.RTtask,0,forTalk)
 % ********
 
 

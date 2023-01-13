@@ -21,7 +21,7 @@ confModel = 'evidence+time'; % default, Kiani 2014 etc
 % confModel = 'time_only';
     % ^ these require different units for theta, time and evidence respectively
 
-ntrials = 50000;
+ntrials = 100000;
 
 dbstop if error
 
@@ -47,10 +47,11 @@ allowNonHB = 0; % allow non-hit-bound trials? if set to 0 and a trial lasts
 
 k = 18; % drift rate coeff (conversion from %coh to units of DV)
 B = 0.7; % bound height
-    mu = k*coh; % mean of momentary evidence (drift rate)
+mu = k*coh; % mean of momentary evidence (drift rate)
 sigma = 1; % unit variance (Moreno-Bote 2010), not a free param           
 theta = 1.2; % threshold for high bet in units of log odds correct (Kiani & Shadlen 09, 14)
 alpha = 0.1; % base rate of low bets (offset to PDW curve, as seen in data)
+
 
 % % alternate slate of params, to check robustness of fitting code (pre-param recovery)
 % k = 8; % drift rate coeff (conversion from %coh to units of DV)
@@ -59,6 +60,7 @@ alpha = 0.1; % base rate of low bets (offset to PDW curve, as seen in data)
 % sigma = 1; % unit variance (Moreno-Bote 2010), not a free param             
 % theta = 1.6; % threshold for high bet in units of log odds correct (Kiani & Shadlen 09, 14)
 % alpha = 0.15; % base rate of low bets (offset to PDW curve, as seen in data)
+
 
  % Tnd = non-decision time (ms), to account for sensory/motor latencies
 TndMean = 300;
@@ -88,6 +90,7 @@ R.plotflag = 0; % 1 = plot, 2 = plot and export_fig
 P = images_dtb_2d(R);
 toc
 
+% % % P.up.p(1)+P.lo.p(1)
 
 %%
 % momentary evidence is a draw from bivariate normal distribution
@@ -211,5 +214,5 @@ end
 toc
 
 % run script for post-processing
-simDDM_postProcessing % (standardized for 1D and 2D models)
+Dots_simDDM_postProcessing % (standardized for 1D and 2D models)
 
