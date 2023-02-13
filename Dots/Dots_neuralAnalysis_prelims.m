@@ -11,6 +11,9 @@ for n = 1:length(dataCell)
     if any(isnan(dataCell{n}.Exp.openEvents.choice))
         keyboard
     end
+    if isfield(dataCell{n}.Exp.openEvents,'PDW')
+        dataCell{n}.Exp.openEvents = renameStructField(dataCell{n}.Exp.openEvents, 'PDW', 'pdw');
+    end
     if any(isnan(dataCell{n}.Exp.openEvents.pdw))
         keyboard
     end

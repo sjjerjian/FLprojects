@@ -36,11 +36,13 @@ end
 R.t = 0.001:0.001:max_dur;
 R.Bup = B;
 R.drift = k * unique(data.coherence); % takes only unsigned drift rates
-R.drift_freq = hist(data.coherence,unique(data.coherence))'/length(data.coherence); % relative frequency of each coh(drift)
+R.drift_freq = hist(data.coherence,unique(data.coherence))'/length(data.coherence); %#ok<HIST> % relative frequency of each coh(drift)
 R.lose_flag = 1; % we always need the losing densities
 R.plotflag = options.plot; % 1 = plot, 2 = plot nicer and export_fig (eg for talk)
 %     R.plotflag = 0; % manual override
 P = images_dtb_2d(R); % /WolpertMOI
+
+P = images_dtb_calcLPOandPlot(R,P);
 
 % for fitting RT dists, need to  clip any data.RTs that may be past the
 % limit in the mapping
@@ -73,9 +75,6 @@ meanRTlow_model = n;
 meanRT_data = n;
 meanRThigh_data = n;
 meanRTlow_data = n;
-% % % sigmaRT_data = n;  % obsolete
-% % % sigmaRThigh_data = n;
-% % % sigmaRTlow_data = n;
 sigmaRT_model = n;
 sigmaRThigh_model = n;
 sigmaRTlow_model = n;
@@ -104,9 +103,6 @@ conf_model_trialwise = m;
 RT_model_trialwise = m;
 RThigh_model_trialwise = m;
 RTlow_model_trialwise = m;
-% % % sigmaRT_data_trialwise = m;  % obsolete
-% % % sigmaRThigh_data_trialwise = m;
-% % % sigmaRTlow_data_trialwise = m;
 sigmaRT_model_trialwise = m;
 sigmaRThigh_model_trialwise = m;
 sigmaRTlow_model_trialwise = m;
@@ -152,20 +148,11 @@ for c = 1:length(cohs) % loop through signed cohs, because that is what defines 
     
     %ensure total prob sums to one (when it doesn't, it's because of unabsorbed prob)
     Ptot = pRightHigh + pRightLow + pLeftHigh + pLeftLow;
-    if abs(Ptot-1)>0.01; warning('Ptot'); fprintf('c=%d, Ptot=%f\n',c,Ptot); end
+%     if abs(Ptot-1)>0.01; warning('Ptot'); fprintf('c=%d, Ptot=%f\n',c,Ptot); end
     pRightHigh = pRightHigh/Ptot;
     pRightLow = pRightLow/Ptot;
     pLeftHigh = pLeftHigh/Ptot;
     pLeftLow = pLeftLow/Ptot;
-
-% % %     % copy intersections to trials, for multinomial likelihood
-% % %     % does NOT take into account alpha!!!
-% % %     Jdata = data.scoh==cohs(c); % select trials of this coh
-% % %     pRightHigh_model_trialwise(Jdata) = pRightHigh;
-% % %     pRightLow_model_trialwise(Jdata) = pRightLow;
-% % %     pLeftHigh_model_trialwise(Jdata) = pLeftHigh;
-% % %     pLeftLow_model_trialwise(Jdata) = pLeftLow;
-    % this step now occurs below, after incorporating alpha 
 
     % by definition of conditional probability: P(A|B) = P(A n B) / P(B)
     pHigh_Right = pRightHigh / pRight;
@@ -206,7 +193,7 @@ for c = 1:length(cohs) % loop through signed cohs, because that is what defines 
 
     % still should sum to 1
     Ptot = pRightHigh_wAlpha + pRightLow_wAlpha + pLeftHigh_wAlpha + pLeftLow_wAlpha;
-    if abs(Ptot-1)>1e-6; warning('Ptot'); fprintf('c=%d, Ptot=%f\n',c,Ptot); end
+%     if abs(Ptot-1)>1e-6; warning('Ptot'); fprintf('c=%d, Ptot=%f\n',c,Ptot); end
     pRightHigh_wAlpha = pRightHigh_wAlpha/Ptot;
     pRightLow_wAlpha = pRightLow_wAlpha/Ptot;
     pLeftHigh_wAlpha = pLeftHigh_wAlpha/Ptot;
@@ -286,19 +273,6 @@ for c = 1:length(cohs) % loop through signed cohs, because that is what defines 
         meanRThigh_model(c) = pHBhigh*meanRThigh + (1-pHBhigh)*max_dur + Tnd;
         meanRTlow_model(c) = pHBlow*meanRTlow + (1-pHBlow)*max_dur + Tnd;
 
-        % TEMP(?): compute the variances of these PDFs for the
-        % fitting-by-mean RT likelihood calculations below. This may become
-        % obsolete if we can use the PDFs themselves
-        
-        % variance = sum((x - mean).^2 .* y) 
-        % where x is the domain of the PDF, y is the PDF values over the
-        % domain x, and mean is the mean of the PDF, which you can
-        % calculate using the formula you provided: mean = sum(y.*x). -- thanks ChatGPT!
-
-% % %         % SJ 12-2022 Is diag is what we want here? Var(X) = E((X-E(X))^2)
-% % %         P.up.var_t = diag(P.up.pdf_t * ((R.t - P.up.mean_t).^2)' ./ P.up.p);
-% % %         P.lo.var_t = diag(P.lo.pdf_t * ((R.t - P.lo.mean_t).^2)' ./ P.lo.p);
-
                                                                 % ___note the PDFs are normalized___
         sigmaRT_model(c) = sqrt(sum((R.t - P.up.mean_t(uc)).^2 .* P.up.pdf_t(uc,:)/sum(P.up.pdf_t(uc,:))));
         sigmaRThigh_model(c) = sqrt(sum((R.t - meanRThigh).^2 .* PxtAboveTheta/sum(PxtAboveTheta)));
@@ -318,13 +292,10 @@ for c = 1:length(cohs) % loop through signed cohs, because that is what defines 
         I = Jdata & usetrs_data;
         n_RT_data(c) = sum(I);
         meanRT_data(c) = mean(data.RT(I));
-% % %         sigmaRT_data(c) = std(dataRT(I))/sqrt(sum(I)); % SD or SEM? --*obsolete even if not using full dists, use Sigma from the dist itself
-% % %         sigmaRT_data_trialwise(Jdata) = sigmaRT_data(c); % copy to trials, for alternate LL calculation below
-                                                               % (should this be Jdata or I?)            
-            % but we can just get the likelihood directly from the PDF!
+            % better yet, we can just get the likelihood directly from the PDF!
             PDF = P.up.pdf_t(uc,:)/sum(P.up.pdf_t(uc,:)); % renormalize
             TndDist = normpdf(P.t,Tnd,2e-4)/sum(normpdf(P.t,Tnd,2e-4)); 
-            PDFwTnd = conv(PDF,TndDist); % convolve with ^Tnd dist (currently zero variance, approx something tiny)
+            PDFwTnd = conv(PDF,TndDist); % convolve with ^Tnd dist (currently zero variance, approx using something tiny)
             PDFwTnd = PDFwTnd(1:length(P.t))/sum(PDFwTnd(1:length(P.t))); % normalize again and trim the extra length from conv
             % figure;plot(PDF,'b');hold on; plot(PDFwTnd,'r'); % temp, just to see that the conv makes sense
             L_RT_fromPDF(I) = PDFwTnd(round(dataRT_forPDF(I)*1000))';
@@ -333,9 +304,6 @@ for c = 1:length(cohs) % loop through signed cohs, because that is what defines 
         I = Jdata & usetrs_data & data.PDW_preAlpha==1;
         n_RThigh_data(c) = sum(I);
         meanRThigh_data(c) = mean(data.RT(I));
-% % %         sigmaRThigh_data(c) = std(dataRT(I))/sqrt(sum(I)); % SD or SEM? --*obsolete even if not using full dists, use Sigma from the dist itself
-% % %         sigmaRThigh_data_trialwise(Jdata) = sigmaRThigh_data(c); % copy to trials, for alternate LL calculation below
-            % but we can just get the likelihood directly from the PDF!
             PDF = PxtAboveTheta/sum(PxtAboveTheta);
             PDFwTnd = conv(PDF,TndDist);
             PDFwTnd = PDFwTnd(1:length(P.t))/sum(PDFwTnd(1:length(P.t)));
@@ -345,9 +313,6 @@ for c = 1:length(cohs) % loop through signed cohs, because that is what defines 
         I = Jdata & usetrs_data & data.PDW_preAlpha==0;
         n_RTlow_data(c) = sum(I);
         meanRTlow_data(c) = mean(data.RT(I));
-% % %         sigmaRTlow_data(c) = std(data.RT(I))/sqrt(sum(I)); % SD or SEM? --*obsolete even if not using full dists, use Sigma from the dist itself
-% % %         sigmaRTlow_data_trialwise(Jdata) = sigmaRTlow_data(c); % copy to trials, for alternate LL calculation below
-            % but we can just get the likelihood directly from the PDF!
             PDF = PxtBelowTheta/sum(PxtBelowTheta); 
             PDFwTnd = conv(PDF,TndDist);
             PDFwTnd = PDFwTnd(1:length(P.t))/sum(PDFwTnd(1:length(P.t)));
@@ -409,12 +374,6 @@ minP = 1e-300;
 pRight_model_trialwise(pRight_model_trialwise==0) = minP; 
 LL_choice = sum(log(pRight_model_trialwise(choice))) + sum(log(1-pRight_model_trialwise(~choice)));
 
-% % steven method, based on Palmer: choice proportions, not trials
-% parsedData = Dots_parseData(data,options.conftask,options.RTtask,0);
-% L_choice = binopdf(round(parsedData.pRight.*parsedData.n_all),parsedData.n_all,pRight_model); 
-% L_choice(L_choice==0) = minP;
-% LL_choice = nansum(log(L_choice(:)));
-
 % CHOICE, from conditionals
 pRight_Low_model_trialwise(pRight_Low_model_trialwise==0) = minP;
 pp = pRight_Low_model_trialwise(data.PDW==0); % conditionalize first
@@ -426,7 +385,7 @@ pp = pRight_High_model_trialwise(data.PDW==1); % conditionalize first
 cc = choice(data.PDW==1);
 LL_choice_high = sum(log(pp(cc))) + sum(log(1-pp(~cc)));
 
-LL_choice_cond = LL_choice_low + LL_choice_high; % currently unused
+% % LL_choice_cond = LL_choice_low + LL_choice_high; % currently unused
 
 % RT
 if options.RTtask     
@@ -539,7 +498,7 @@ elseif options.conftask==2 % PDW
     cc = PDW(data.correct==0);
     LL_conf_err = sum(log(pp(cc))) + sum(log(1-pp(~cc)));
     
-    LL_conf_cond = LL_conf_corr + LL_conf_err; % currently unused
+% %     LL_conf_cond = LL_conf_corr + LL_conf_err; % currently unused
     
     % OR multinomial likelihood with n=1 and k=4 (categorial distribution)
     RH = data.choice==1 & data.PDW==1;

@@ -4,7 +4,8 @@
 clear
 close all
 % load('/Users/chris/Documents/MATLAB/Fall2020_Dataset.mat');
-load('/Users/chris/Documents/MATLAB/Fall2020_Dataset_With_Fall2021');
+% load('/Users/chris/Documents/MATLAB/Fall2020_Dataset_With_Fall2021');
+load('/Users/chris/Documents/MATLAB/01-18-23_HanzoMTData.mat');
 dbstop if error
 
 
@@ -34,68 +35,69 @@ dbstop if error
 plotTuningFits = 0;
 plotEverythingElse = 0;
 
-% excludes = [];
-excludes = ...
-[4,5
-31,1
-31,2
-31,3
-31,4
-31,5
-31,6
-31,7
-31,8
-31,9
-31,10
-31,11];
+excludes = [];
+% excludes = ...
+% [4,5
+% 31,1
+% 31,2
+% 31,3
+% 31,4
+% 31,5
+% 31,6
+% 31,7
+% 31,8
+% 31,9
+% 31,10
+% 31,11];
 
-useRemap = ...
-[13,2 % [mapping has very few spikes]
-19,2 % [mapping has quite low FR]
-21,1 % [tuning shifts by >45]  [probably! check w M]
-21,2 % [tuning shifts by ~180] [probably! check w M]
-21,3 % [mapping has no spikes]
-21,4 % [mapping has very few spikes]
-21,5 % [tuning shifts by >45] [probably! check w M]
-1,4 % [tuning shifts by >90] [probably! check w M]
-3,1
-3,5
-3,7
-4,3
-4,7
-4,8
-5,1
-5,2
-5,5
-5,7
-7,5
-7,6
-7,7
-7,8
-9,3
-13,1
-14,2
-14,4
-19,4
-19,5
-22,3
-23,1
-23,2 % [tuning shifts by ~45] [probably! check w M]
-23,5
-23,6
-25,4
-25,5
-25,7
-25,10
-25,11
-25,14
-25,16
-26,18
-27,4
-27,7
-28,2
-29,3
-29,4];
+useRemap = [];
+% useRemap = ...
+% [13,2 % [mapping has very few spikes]
+% 19,2 % [mapping has quite low FR]
+% 21,1 % [tuning shifts by >45]  [probably! check w M]
+% 21,2 % [tuning shifts by ~180] [probably! check w M]
+% 21,3 % [mapping has no spikes]
+% 21,4 % [mapping has very few spikes]
+% 21,5 % [tuning shifts by >45] [probably! check w M]
+% 1,4 % [tuning shifts by >90] [probably! check w M]
+% 3,1
+% 3,5
+% 3,7
+% 4,3
+% 4,7
+% 4,8
+% 5,1
+% 5,2
+% 5,5
+% 5,7
+% 7,5
+% 7,6
+% 7,7
+% 7,8
+% 9,3
+% 13,1
+% 14,2
+% 14,4
+% 19,4
+% 19,5
+% 22,3
+% 23,1
+% 23,2 % [tuning shifts by ~45] [probably! check w M]
+% 23,5
+% 23,6
+% 25,4
+% 25,5
+% 25,7
+% 25,10
+% 25,11
+% 25,14
+% 25,16
+% 26,18
+% 27,4
+% 27,7
+% 28,2
+% 29,3
+% 29,4];
 
 extRaster = [50 150]; % extend raster this much before dots onset (1) and after dots offset (2)
 latency = [60 20]; % cutoffs for spike rate [post dots onset (1) and post dots offset (2)]; latency(2) must be < extRaster(2)!
@@ -119,7 +121,8 @@ Dots_neuralAnalysis_prelims
 %%%%%%%%%%%%%%%%
 C=1; % counter for valid units, across all sessions
 
-for n = 1:30 % length(dataCell)
+for n = 1:10 % length(dataCell)
+    n
 
     if plotEverythingElse        
         figure(n); set(gcf, 'Color', 'w', 'Position', [800 725 370*min([nU(n) 8]) 430], 'PaperPositionMode', 'auto');

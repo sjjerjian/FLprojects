@@ -20,8 +20,6 @@ load tempsim.mat % e.g. for (pre)param recovery
 
 
 %% Hanzo
-% load Hanzo_data_fall2020
-% or
 % load Hanzo_data_fall2020_withFall2021
 
 
@@ -66,11 +64,11 @@ if ~exist('data.PDW_preAlpha','var')
     data.PDW_preAlpha = data.PDW;
 end
 
-% ********
-% optional [data will be plotted below regardless, along with the fits]
+% % ********
+% % optional [data will be plotted below regardless, along with the fits]
 % forTalk = 0;
 % Dots_plot(parsedData,cohs,options.conftask,options.RTtask,0,forTalk)
-% ********
+% % ********
 
 
 
@@ -139,7 +137,7 @@ switch modelID
             end
         else
             
-%             % HANZO BEST BY EYE
+% %             % HANZO BEST BY EYE
 %             k= 26;
 %             B= .52;
 %             theta= 0.99;
@@ -147,23 +145,37 @@ switch modelID
 %             TndR= 0.30;
 %             TndL= 0.37;
 
-%             % GENJI BEST BY EYE
-% %             k= 18;
-% %             B= .75;
-%             k= 12;
-%             B= .69;
+%             % GENJI: fit choice
+%             k= 10;
+%             B= .76;
+%             theta= 1.22;
+%             alpha= 0;
+%             TndR= 0.22;
+%             TndL= 0.22;
+
+%             % GENJI: fit RT
+%             k= 14;
+%             B= .74;
 %             theta= 1.35;
 %             alpha= 0;
-%             TndR= 0.29;
-%             TndL= 0.29;
-            
-%             % DoubtConf rough guess
-            k= 4;
-            B= 2.15;
-            theta= 2.5;
-            alpha= 0.12;
-            TndR= 0.58;
-            TndL= 0.58;
+%             TndR= 0.27;
+%             TndL= 0.26;
+
+%             % GENJI: fit Conf
+%             k= 19;
+%             B= .74;
+%             theta= 1.35;
+%             alpha= 0;
+%             TndR= 0.28;
+%             TndL= 0.27;
+ 
+% %             % DoubtConf rough guess
+%             k= 4;
+%             B= 2.15;
+%             theta= 2.5;
+%             alpha= 0.12;
+%             TndR= 0.58;
+%             TndL= 0.58;
 
         end
         guess = [k B theta alpha TndR TndL];
@@ -175,7 +187,7 @@ end
 
 % ************************************
 % set all fixed to 1 for hand-tuning or "pre-param-recovery"
-% fixed(:)=1;
+fixed(:)=1;
 
 % % temp: directed perturbations to see if effect on LL is sensible
 % guess(3) = 0.7; % affects LL for choice_low more than _high, although not as big a diff as might expect (also affects conf and RT, both curves)

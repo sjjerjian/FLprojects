@@ -159,11 +159,13 @@ pHighSEerr = sqrt( (pHighErr.*(1-pHighErr)) ./ nPDW_err );
 
 
 % fit logistic regression
-% all trials
+
+    % all trials
 X = data.scoh;
 y = data.choice==1; % 1 is right
 [B1, ~, stats1] = glmfit(X, y, 'binomial');
 yVals1 = glmval(B1,xVals,'logit');
+
     % high conf/bet
 if conftask==1
     I = data.conf>=median(data.conf);
@@ -176,6 +178,7 @@ X = data.scoh(I);
 y = data.choice(I)==1;
 [B2, ~, stats2] = glmfit(X, y, 'binomial');
 yVals2 = glmval(B2,xVals,'logit');
+
     % low conf/bet
 if conftask==1
     I = data.conf<median(data.conf);
@@ -188,7 +191,12 @@ X = data.scoh(I);
 y = data.choice(I)==1;
 [B3, ~, stats3] = glmfit(X, y, 'binomial');
 yVals3 = glmval(B3,xVals,'logit');
-     
+
+    % all trials with indicator term for conf
+X = [data.scoh data.PDW.*data.scoh];
+y = data.choice==1; % 1 is right
+[B4, ~, stats4] = glmfit(X, y, 'binomial');
+   
 
 parsedData = struct();
 
@@ -220,9 +228,11 @@ parsedData.yVals3 = yVals3;
 parsedData.B1 = B1;
 parsedData.B2 = B2;
 parsedData.B3 = B3;
+parsedData.B4 = B4;
 parsedData.stats1 = stats1;
 parsedData.stats2 = stats2;
 parsedData.stats3 = stats3;
+parsedData.stats4 = stats4;
 parsedData.yVals1 = yVals1;
 parsedData.yVals2 = yVals2;
 parsedData.yVals3 = yVals3;

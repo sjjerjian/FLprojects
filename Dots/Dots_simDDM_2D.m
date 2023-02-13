@@ -21,7 +21,7 @@ confModel = 'evidence+time'; % default, Kiani 2014 etc
 % confModel = 'time_only';
     % ^ these require different units for theta, time and evidence respectively
 
-ntrials = 100000;
+ntrials = 10000;
 
 dbstop if error
 
@@ -86,11 +86,18 @@ R.t = 0.001:0.001:max_dur/1000; % seconds
 R.Bup = B;
 R.drift = unique(abs(mu)); % unsigned drift rates
 R.lose_flag = 1;
-R.plotflag = 0; % 1 = plot, 2 = plot and export_fig
-P = images_dtb_2d(R);
-toc
+R.plotflag = 1; % 1 = plot, 2 = plot and export_fig
+R.grid=linspace(-4*R.Bup,0,500); % ngrid can vary, default is 500
+R.k_urg = 1; % linear urgency (slope of collapsing bound, in units of drift/t) 
+R.low_th = -4*R.Bup;
 
-% % % P.up.p(1)+P.lo.p(1)
+P = images_dtb_2d(R);
+
+P2 = images_dtb_2d_new(R);
+
+P = images_dtb_calcLPOandPlot(R,P);
+
+toc
 
 %%
 % momentary evidence is a draw from bivariate normal distribution

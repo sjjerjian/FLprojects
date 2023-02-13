@@ -123,6 +123,11 @@ t = mu/se;
 df = sum(~isnan(data.PDW))-length(parsedData.B2); 
 pval_ttest_slopes = 2*(1-tcdf(t,df)) % two-tailed
 
+% alternative slope test: indicator version:
+t = parsedData.B4(3)/parsedData.stats4.se(3);
+df = sum(~isnan(data.PDW))-length(parsedData.B4); 
+pval_ttest_slopes_alt = 2*(1-tcdf(t,df)) % two-tailed
+
 
 % t test on pHigh, corr vs err (is confidence higher on correct trials?)
 M = ~isnan(data.PDW) & data.correct==1;

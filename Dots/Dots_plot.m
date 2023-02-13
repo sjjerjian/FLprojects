@@ -1,6 +1,13 @@
 function Dots_plot(parsedData,cohs,conftask,RTtask,wFit,forTalk)
 
 
+xl = [-1.05*max(cohs) 1.05*max(cohs)];
+ylConf = [0.4 1]; % hanzo
+ylRT = [0.3 0.7]; % hanzo
+% ylConf = [0.2 1]; % genji
+% ylRT = [0.3 1]; % genji
+
+
 if nargin<5, wFit=0; end
 if nargin<6, forTalk=0; end
 
@@ -52,12 +59,6 @@ else
     line1='-';
     line2='--';
 end
-
-xl = [-1.05*max(cohs) 1.05*max(cohs)];
-ylConf = [0.4 1]; % hanzo
-ylRT = [0.3 0.7]; % hanzo
-% ylConf = [0.2 1]; % genji
-% ylRT = [0.3 0.9]; % genji
 
 subplot(nplots,1,1);
 if wFit==0; plot(parsedData.xVals,parsedData.yVals1,'k-'); hold on; end
