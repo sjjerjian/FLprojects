@@ -1,11 +1,12 @@
 function [nsEvents] = nsEventConditions(nsEvents,PDS,par)
-% [nsEvents] = NSEVENTCONDITIONS(nsEvents,PDS)
+% [nsEvents] = NSEVENTCONDITIONS(nsEvents,PDS,PAR)
 %
 % pulls in useful trial info from relevant PLDAPS file into nsEvent struct
 % 
 % since events are sent to Ripple via binary DigIn, conditions except
 % modality are sent as indices in condition list. Here we pull the actual
-% info from PLDAPS
+% info from PLDAPS, so that eventual neural dataStruct has all the task
+% information needed for analysis
 %
 % SJ updates
 % 05-2022 fixed issues with mismatched trials
@@ -15,7 +16,9 @@ function [nsEvents] = nsEventConditions(nsEvents,PDS,par)
 %% check that unique trial numbers match completely, if not, select NS entries to match
 % note that if multiple PDS files correspond to one Trellis file, this
 % will return just the trials in nsEvents which correspond to the selected
-% PDS file. i.e. probably unwise to overwrite nsEvents in the wrapper!
+% PDS file.
+% this is important in the wrapper func, to make sure we are not
+% overwriting nsEvents, or at least concatenating the output
 
 for t=1:length(PDS.data)
     PDSutn(t,:) = PDS.data{t}.unique_number;
@@ -33,18 +36,41 @@ matchTrials = ismember(NSutn,PDSutn,'rows');
 
 % 06-2022
 % breakfix vector was 1 entry short in one case, which messes up the
-% matchTrials stuff. let's just remove it, and just add in the goodtrial logical
-% later. (this needs to be fixed at some point)
+% matchTrials stuff. let's just remove it here, and just add in the goodtrial logical
+% later, which serves the same purpose (this might be good to fix at some point)
 try nsEvents.Events = rmfield(nsEvents.Events,'breakfix'); catch; end
 
-% remove fields only relevant to RFmapping
-if ~strcmpi(par,'RFmapping')
-    try nsEvents.Events = rmfield(nsEvents.Events,'dotOrder'); catch; end
-    try nsEvents.Events = rmfield(nsEvents.Events,'stimOn_all'); catch; end
-    try nsEvents.Events = rmfield(nsEvents.Events,'stimOff_all'); catch; end
+% 02-2023 actually don't do this, in case we want to concatenate events from all sessions together
+
+% remove fields only relevant to RFmapping if par is not RFmapping
+% if ~strcmpi(par,'RFmapping')
+%     try nsEvents.Events = rmfield(nsEvents.Events,'dotOrder'); catch; end
+%     try nsEvents.Events = rmfield(nsEvents.Events,'stimOn_all'); catch; end
+%     try nsEvents.Events = rmfield(nsEvents.Events,'stimOff_all'); catch; end
+% end
+% remove fields which are all nans, irrelevent for chosen paradigm
+% (presumably)
+% fnames = fieldnames(nsEvents.Events);
+% for f = 1:length(fnames)
+%     if ~iscell(nsEvents.Events.(fnames{f})) && all(isnan(nsEvents.Events.(fnames{f})))
+%         try nsEvents.Events = rmfield(nsEvents.Events,fnames{f}); catch; end
+%     end
+% end
+
+% seems like VesMapping events didn't have stimOff_all, so if VesMapping is
+% done at the end the vector was the wrong length, so assign empties
+% 02-22-2023
+if nsEvents.pldaps.parNum(end)==4
+    nsEvents.Events.stimOff_all(end+1:length(nsEvents.Events.stimOn_all)) = {[]};
 end
 
+% now replace all empties with stimOff if there's only one
+empty_inds = find(cellfun(@isempty,nsEvents.Events.stimOff_all));
+for c = 1:length(empty_inds)
+    nsEvents.Events.stimOff_all(empty_inds(c)) = {nsEvents.Events.stimOff(empty_inds(c))};
+end
 
+%%
 fnamesC = fieldnames(nsEvents.Events);
 for f = 1:length(fnamesC)
     nsEvents.Events.(fnamesC{f}) = nsEvents.Events.(fnamesC{f})(matchTrials);
@@ -75,14 +101,8 @@ PDSconditions = PDSconditions(matchTrials2);
 PDSdata = PDSdata(matchTrials2);
 
 %% 
-% remove fields which are all nans, irrelevent for this paradigm
-% (presumably)
-fnames = fieldnames(nsEvents.Events);
-for f = 1:length(fnames)
-    if ~iscell(nsEvents.Events.(fnames{f})) && all(isnan(nsEvents.Events.(fnames{f})))
-        try nsEvents.Events = rmfield(nsEvents.Events,fnames{f}); catch; end
-    end
-end
+
+
 
 % refactor trial data from individual cells into matrix for easier insertion into nsEvents
 % should be fixed across trials within a paradigm
@@ -95,6 +115,8 @@ for t = 1:length(PDSconditions)
         tempConds.(fnamesC{f})(:,t) = PDSconditions{t}.stimulus.(fnamesC{f});
         try
             tempBehav.RT(:,t) = PDSdata{t}.behavior.RT;
+        catch
+            % fine
         end
     end
     
@@ -107,14 +129,19 @@ for t = 1:length(PDSconditions)
     if strcmp(nsEvents.pldaps.parName{t},'dots3DMP')
         nsEvents.Events.oneTargChoice(t) = PDSdata{t}.behavior.oneTargChoice;
         nsEvents.Events.oneTargConf(t)   = PDSdata{t}.behavior.oneTargConf;
+    else
+        nsEvents.Events.oneTargChoice(t) = NaN;
+        nsEvents.Events.oneTargConf(t) = NaN;
     end
 end
 
 
-
-
 % just add in the fields from PDS to nsEvents, without any further checks (except
 % for the ones done above)
+% TO DO
+% maybe just do a sanity check on some, e.g. modality (since this is the
+% same for both, or hdgOrder/dotOrder for RFmapping)
+
 fnamesC = fieldnames(PDSconditions{1}.stimulus);
 for f=1:length(fnamesC)
     if any(strcmp(fnamesC{f},{'headingTheta','hdgOrder','headingPhi'}))
@@ -123,8 +150,10 @@ for f=1:length(fnamesC)
         nsEvents.Events.(fnamesC{f}) = tempConds.(fnamesC{f});
     end
 end
+
 try
     nsEvents.Events.RT = tempBehav.RT;
+catch
 end
 
 % SJ 09-30-2022 should do the same with behavior - sanity check that chocie
