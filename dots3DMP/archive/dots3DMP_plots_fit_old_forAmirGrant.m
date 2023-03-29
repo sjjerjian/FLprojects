@@ -1,4 +1,4 @@
-function dots3DMP_plots_fit(Data,fitInterp,conftask,RTtask,fitgauss)
+function dots3DMP_plots_fit_old_forAmirGrant(Data,fitInterp,conftask,RTtask,fitgauss)
 
 % somewhat unwieldy amalgam of parseData and dots3DMP_plots, to show model 
 % fits versus data in dots3DMP experiment
@@ -16,7 +16,12 @@ cohs = unique(data.coherence);
 deltas = unique(data.delta);
 hdgs = unique(data.heading);
 
-dots3DMP_parseData
+parsedData = dots3DMP_parseData(data,mods,cohs,deltas,hdgs,conftask,RTtask,0,0);
+fnames = fieldnames(parsedData);
+for F = 1:length(fnames)
+    eval([fnames{F} ' = parsedData.' fnames{F}]);
+end
+
 
 % first, for all trials irrespective of delta
 D = length(deltas)+1; % (the extra column we made for pooling across deltas)

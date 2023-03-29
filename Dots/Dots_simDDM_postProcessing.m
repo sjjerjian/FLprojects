@@ -76,5 +76,5 @@ Dots_plot(parsedData,cohs,conftask,RTtask,wFit,forTalk)
 %% temp: save data, e.g. for param recovery
 
 cd(datafolder)
-save tempsim.mat data origParams allowNonHB
+save tempsim.mat data origParams allowNonHB confModel
 

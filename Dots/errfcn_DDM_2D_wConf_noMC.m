@@ -52,6 +52,16 @@ if sum(dataRT_forPDF>P.t(end))/length(dataRT_forPDF)>0.05
 end
 dataRT_forPDF(dataRT_forPDF>P.t(end)) = P.t(end);
 
+% create alternatives to logOddsCorrMaP
+if strcmp(options.confModel,'evidence_only')
+    dvMap = repmat(P.y',1,length(P.t));
+end
+if strcmp(options.confModel,'time_only')
+    timeMap = repmat(P.t,length(P.y),1);
+end
+
+
+
 %% calculate likelihood of the observed data given the model parameters
 
 % usetrs_data = data.correct | data.coherence<1e-6; % use only correct (OR ~0 hdg) trials for RT fits
@@ -129,21 +139,60 @@ for c = 1:length(cohs) % loop through signed cohs, because that is what defines 
 
         % calculate probabilities of the four outcomes: right/left x high/low
         % these are the intersections, e.g. P(R n H) [n is used as the upside-down U symbol]
-        pRightHigh = sum(sum(Pxt2.*(P.logOddsCorrMap>=theta)));
-        pRightLow = sum(sum(Pxt2.*(P.logOddsCorrMap<theta)));
-        pLeftHigh = sum(sum(Pxt1.*(P.logOddsCorrMap>=theta)));
-        pLeftLow =  sum(sum(Pxt1.*(P.logOddsCorrMap<theta)));                                                             
+        switch options.confModel
+             case 'evidence+time'
+                % use map to look up log-odds that the motion is rightward
+                pRightHigh = sum(sum(Pxt2.*(P.logOddsCorrMap>=theta)));
+                pRightLow = sum(sum(Pxt2.*(P.logOddsCorrMap<theta)));
+                pLeftHigh = sum(sum(Pxt1.*(P.logOddsCorrMap>=theta)));
+                pLeftLow =  sum(sum(Pxt1.*(P.logOddsCorrMap<theta)));
+            case 'evidence_only'
+                % here, theta is treated as a flat criterion on evidence,
+                % and is therefore in DV units (distance from bound, so
+                % that the positive association with conf is preserved)
+                pRightHigh = sum(sum(Pxt2.*(dvMap<=-theta)));
+                pRightLow = sum(sum(Pxt2.*(dvMap>-theta)));
+                pLeftHigh = sum(sum(Pxt1.*(dvMap<=-theta)));
+                pLeftLow =  sum(sum(Pxt1.*(dvMap>-theta)));
+            case 'time_only'
+                % here, theta is treated as a time deadline, after which
+                % the condience is 'low' (decision time in seconds, thus
+                % inversely related to conf
+                pRightHigh = sum(sum(Pxt2.*(timeMap<=theta)));
+                pRightLow = sum(sum(Pxt2.*(timeMap>theta)));
+                pLeftHigh = sum(sum(Pxt1.*(timeMap<=theta)));
+                pLeftLow =  sum(sum(Pxt1.*(timeMap>theta)));
+        end
     else % rightward motion
         % if coh is positive, then pRight is p(correct), aka P.up
         pRight = P.up.p(uc)/(P.up.p(uc)+P.lo.p(uc)); % normalized by total bound-crossing probability
         pLeft = 1-pRight;
-
-        % calculate probabilities of the four outcomes: right/left x high/low
-        % these are the intersections, e.g. P(R n H)
-        pRightHigh = sum(sum(Pxt1.*(P.logOddsCorrMap>=theta)));
-        pRightLow = sum(sum(Pxt1.*(P.logOddsCorrMap<theta)));
-        pLeftHigh = sum(sum(Pxt2.*(P.logOddsCorrMap>=theta)));
-        pLeftLow =  sum(sum(Pxt2.*(P.logOddsCorrMap<theta)));                                                     
+                                                
+        switch options.confModel
+             case 'evidence+time'
+                % use map to look up log-odds that the motion is rightward
+                pRightHigh = sum(sum(Pxt1.*(P.logOddsCorrMap>=theta)));
+                pRightLow = sum(sum(Pxt1.*(P.logOddsCorrMap<theta)));
+                pLeftHigh = sum(sum(Pxt2.*(P.logOddsCorrMap>=theta)));
+                pLeftLow =  sum(sum(Pxt2.*(P.logOddsCorrMap<theta)));
+            case 'evidence_only'
+                % here, theta is treated as a flat criterion on evidence,
+                % and is therefore in DV units (distance from bound, so
+                % that the positive association with conf is preserved)
+                pRightHigh = sum(sum(Pxt1.*(dvMap<=-theta)));
+                pRightLow = sum(sum(Pxt1.*(dvMap>-theta)));
+                pLeftHigh = sum(sum(Pxt2.*(dvMap<=-theta)));
+                pLeftLow =  sum(sum(Pxt2.*(dvMap>-theta)));
+            case 'time_only'
+                % here, theta is treated as a time deadline, after which
+                % the condience is 'low' (decision time in seconds, thus
+                % inversely related to conf
+                pRightHigh = sum(sum(Pxt1.*(timeMap<=theta)));
+                pRightLow = sum(sum(Pxt1.*(timeMap>theta)));
+                pLeftHigh = sum(sum(Pxt2.*(timeMap<=theta)));
+                pLeftLow =  sum(sum(Pxt2.*(timeMap>theta)));
+        end
+        
     end
     
     %ensure total prob sums to one (when it doesn't, it's because of unabsorbed prob)

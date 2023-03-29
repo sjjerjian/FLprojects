@@ -10,32 +10,15 @@
 
 clear all; close all;
 
-
-%% Simulated data
-load tempsim.mat % e.g. for (pre)param recovery
-
-
-%% 'Doubt' dataset, Marton et al.
-% load doubtconf.mat
+% datafile = 'tempsim.mat'; % simulated data, e.g. for (pre)param recovery
+datafile = 'doubtconf.mat'; % 'Doubt' dataset, Marton et al.
+% datafile = 'Hanzo_data_fall2020_withFall2021.mat';
+% datafile = 'Genji_data';
 
 
-%% Hanzo
-% load Hanzo_data_fall2020_withFall2021
 
+load(datafile)
 
-%% Genji
-% load fittingGenji
-% I = fittingGenji.twoChoiceConf==1 & fittingGenji.RT~=inf & fittingGenji.RT<=3 & fittingGenji.removeBias==1 & fittingGenji.taskRT==1;
-% data.direction = zeros(sum(I),1);
-% data.direction(fittingGenji.cohs(I)<0) = 180;
-% data.direction(fittingGenji.cohs(I)==0) = randsample([0 180],sum(fittingGenji.cohs(I)==0),'true');
-% data.coherence = abs(fittingGenji.cohs(I))';
-% data.scoh = fittingGenji.cohs(I)';
-% data.choice = fittingGenji.choice(I)';
-% data.PDW = fittingGenji.wager(I)';
-% data.RT = fittingGenji.RT(I)';
-% data.correct = (data.choice==1 & data.direction==0) | (data.choice==0 & data.direction==180);
-% clear I fittingGenji;
 
 
 %% some bookkeeping, then parse data, and plot if desired
@@ -82,6 +65,18 @@ modelID=2; options.errfcn = @errfcn_DDM_2D_wConf_noMC; % 2D DDM aka anticorrelat
 % modelID=2; options.errfcn = @errfcn_DDM_2D_wConf_noMC_signed; % as above, but with signed cohs
 %***********************************************
 
+if exist('confModel','var') % i.e., from simulation
+    options.confModel = confModel;
+else
+    options.confModel  = 'evidence+time'; % default, Kiani14: theta is criterion in log odds correct for betting high
+%     options.confModel  = 'evidence_only';
+                    % here, theta is treated as a flat criterion on evidence,
+                    % and is therefore in DV units (distance from bound, so
+                    % that the positive association with conf is preserved)
+%     options.confModel  = 'time_only';
+                    % here, theta is simply a deadline: if past it, bet low
+end
+
 options.feedback = 1; % 1 = text output to cmd window, 2 = that, plus plot LL across runs
 options.plot = 0; % plot the marginal PDFs, logOddsCorr map, and high/low bet regions (only makes sense for fixed(:)=1)
 
@@ -113,7 +108,7 @@ switch modelID
             % these are attempts at fitting DoubtConf
             k = 0.3; % sensitivity parameter
             B = 40; % bound height
-            theta = 2.6; % criterion (in log odds correct) for betting high
+            theta = 2.6; % criterion for betting high
             alpha = 0.2; % base rate of low-bet choices
             Tnd = 1.5; % non-decision time (s)
         end
@@ -136,48 +131,54 @@ switch modelID
                 TndL = origParams.TndMean/1000;
             end
         else
+
             
-% %             % HANZO BEST BY EYE
-%             k= 26;
-%             B= .52;
-%             theta= 0.99;
-%             alpha= 0.14;
-%             TndR= 0.30;
-%             TndL= 0.37;
+            switch datafile(1:5)
 
-%             % GENJI: fit choice
-%             k= 10;
-%             B= .76;
-%             theta= 1.22;
-%             alpha= 0;
-%             TndR= 0.22;
-%             TndL= 0.22;
+                case 'doubt' % 'Doubt' dataset, Marton et al.
+                    k= 4;
+                    B= 2.15;
+                    theta= 2.5;
+%                     theta= 3.5;
+                    alpha= 0.12;
+                    TndR= 0.58;
+                    TndL= 0.58;
+                case 'Hanzo'
+                    k= 26;
+                    B= .52;
+                    theta= 0.99;
+                    alpha= 0.14;
+                    TndR= 0.30;
+                    TndL= 0.37;
+                case 'Genji'
+                    % GENJI: 'fit' choice
+                    k= 10;
+                    B= .76;
+                    theta= 1.22;
+                    alpha= 0;
+                    TndR= 0.22;
+                    TndL= 0.22;                
 
-%             % GENJI: fit RT
-%             k= 14;
-%             B= .74;
-%             theta= 1.35;
-%             alpha= 0;
-%             TndR= 0.27;
-%             TndL= 0.26;
+    %                  % GENJI: 'fit' RT
+    %                 k= 14;
+    %                 B= .74;
+    %                 theta= 1.35;
+    %                 alpha= 0;
+    %                 TndR= 0.27;
+    %                 TndL= 0.26;
 
-%             % GENJI: fit Conf
-%             k= 19;
-%             B= .74;
-%             theta= 1.35;
-%             alpha= 0;
-%             TndR= 0.28;
-%             TndL= 0.27;
- 
-% %             % DoubtConf rough guess
-%             k= 4;
-%             B= 2.15;
-%             theta= 2.5;
-%             alpha= 0.12;
-%             TndR= 0.58;
-%             TndL= 0.58;
+    %                 % GENJI: 'fit' Conf
+    %                 k= 19;
+    %                 B= .74;
+    %                 theta= 1.35;
+    %                 alpha= 0;
+    %                 TndR= 0.28;
+    %                 TndL= 0.27;
+    
+            end
 
         end
+        
         guess = [k B theta alpha TndR TndL];
         fixed = [0 0 0     0     0    0];
         

@@ -42,12 +42,19 @@ pRightLow = n;
 nRT_all = n; % all
 nRT_high = n; % high
 nRT_low = n; % low
+nRT_corr = n; % correct
+nRT_err = n; % error
 RTmean = n;
 RTse = n;
 RTmeanHigh = n;
 RTseHigh = n;
 RTmeanLow = n;
 RTseLow = n;
+RTmeanCorr = n;
+RTseCorr = n;
+RTmeanErr = n;
+RTseErr = n;
+
 
 nPDW_all = n; % all
 nPDW_corr = n; % corr
@@ -57,8 +64,8 @@ pHighCorr = n;
 pHighErr = n;
 
 nConf_all = n; % all
-nConf_corr = n; % corr
-nConf_err = n; % err
+nConf_corr = n; % correct
+nConf_err = n; % error
 confMean = n;
 confSE = n;
 confMeanCorr = n;
@@ -109,6 +116,14 @@ for c = 1:length(cohs)
         RTmeanLow(c) = mean(data.RT(Jlo & K));
         RTseLow(c) = std(data.RT(Jlo & K))/sqrt(nRT_low(c));
     end
+    
+    nRT_corr(c) = sum(J & K & data.correct==1);
+    RTmeanCorr(c) = mean(data.RT(J & K & data.correct==1));
+    RTseCorr(c) = std(data.RT(J & K & data.correct==1))/sqrt(nRT_corr(c));
+    
+    nRT_err(c) = sum(J & K & data.correct==0);
+    RTmeanErr(c) = mean(data.RT(J & K & data.correct==0));
+    RTseErr(c) = std(data.RT(J & K & data.correct==0))/sqrt(nRT_err(c));
     
     % pdw
     if conftask==2
@@ -260,6 +275,10 @@ if RTtask
     parsedData.RTseHigh = RTseHigh;
     parsedData.RTmeanLow = RTmeanLow;
     parsedData.RTseLow = RTseLow;
+    parsedData.RTmeanCorr = RTmeanCorr;
+    parsedData.RTseCorr = RTseCorr;
+    parsedData.RTmeanErr = RTmeanErr;
+    parsedData.RTseErr = RTseErr;
 end
 
 

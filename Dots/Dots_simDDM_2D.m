@@ -49,7 +49,8 @@ k = 18; % drift rate coeff (conversion from %coh to units of DV)
 B = 0.7; % bound height
 mu = k*coh; % mean of momentary evidence (drift rate)
 sigma = 1; % unit variance (Moreno-Bote 2010), not a free param           
-theta = 1.2; % threshold for high bet in units of log odds correct (Kiani & Shadlen 09, 14)
+theta = 1.2; % threshold for high bet in units of ...
+             %... [log odds correct (Kiani & Shadlen 09, 14), evidence only, or time only]
 alpha = 0.1; % base rate of low bets (offset to PDW curve, as seen in data)
 
 
@@ -92,8 +93,7 @@ R.k_urg = 1; % linear urgency (slope of collapsing bound, in units of drift/t)
 R.low_th = -4*R.Bup;
 
 P = images_dtb_2d(R);
-
-P2 = images_dtb_2d_new(R);
+% % % P2 = images_dtb_2d_new(R);
 
 P = images_dtb_calcLPOandPlot(R,P);
 
