@@ -10,90 +10,62 @@
 % simulated data, different models
 
 clear; clc; close all
-cd /Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data/dataStructs
-addpath(genpath('/Users/stevenjerjian/Desktop/FetschLab/Analysis/FLprojects/'))
-
-
-% TODO 02-2023
 
 % check that plotting and labelling works correctly
 % compare RT profiles in ves and comb split by heading and coherence
 
 %% select subject, load the data
 
-subject = 'zarya';
+datapath = '/Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data/dataStructs';
+subject = 'human';
 export_figs = 0;
 
-switch subject
-    
-    case 'lucio'
-%         load('lucio_20210315-20210805_clean.mat') % recent lucio data, PDW + RT
-%         load('lucio_20211101-20220602_clean.mat') % recent lucio data, PDW + RT
-        load('lucio_20220301-20221006_clean.mat') % recent lucio data, PDW + RT
+fig_folder = '/Users/stevenjerjian/Desktop/FetschLab/Analysis/figs';
 
-        conftask = 2; % 1=colorbars, 2=PDW
-        RTtask   = 1;
-        
-        RTlims = [0.25 2.25];
+conftask = 1;
+RTtask   = 1;
 
-    case 'zarya'
-        load('zarya_20221207-20221222_clean.mat') % recent lucio data, PDW + RT
+data = dots3DMP_loadBehaviorData(subject,datapath,conftask,RTtask);
+RTlims = [0.25 2.25];
 
-        conftask = 2; % 1=colorbars, 2=PDW
-        RTtask   = 1;
-        RTlims = [0.25 2.25];
-
-    case 'human'
-
-        conftask = 1;
-        RTtask   = 1; % change this to select RT or non-RT dataset
-       
-        if ~RTtask
-            load('human_20190625-20191231_nonRT_clean.mat');% human non-RT, SfN 2021
-            
-        else
-%             load('human_20200213-20210922_RT_clean.mat') % human RT, SfN 2021
-%             load('human_20200213-20220113_RT_clean_Jan2022.mat') % human RT, Jan 2022
-            load('human_20200213-20220317_RT_clean_Mar2022.mat') % human RT, Jan 2022
-
-            RTlims = [0.25 2.5];
-        end
-        
-        
-    case 'simul' % load simulated data
-
-        load('2DAccSim_conftask2_8100trs.mat')
-        % conftask & RTtask should already be saved in file
+if ~isfield(data,'oneTargConf')
+    data.oneTargConf = false(size(data.heading));
 end
 
 fnames = fieldnames(data);
 
+
+if strcmp(subject,'human')
+    if RTtask
+        % not enough good data, so let's just remove for now?
+        removethese = data.heading==0;
+        for f=1:length(fnames)
+            data.(fnames{f})(removethese) = [];
+        end
+    end
+    removethese = strcmp(data.subj,'SBG');
+    for f=1:length(fnames)
+        data.(fnames{f})(removethese) = [];
+    end
+end
+
+
 if RTtask
     removethese = data.RT < RTlims(1) | data.RT > RTlims(2);
+
+    fprintf('%d trials outside of RT lims...removing\n',sum(removethese));
     
     for f=1:length(fnames)
         data.(fnames{f})(removethese) = [];
     end
 end
 
-if strcmp(subject,'human') && RTtask
-    % not enough good data, so let's just remove for now?
-    removethese = data.heading==0;
-    for f=1:length(fnames)
-        data.(fnames{f})(removethese) = [];
-    end
-end
-
-mods   = 2; %unique(data.modality); 
+mods   = [1 2 3]; %unique(data.modality); 
 cohs   = unique(data.coherence); 
 deltas = unique(data.delta);
 % deltas = [-3 3];
-deltas = 0;
+% deltas = 0;
 hdgs   = unique(data.heading);
-
-
-%%
-
 
 %% basic parsing and plot of logistic fits
 
@@ -107,7 +79,11 @@ gfit = dots3DMP_fit_cgauss(data,mods,cohs,deltas,conftask,RTtask);
 % separate subplots for each coh, with all mods on same subplot
 gfits_fig = dots3DMP_plots_cgauss_byCoh(gfit,parsedData,mods,cohs,deltas,hdgs,conftask,RTtask);
 
-if export_figs, exportgraphics(gfits_fig,'gaussFitBehavior.pdf','Resolution',300); end
+if export_figs
+    figname = sprintf('%s_%s_gfit_behavior.pdf',subject,date);
+%     savefig(fullfile(figfolder,figname));
+    exportgraphics(gfits_fig,fullfile(figfolder,figname),'Resolution',300); 
+end
 
 % or separate subplots for each mod/delta, and all cohs on same subplot -
 % needs work to look nice if it's going to be used publicly
