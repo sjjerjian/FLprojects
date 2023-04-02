@@ -1,6 +1,8 @@
 function gfit = dots3DMP_fit_cgauss(data,mods,cohs,deltas,conftask,RTtask)
 % SJ 07-2021 converted to function for cleaner workspace
 
+if ~isfield(data,'oneTargConf'); data.oneTargConf=zeros(size(data.choice)); end
+
 % define anonymous functions for fitting:
 
 % CHOICES - cumulative gaussian
