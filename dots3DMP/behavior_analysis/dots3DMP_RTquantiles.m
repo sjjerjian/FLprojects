@@ -149,7 +149,6 @@ subplotInd = [1 2 3];
 mcols = {'Greys','Greys','Greys','Purples'};
 
 sp = numSubplots(numel(subplotInd));
-
 fsz = 14;
 scaling = 8;
 
@@ -157,8 +156,12 @@ fh(1)=figure(16);
 set(gcf,'Color',[1 1 1],'Position',[200 200 650 200],'PaperPositionMode','auto');
 
 for c = 1:size(ucond,1) % the extra one is for all conditions pooled
-    
-    cmap = cbrewer('seq',mcols{c},length(uhdg)*2);
+
+    try
+        cmap = cbrewer('seq',mcols{c},length(uhdg)*2);
+    catch
+        cmap = cbrewer2('seq',mcols{c},length(uhdg)*2);
+    end
     cmap = cmap(length(uhdg)+1:end,:);
     subplot(sp(1),sp(2),subplotInd(c)); hold on;
     
@@ -215,7 +218,9 @@ for c = 1:size(ucond,1) % the extra one is for all conditions pooled
         ylabel(yLab);
     end
 
-    changeAxesFontSize(gca,fsz,fsz); tidyaxes(gca,fsz); set(gca,'box','off');
+    changeAxesFontSize(gca,fsz,fsz);
+%     tidyaxes(gca,fsz);
+    set(gca,'box','off');
     set(gca,'ytick',0:0.2:1);
     set(gca,'xtick',0:0.25:2.25);
     if conftask==1,set(gca,'xticklabel',{'0','','.5','','1','','1.5','','2',''});

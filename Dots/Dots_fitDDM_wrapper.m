@@ -10,8 +10,8 @@
 
 clear all; close all;
 
-% datafile = 'tempsim.mat'; % simulated data, e.g. for (pre)param recovery
-datafile = 'doubtconf.mat'; % 'Doubt' dataset, Marton et al.
+datafile = 'tempsim.mat'; % simulated data, e.g. for (pre)param recovery
+% datafile = 'doubtconf.mat'; % 'Doubt' dataset, Marton et al.
 % datafile = 'Hanzo_data_fall2020_withFall2021.mat';
 % datafile = 'Genji_data';
 
@@ -34,7 +34,7 @@ else
 end
 
 options.RTtask = 1;
-options.conftask = 2; % 1=continuous/rating, 2=PDW
+options.conftask = 1; % 1=continuous/rating, 2=PDW
 cohs = unique(data.scoh);
 
 % parse trial data into aggregated and other support vars
@@ -49,8 +49,8 @@ end
 
 % % ********
 % % optional [data will be plotted below regardless, along with the fits]
-% forTalk = 0;
-% Dots_plot(parsedData,cohs,options.conftask,options.RTtask,0,forTalk)
+forTalk = 0;
+Dots_plot(parsedData,cohs,options.conftask,options.RTtask,0,forTalk)
 % % ********
 
 

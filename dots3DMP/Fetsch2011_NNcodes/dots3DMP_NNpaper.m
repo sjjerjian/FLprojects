@@ -9,12 +9,13 @@
 %%
 clear;clc
 % load the data
-cd /Users/stevenjerjian/Desktop/FetschLab/Analysis/data
+% cd /Users/stevenjerjian/Desktop/FetschLab/Analysis/data
+cd /Users/chris/Documents/MATLAB/paper_datasets/
 load Fetsch_et_al_NatNeuro_2011.mat
 
 % add relevant code folders to path, user specific
-addpath(genpath('/Users/stevenjerjian/Desktop/FetschLab/Analysis/codes'))
-addpath(genpath('/Users/stevenjerjian/Desktop/PhD/Codes/General/'))
+% addpath(genpath('/Users/stevenjerjian/Desktop/FetschLab/Analysis/codes'))
+% addpath(genpath('/Users/stevenjerjian/Desktop/PhD/Codes/General/'))
 
 %%
 mods   = unique(data.modality);
@@ -28,8 +29,8 @@ monkey = []; % [], 'W','Y'
 
 if ~isempty(monkey)
     switch monkey
-        case 'W', monkID = m18;
-        case 'Y', monkID = m24;
+        case 'W', monkID = 18;
+        case 'Y', monkID = 24;
         otherwise
             error('no monkey with that ID');
     end
@@ -39,9 +40,11 @@ if ~isempty(monkey)
         if strcmp(fnames(F), 'spikes')
             data.spikes(removethese,:) = [];
         else
-            eval(['newdata.' fnames{F} '(removethese) = [];']);
+            eval(['data.' fnames{F} '(removethese) = [];']);
         end
     end
+else
+    
 end
 %% Psychometric curves (Fig 1)
 
@@ -60,7 +63,7 @@ dots3DMP_plots_cgauss_NN(gfit,parsedData,mods,cohs,deltas,hdgs)
 
 % bootstrapping for errorbars (resample data with replacement nboots times)
 nboots = 100;
-[muPMFboot,sigmaPMFboot,wvesEmpboot,wvesPredboot] = dots3DMP_cgauss_bootstrap_NN(newdata,mods,cohs,deltas,nboots);
+[muPMFboot,sigmaPMFboot,wvesEmpboot,wvesPredboot] = dots3DMP_cgauss_bootstrap_NN(data,mods,cohs,deltas,nboots);
 dots3DMP_plot_wgts_bootstrap(wvesPred,wvesEmp,wvesEmpboot,wvesPredboot,sigmaPMFboot,gfit,cohs);
 
 %% example MSTd neuron (Fig. 3)
