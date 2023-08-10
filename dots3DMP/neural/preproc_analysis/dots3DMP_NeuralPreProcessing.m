@@ -1,7 +1,7 @@
 % Fetsch Lab
 % S. J. Jerjian
 % Created May 2022
-% Last updated April 2023
+% Last updated May 2023
 %
 % This script generates a large dataStruct containing spike sorted units from rigB (dots3DMP recordings)
 % 
@@ -25,7 +25,7 @@
 %       'cluster_type' :  1 x N corresponding to cluster_ids above. By Kilosort convention,
 %                               1 = MU, 2 = SU, (3 = noise, not included by default)
 %                               if keepMU==1, MUs will be included, otherwise only SUs will be included in output struct
-%       'cluster_labels': 'MU','SU','UN'
+%       'cluster_label':  1 x N cluster labels (MU, SU, UN = 'unsorted')
 %       'spiketimes'   :  1 x N cell array containing spike times for each cluster, within the range of the given paradigm
 % 
 % See createSessionData for understanding how the dataStruct is created 
@@ -62,13 +62,13 @@ clear;clc
 paradigms = {'dots3DMPtuning','dots3DMP','RFMapping','VesMapping'};
 
 subject = 'lucio';
-dateRange = 20220512:20230411;
+dateRange = 20220512:20230602;
 
 keepMU = 1;           % include all SU and MU, by default, do it, can always remove them later
 useSCP = 1; 
 useVPN = 0;
 overwriteLocalFiles = 0; % set to 1 to always use the server copy
-% overwriteEventSets = 0; % obsolete for now
+% overwriteEventSets = 0; % obsolete for now, to be removed
 
 
 %%
