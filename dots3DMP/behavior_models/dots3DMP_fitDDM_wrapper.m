@@ -31,7 +31,7 @@ options.conftask = 2; % 1=continuous/rating, 2=PDW
 % ==== method ====
 modelID=1; % unused for now
 options.errfcn    = @dots3DMP_errfcn_DDM_2D_wConf_noMC; % 2D DDM aka anticorrelated race, for RT+conf [Kiani 14 / van den Berg 16 (uses Wolpert's images_dtb_2d (method of images, from Moreno-Bote 2010))]
-options.fitMethod = 'global'; %'fms','global','multi','pattern','bads'
+options.fitMethod = 'fms'; %'fms','global','multi','pattern','bads'
 options.whichFit  = {'choice','RT'}; % choice, conf, RT, multinom (choice+conf)
 
 % ==== implementation ====
@@ -50,7 +50,7 @@ options.runInterpFit = 0;   % model predictions for interpolated headings? for n
 
 guess = [origParams.kmult, origParams.B, origParams.theta, origParams.alpha, origParams.TndMean/1000];
 
-guess = [50, 1.0, origParams.theta, origParams.alpha, 0.3, 0.5, 0.4];
+guess = [50, 1.0, origParams.theta, origParams.alpha, 0.8, 0.8, 0.8];
 
 fixed = zeros(1,length(guess));
 
@@ -60,10 +60,14 @@ fixed(:)=1;
 % ************************************
 
 % or select some parameters to hold fixed
-fixed = [0 0 1 1 1 1 1 1 1];
+fixed = [0 0 1 1 1 1 0 0 0];
 
 
 %% fit the model to data
+
+% to run fit in background...
+% fitDDMfeval = parfeval(@dots3DMP_fitDDM,1,data,options,guess,fixed);
+% X = fetchOutputs(fitDDMfeval); % run when done!
 
 X = dots3DMP_fitDDM(data,options,guess,fixed);
 
@@ -76,7 +80,7 @@ options.dummyRun = 0;
 options.whichFit = {'choice','conf','RT'}; % choice, conf, RT, multinom (choice+conf)
 
 options.feedback = 1;
-[err_final, fit, parsedFit] = feval(options.errfcn,X,X,fixed,data,options);
+[err_final, fit, parsedFit, ~, LLs] = feval(options.errfcn,X(fixed==0),X,fixed,data,options);
 
 %% plot the model predicted data points at this stage
 
@@ -89,9 +93,13 @@ dots3DMP_plots_fit_byCoh(data,fit,options.conftask,options.RTtask);
 fixed = [1 1 0 0 0 0 1 1 1]; % thetas and alpha are free params
 options.whichFit = {'conf'}; % choice, conf, RT, multinom (choice+conf)
 
-options.feedback = 2;
-[err_final, fit, parsedFit] = feval(options.errfcn,X,X,fixed,data,options);
+X = dots3DMP_fitDDM(data,options,X,fixed);
 
+fixed = true(size(X));
+[err_final, fit, parsedFit, options.logOddsCorrMap] = feval(options.errfcn,X,X,fixed,data,options);
+
+%%
+options.runInterpFit = 0;   % model predictions for interpolated headings
 if options.runInterpFit
 
     fixed = true(size(X)); % again, no actual fitting

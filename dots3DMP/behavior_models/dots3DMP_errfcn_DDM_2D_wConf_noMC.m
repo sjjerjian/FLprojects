@@ -1,4 +1,4 @@
-function [err,fit,parsedFit] = dots3DMP_errfcn_DDM_2D_wConf_noMC(param, guess, fixed, data, options)
+function [err,fit,parsedFit, logOddsCorrMap_tosave, LLs] = dots3DMP_errfcn_DDM_2D_wConf_noMC(param, guess, fixed, data, options)
 
 % updated model calculations to Steven's method:
 % SJ 10-11-2021 no Monte Carlo simulation for fitting, it's redundant! just use model predictions directly
@@ -11,7 +11,7 @@ function [err,fit,parsedFit] = dots3DMP_errfcn_DDM_2D_wConf_noMC(param, guess, f
 
 % SJ spawned 12-2022 from dots version, for dots3DMP
 
-% SJ 02-2023 s
+% SJ 02-2023
 % added R.lose_flag for all PDW related calculations - we don't need to compute losing distributions if not fitting conf
 
 
@@ -23,7 +23,9 @@ errFuncStart = tic;
 param = getParam(param, guess, fixed);
 
 
-paramNames = {'kmult','B',sprintf('%s_Ves',char(952)),sprintf('%s_Vis',char(952)),sprintf('%s_Comb',char(952)),'alpha','TndVes','TndVis','TndComb'};
+paramNames = {'kmult','B',sprintf('%s_Ves',char(952)),sprintf('%s_Vis',char(952)),sprintf('%s_Comb',char(952)),...
+    'alpha','TndVes','TndVis','TndComb'};
+
 kmult = param(1);
 B     = abs(param(2)); % don't accept negative bound heights
 theta = abs(param(3:5)); % or negative thetas, one theta per mod
@@ -239,11 +241,20 @@ for m = 1:length(mods)
             % run MOI
             P = images_dtb_2d_varDrift(R);
 
-            if R.lose_flag
-                P = images_dtb_calcLPOandPlot(R,P);
+            if options.dummyRun==0 || ~isfield(options,'logOddsCorrMap')
+
+                if R.lose_flag
+                    P.logOddsCorrMap = images_dtb_calcLPOandPlot(R,P);
+                    logOddsCorrMap_tosave(:,:,m,c) = P.logOddsCorrMap;
+                else
+                    logOddsCorrMap_tosave = nan;
+                end
+
+                
+            else
+                P.logOddsCorrMap = options.logOddsCorrMap(:,:,m,c);
             end
 
-            %if options.dummyRun we want to somehow use a stored logOddsMap
 
             for h = 1:length(hdgs)
 
@@ -317,14 +328,13 @@ for m = 1:length(mods)
                 if R.lose_flag % && options.conftask==2 | 'fitConditionals'
 
                     % SJ 02-2023 reducing lines here and number of scalar vars, all calcs can be run on array
-                    % actually  doing it this way, we could do a
-                    % similar multinomial for SEP task (with >2 columns for
-                    % binned confidence reports)
+                    % this should also make code easier to extend to
+                    % multi-level (e.g. if discretizing SEP task)
 
                     pChoiceAndWager = [pRightHigh, pRightLow; pLeftHigh, pLeftLow];
                     pChoice = [pRight;pLeft];
 
-                    [pWager_Choice,pChoice_Wager,pWager,pChoiceAndWager] = int_to_margconds(pChoiceAndWager,pChoice);
+                    [~,pChoice_Wager,pWager,~] = int_to_margconds(pChoiceAndWager,pChoice);
                     
                     % adjust marginal for the base rate of low-conf bets (alpha)
                     pWager_wAlpha = pWager + [-1 1]*alpha*pWager(1);
@@ -450,27 +460,16 @@ for m = 1:length(mods)
                 %     nCor(c) = sum(Jdata & (data.correct | abs(data.heading)<1e-6));
                 if options.RTtask
 
-                    % different Tnds for different choices, NOT for different cohs,
-                    % so we simply take a weighted average based on P(right)
-                    %         Tnd = TndR*pRight + TndL*(1-pRight);
-
-                    % for param-recov, model RT needs adjusted to account for unabsorbed
-                    % probability (trials that don't hit the bound, usually only at low
-                    % cohs, when bound is high, etc). Turns out the calculation of
-                    % P.up.mean_t only applies to absorbed prob (bound-crossings), so
-                    % we simply adjust it by averaging mean_t with maxdur, weighted by
-                    % one minus the probability of bound crossing
-                    % (this was a cool exercise when it worked, but seems easier to
-                    % exclude those trials and pretend there is no unabsorbed prob;
-                    % also more consistent with real behavior where there's always a
-                    % choice before max_dur is reached  --thanks to MVL for this)
+                    % weighted adjustment to account for unabsorbed probability 
+                    % probability (trials that don't hit the bound), if
+                    % those trials are not already being excluded
                     if options.ignoreUnabs
                         pHB = 1;
                     else
                         pHB = P.up.p(uh)+P.lo.p(uh); % prob of crossing either bound
                     end
 
-
+                    % not much difference
                     %         meanRT_model(m,c,d,h) = P.up.p(uh)*P.up.mean_t(uh) + P.lo.p(uh)*P.lo.mean_t(uh) + (1-pHB)*max_dur + Tnd; % weighted average
                     meanRT_model(m,c,d,h) = pHB*P.up.mean_t(uh) + (1-pHB)*max_dur + Tnd; % weighted average
                     %         varRT_model(m,c,d,h)  = pHB*P.up.var_t(uh)  + (1-pHB)*0 + TndSD.^2; % TndSD?
@@ -484,8 +483,8 @@ for m = 1:length(mods)
                         PxtAboveTheta = sum(Pxt1.*(P.logOddsCorrMap>=theta(m))); % shouldn't matter if Pxt1 or 2, it's symmetric
                         PxtBelowTheta = sum(Pxt1.*(P.logOddsCorrMap<theta(m)));
 
-%                         PxtAboveTheta2 = sum(Pxt2.*(logOddsMap>=theta(m))); % shouldn't matter if Pxt1 or 2, it's symmetric
-%                         PxtBelowTheta2 = sum(Pxt2.*(logOddsMap<theta(m)));
+%                         PxtAboveTheta2 = sum(Pxt2.*(P.logOddsCorrMap>=theta(m))); % shouldn't matter if Pxt1 or 2, it's symmetric
+%                         PxtBelowTheta2 = sum(Pxt2.*(P.logOddsCorrMap<theta(m)));
 
                         meanRThigh = PxtAboveTheta * R.t' / sum(PxtAboveTheta);
                         meanRTlow  = PxtBelowTheta * R.t' / sum(PxtBelowTheta);
@@ -552,7 +551,7 @@ for m = 1:length(mods)
                     % (should this be Jdata or I?)
 
                     % but we can just get the likelihood directly from the PDF!
-                    PDF = P.up.pdf_t(uh,:)/sum(P.up.pdf_t(uh,:)); % renormalize % WHY ONLY P.UP HERE??
+                    PDF = P.up.pdf_t(uh,:)/sum(P.up.pdf_t(uh,:)); % renormalize fine, P.up.pdf and P.lo.pdf do look similar?
 %                     PDF2 = P.lo.pdf_t(uh,:)/sum(P.lo.pdf_t(uh,:)); % renormalize
 
 
@@ -564,7 +563,7 @@ for m = 1:length(mods)
                     % repeat for high/low bet separately
                     if R.lose_flag %&& options.conftask==2
                         %         I = Jdata & usetrs_data & data.PDW_preAlpha==1;
-                        %I = Jdata & usetrs_data & data.PDW==1;
+                        I = Jdata & usetrs_data & data.PDW==1;
                         %n_RThigh_data(m,c,d,h) = sum(I);
                         %meanRThigh_data(m,c,d,h) = mean(data.RT(I));
                         %         sigmaRThigh_data(m,c,d,h) = std(data.RT(I))/sqrt(sum(I)); % SD or SEM?
@@ -578,7 +577,7 @@ for m = 1:length(mods)
                         if any(isnan(L_RT_PDW_fromPDF(I))); keyboard; end % TEMP
 
                         %         I = Jdata & usetrs_data & data.PDW_preAlpha==0;
-                        %I = Jdata & usetrs_data & data.PDW==0;
+                        I = Jdata & usetrs_data & data.PDW==0;
                         %n_RTlow_data((m,c,d,h)) = sum(I);
                         %meanRTlow_data(m,c,d,h) = mean(data.RT(I));
                         %         sigmaRTlow_data(m,c,d,h) = std(data.RT(I))/sqrt(sum(I)); % SD or SEM?
@@ -692,11 +691,7 @@ if options.RTtask
 
     %     sigmaRT_data = sigmaRT_data.^2 % ***this seems more comparable to the theoretical SEM from Palmer, keep it as an option.
 
-    %     L_RToption = 'means_nosep';
-    %     L_RToption = 'trials_nosep';
-    %     L_RToption = 'means_sep';
-    %     L_RToption = 'trials_sep';
-    L_RToption = 'full_dist';
+    L_RToption = 'full_dist'; % 'means_nosep','trials_nosep','means_sep','trials_sep'
 
     switch L_RToption
         case 'means_nosep'
@@ -726,7 +721,7 @@ if options.RTtask
             L_RT_high = 1./(sigmaRThigh_model*sqrt(2*pi)) .* exp(-(meanRThigh_model-meanRThigh_data).^2 ./ (2*sigmaRThigh_model.^2)) / 1000;
             L_RT_high(L_RT_high==0) = minP;
             % WEIGHT LL by nTrials, e.g. since there are fewer low bets
-            % at high coh, a miss there should penalize less
+            % at easier headings, a mismatch in the fit there should penalize less
             weightedLL = n_RThigh_data/sum(n_RThigh_data) .* log(L_RT_high) * length(cohs);
             LL_RT_high = sum(weightedLL);
 
@@ -771,9 +766,9 @@ if options.RTtask
 end
 
 % CONF
+LL_conf = 0;
 if R.lose_flag
 
-    LL_conf = 0;
     if options.conftask==1 % SEP
 
         keyboard % this is unfinished
@@ -834,11 +829,18 @@ if R.lose_flag
 end
 
 % total -LL
+LL_RT = LL_RT/10; % to better match order of magnitude of the other two...
+
 err = 0;
 for f = 1:length(options.whichFit)
-    err = err - eval(['LL_',options.whichFit{1}]);
+    err = err - eval(['LL_',options.whichFit{f}]);
 end
-%err_iter(end+1) = err;
+
+% SJ 02-2023 returning these individually for diagnostics
+LLs.choice = LL_choice;
+LLs.conf   = LL_conf;
+LLs.RT     = LL_RT;
+
 
 %% print progress report!
 if options.feedback
@@ -856,23 +858,8 @@ if options.feedback
 
 end
 
-% if options.feedback==2 && strcmp(options.fitMethod,'fms')
-%     if call_num == 1
-%         figure(400); h = plot(call_num,err_iter,'.','color','k','markersize',14);
-%         h.Parent.XLabel.String = 'Iteration';
-%         h.Parent.YLabel.String = 'Total Error';
-%         set(h,'YDataSource','err_all');
-%         set(h,'XDataSource','call_num');
-%     else
-%         set(h,'XData',call_num,'YData',err_iter); drawnow;
-%     end
-% %     figure(400); hold on;
-% %     plot(call_num, err, '.','color','k','markersize',14);
-% %     xlim([0 call_num])
-% %     drawnow;
-% end
 errFuncElapsed = toc(errFuncStart);
-fprintf('Time in errfcn: %2.2fs',errFuncElapsed);
+fprintf('Time in errfcn: %2.2fs\n',errFuncElapsed);
 
 
 %************
@@ -887,12 +874,14 @@ end
 
 % retrieve the full parameter set, given the adjustable and fixed parameters
 function param2 = getParam ( param1 , guess , fixed )
-    param2(fixed==0) = param1(fixed==0);  %get adjustable parameters from param1
+    param2(fixed==0) = param1;  %get adjustable parameters from param1 (these are the fittable params)
     param2(fixed==1) = guess(fixed==1);   %get fixed parameters from guess
 end
 
 
-% go from choice-wager intersections to conditionals, and marginal on wager
+% ===== helper functions ====
+
+% 1. go from choice-wager intersections to conditionals, and marginal on wager
 function [pB_A, pA_B, pB, pAB] = int_to_margconds(pAB,pA)
 
 % pAB:  NxM matrix with intersections for all possibilities of A and B
@@ -919,7 +908,6 @@ pAB  = pAB ./ Ptot;
 pB_A = pAB ./ pA;
 
 % by law of total probability
-
 % pB(1) = pB_A(1,1)*pA(1) + pB_A(2,1)*pA(2) etc.
 pB = pA' * pB_A; % do it with matrix multiplication
 
@@ -928,8 +916,9 @@ pA_B = pB_A .* pA ./ pB;
 
 end
 
-% inverse of int_to_margconds
+% 2. the inverse of int_to_margconds
 % go from conditional and marginals to intersection
+% this is useful if we adjust pA_B e.g. for base rate of low bets
 function [pB_A, pAB] = margconds_to_int(pA_B,pA,pB)
 
 % pA_B:  NxM matrix with probabilities of A given B i.e. P(A|B)
