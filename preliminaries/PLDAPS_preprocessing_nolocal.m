@@ -4,10 +4,7 @@
 % ditch the overflow of rmfield calls in pdsCleanup 
 % https://undocumentedmatlab.com/articles/rmfield-performance
 
-
 today    = str2double(datestr(now,'yyyymmdd'));
-
-
 
 subject = 'lucio';
 paradigm = 'dots3DMP';
@@ -15,35 +12,45 @@ paradigm = 'dots3DMP';
 dateRange = 20220512:20230601;
 
 % where dataStruct should be saved
-localDir = '/Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data/';
+% localDir = '/Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data/';
+localDir = uigetdir([], 'Choose directory to save data to');
 
-opts = struct('eyemovement', 1);
+opts = struct('eyemovement', 1, 'reward', 1);
 data = pds_preprocessing_dots3DMP(subject, paradigm, dateRange, localDir, [], opts);
 
 filename = [subject '_' num2str(dateRange(1)) '-' num2str(dateRange(end)) '_wEM.mat'];
-save(fullfile(localDir, filename), 'data', 'analogs');
+save(fullfile(localDir, filename), 'data', '-v7.3');
 
 
 function [data] = pds_preprocessing_dots3DMP(subject, paradigm, dateRange, localDir, data, options)
 
-
-    % TODO consider providing existing file to append to...
-
     if nargin < 6, options = struct(); end
-    if nargin < 4, localDir = pwd; end
+    if nargin < 4 || isempty(localDir), localDir = uigetdir([], 'Choose directory to save data to'); end
 
     use_existing_file = ~(nargin < 5 || isempty(data));
 
-    opt_fields = {'nexonar', 'dotposition', 'eyemovement', 'reward', 'eventtiming', ...
-        'useSCP', 'useVPN'};
-    
-    for f = 1:length(opt_fields)
-        if ~isfield(options, opt_fields{f})
-            options.(opt_fields{f}) = 0;
-        end
+    if ~isfield(options, 'eventtiming')
+        options.eventtiming = options.eyemovement || options.nexonar;
     end
 
-    options.eventtiming = options.eyemovement || options.nexonar;
+    opt_fields = {'nexonar', 'dotposition', 'eyemovement', 'reward', 'eventtiming', 'useSCP', 'useVPN'};
+    for f = 1:length(opt_fields)
+        if ~isfield(options, opt_fields{f})
+            options.(opt_fields{f}) = 0; % default = False
+        end
+    end
+    
+
+    if options.eyemovement
+        % for aligning and cutting each datapixx trial to a 'time zero'
+        align_event = 'timeGoCue';
+        t_range = [-0.5, 1]; % seconds
+        Fs = 1000;
+        t_range = round(t_range*Fs);
+
+        eyewin_samples = (t_range(1):t_range(2)-1);
+
+    end
         
     if options.eventtiming
         pt_names = {'timeTargFixEntered', 'timeConfTargEntered', 'timeToConfidence'};
@@ -56,41 +63,43 @@ function [data] = pds_preprocessing_dots3DMP(subject, paradigm, dateRange, local
         pt_names = {};
         st_names = {};
     end
-    bhv_names = {'choice', 'RT', 'PDW', 'TargMissed', 'oneTargChoice', 'oneTargConf'};
+    bhv_names = {'choice', 'RT', 'PDW', 'correct', 'TargMissed', 'oneTargChoice', 'oneTargConf'};
 
 
     % set directories
-    if isunix
-        remoteDir = ['/var/services/homes/fetschlab/data/' subject '/'];
-        mountDir  = ['/Volumes/homes/fetschlab/data/' subject '/'];
-    else
-        % TODO
-        % remoteDir = ...
-    end
+    [~, hostname] = system('hostname');
+    hostname = strip(hostname);
 
-    localDir = fullfile(localDir, subject);
-    if ~exist(localDir,'dir')
-        mkdir(localDir);
+    if ismac % someone's local Mac
+        remoteDir = fullfile('/var/services/homes/fetschlab/data/', subject);
+        mountDir  = fullfile('/Volumes/homes/fetschlab/data/', subject);
+    elseif strcmp(hostname, 'DESKTOP-JRJ0F9N')
+        remoteDir = fullfile('Z:\fetschlab\data', subject);
+        mountDir  = remoteDir;
     end
-
 
     % initialize data struct
     if ~use_existing_file
-        ntr_est = 3e5;
-        data.filename = cell(ntr_est, 1);
-        data.subj = cell(ntr_est, 1);
-        data.date = nan(ntr_est, 1);
 
-        all_flds = unique([bhv_names, pt_names, st_names, {'iTrial', 'trialNum'}]);
-       
-        for f = 1:length(all_flds)
-            data.(all_flds{f}) = nan(ntr_est, 1);
-            
-        end
-        if options.eyemovement
-            data.ADCdata = cell(ntr_est, 1);
-            data.ADCtime = cell(ntr_est, 1);
-        end
+        data.filename = {};
+        data.subj = {};
+        data.date = [];
+
+%         ntr_est = 3e5;
+%         data.filename = cell(ntr_est, 1);
+%         data.subj = cell(ntr_est, 1);
+%         data.date = nan(ntr_est, 1);
+% 
+%         all_flds = unique([bhv_names, pt_names, st_names, {'iTrial', 'trialNum'}]);
+%        
+%         for f = 1:length(all_flds)
+%             data.(all_flds{f}) = nan(ntr_est, 1);
+%             
+%         end
+%         if options.eyemovement
+%             data.ADCdata = cell(ntr_est, 1);
+%             data.ADCtime = cell(ntr_est, 1);
+%         end
 
         T = 0;
 
@@ -115,13 +124,19 @@ function [data] = pds_preprocessing_dots3DMP(subject, paradigm, dateRange, local
         ip_add = 'fetschlab@10.161.240.133'; % probably off campus, try proxy IP (requires VPN)
     end
 
-    cmd = ['ssh ' ip_add ' ls ' remoteDir];
-
-    [~,remoteFileList] = system(cmd);  % system(cmd, "-echo") % print output
-    if any(strfind(remoteFileList,'timed out')); error(remoteFileList); end
     
-    remoteFiles = splitlines(remoteFileList);
-    remoteFiles = remoteFiles(contains(remoteFiles, subject) & ~contains(remoteFiles, '_'));
+    if strcmp(hostname, 'DESKTOP-JRJ0F9N')
+        remoteFiles = dir([mountDir, '/*.mat']); % ignore non .mat files (including old .PDS)
+        remoteFiles = {remoteFiles.name}';
+        options.useSCP = 0; % force to 0
+        options.useVPN = 0; 
+    else
+        cmd = ['ssh ' ip_add ' ls ' remoteDir];
+        [~,remoteFileList] = system(cmd, "-echo");  % system(cmd, "-echo") % print output
+        if any(strfind(remoteFileList,'timed out')); error(remoteFileList); end
+        remoteFiles = splitlines(remoteFileList);
+        remoteFiles = remoteFiles(contains(remoteFiles, subject) & ~contains(remoteFiles, '_'));
+    end
     [~, remoteFileNames, ~] = cellfun(@fileparts, remoteFiles, 'UniformOutput', false);
 
     dateStart = length(subject)+1;
@@ -136,10 +151,12 @@ function [data] = pds_preprocessing_dots3DMP(subject, paradigm, dateRange, local
             try
 
                 tstart = tic;
+                 fprintf('Loading file: %s\n', remoteFileNames{f})
+
 
                 if options.useSCP
-
-                    % TODO - save reduced version of file, or delete afterwards?
+                    % copy file to local machine
+                    % to save reduced version(?)
                     cmd = ['scp -r ' ip_add ':' remoteDir remoteFiles{f} ' ' localDir];
                     system(cmd, "-echo")
                     load(fullfile(localDir, remoteFiles{f}), '-mat', 'PDS')
@@ -147,7 +164,6 @@ function [data] = pds_preprocessing_dots3DMP(subject, paradigm, dateRange, local
                 else
                     load(fullfile(mountDir, remoteFiles{f}), '-mat', 'PDS');
                 end
-
 
                 % SJ added 02/2022, to generate 3DMP dots offline from trialSeeds, no
                 % need to save online for storage space reasons
@@ -205,17 +221,6 @@ function [data] = pds_preprocessing_dots3DMP(subject, paradigm, dateRange, local
                             end
                         end
 
-                        if options.eyemovement
-                            try
-                                data.ADCdata{T} = PDS.data{t}.datapixx.adc.data;
-                                dp_time = PDS.data{t}.datapixx.unique_trial_time(2);
-                                data.ADCtime{T} = PDS.data{t}.datapixx.adc.dataSampleTimes - dp_time;
-                            catch
-                                data.ADCdata{T} = NaN;
-                                data.ADCtime{T} = NaN;
-                            end
-                        end
-
                         if options.eventtiming
                             for F = 1:length(pt_names)
                                 if isfield(PDS.data{t}.postTarget, pt_names{F})
@@ -234,7 +239,35 @@ function [data] = pds_preprocessing_dots3DMP(subject, paradigm, dateRange, local
                             end
                         end
 
+                        if options.eyemovement
+                            try
+                                adc_data = PDS.data{t}.datapixx.adc.data;
+                                dp_time = PDS.data{t}.datapixx.unique_trial_time(2); % datapixx 'start' time
+                                adc_time = PDS.data{t}.datapixx.adc.dataSampleTimes - dp_time;
+
+                                [~, zero_pos] = min(abs(adc_time - data.(align_event)(T))); % T not t!!
+
+                                % find 'RT' in high-freq data
+                                % TODO set threshold based on st dev
+                                % search for consecutive values above threshold
+%                                 xdata = adc_data(1, eyewin_samples+zero_pos);
+%                                 xdata = abs(xdata-xdata(1));
+%                                 zero_pos = find(xdata>0.1, 1) + zero_pos + eyewin_samples(1);
+                                
+                                data.eyeX(1:length(eyewin_samples), T) = adc_data(1, eyewin_samples+zero_pos);
+                                data.eyeY(1:length(eyewin_samples), T) = adc_data(2, eyewin_samples+zero_pos);
+
+                            catch
+                                data.eyeX(1:length(eyewin_samples), T) = NaN;
+                                data.eyeY(1:length(eyewin_samples), T) = NaN;
+                            end
+                            data.eyeT(1:length(eyewin_samples), T) = eyewin_samples/Fs;
+
+                        end
+
+
                         if options.dotposition
+                            % TODO modify to store dotPos as data x trials array
                             try
                                 if ~isfield(PDS.data{t}.stimulus,'dotX_3D')
                                     PDS.data{t}.stimulus.dotX_3D = dotX_3D{t};
@@ -259,9 +292,8 @@ function [data] = pds_preprocessing_dots3DMP(subject, paradigm, dateRange, local
                     end
                 end
 
-
                 telapsed = toc(tstart);
-                fprintf('%s, time taken: %.2fs', remoteFileNames{f}, telapsed)
+                fprintf('numtrials = %d, time taken: %.2fs', length(PDS.data), telapsed)
 
             catch
                 keyboard
