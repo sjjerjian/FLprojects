@@ -73,10 +73,6 @@ overwriteLocalFiles = 0; % set to 1 to always use the server copy
 
 %%
 
-dateStr = num2str(dateRange(1));
-for d = 2:length(dateRange)
-    dateStr = [dateStr newline num2str(dateRange(d))];
-end
 
 % SJ 04-2022
 % download associated PDS data files (we'll need this for some cleanup)
@@ -93,6 +89,15 @@ localDir = ['/Users/stevenjerjian/Desktop/FetschLab/Analysis/data/' subject '_ne
 remoteDir = ['/var/services/homes/fetschlab/data/' subject '/' subject '_neuro/'];
 mountDir  = ['/Volumes/homes/fetschlab/data/' subject '/' subject '_neuro/'];
 
+sess_info_file = '/Users/stevenjerjian/Desktop/FetschLab/Analysis/info/RecSessionInfo.xlsx';
+
+%% 
+
+dateStr = num2str(dateRange(1));
+for d = 2:length(dateRange)
+    dateStr = [dateStr newline num2str(dateRange(d))];
+end
+
 %% grab the task events and info files
 % this time we will locally download these (_RippleEvents and info files)
 
@@ -101,7 +106,6 @@ getNeuralEventsInfo;
 
 %% create the dataStruct
 
-sess_info_file = '/Users/stevenjerjian/Desktop/FetschLab/Analysis/info/RecSessionInfo.xlsx';
 createSessionData;   
 
 %% create one .mat file containing concatenated events from all paradigms for a given set

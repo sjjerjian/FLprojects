@@ -45,6 +45,68 @@ addpath(genpath('C:\Users\fetschlab\Documents\MATLAB\dots3DMP'));
 %% ########## START ACTUAL OFFLINE PROCESSING HERE ########## 
 % one cell per recording date (penetration)
 
+%% 2023-10-17, pen 76
+
+% 1 value, fixed across session
+info.subject     = 'lucio';
+info.date        = 20231017;
+info.pen         = 76;
+info.gridtype    = 'original';
+
+info.filepath = ['\\172.30.3.33\homes\fetschlab\data\' info.subject '\' info.subject '_neuro\' num2str(info.date) '\']; % save directly to NAS
+
+% >=1 value, fixed across session
+info.probe_type          = {'DBC D-A 32ch'};
+info.probe_ID            = {'10034_32ch_65um_80mm'};
+info.gridxy              = {[2, 7]};
+info.chanlist            = 1:32;
+
+% >=1 value, fixed across probes (task info)
+info.pldaps_filetimes    = [1454 1510 1617 1848];
+info.trellis_filenums    = [1 1 2 2];
+info.par                 = {'VesMapping','dots3DMPtuning', 'dots3DMP', 'dots3DMPtuning'};
+info.rec_group           = [1 1 2 2];
+info.comments            = {'','','',''};
+
+% >=1 value, different across probes (recording info)
+info.depths              = {[11203 11203 11217 11217]}; % MDI depth
+info.cellcomments        = {{'','','',''}};
+
+savefilename = sprintf('%s%ddots3DMP_info.mat',info.subject,info.date);
+save([info.filepath savefilename],'info','-mat')
+processTrellisData(info,1);
+
+%% 2023-10-03, pen 75
+
+% 1 value, fixed across session
+info.subject     = 'lucio';
+info.date        = 20231003;
+info.pen         = 75;
+info.gridtype    = 'original';
+
+info.filepath = ['\\172.30.3.33\homes\fetschlab\data\' info.subject '\' info.subject '_neuro\' num2str(info.date) '\']; % save directly to NAS
+
+% >=1 value, fixed across session
+info.probe_type          = {'DBC D-A 32ch'};
+info.probe_ID            = {'10034_32ch_65um_80mm'};
+info.gridxy              = {[2, 7]};
+info.chanlist            = 1:32;
+
+% >=1 value, fixed across probes (task info)
+info.pldaps_filetimes    = [1559 1606 1613 NaN 1655];
+info.trellis_filenums    = [1 1 1 1 1];
+info.par                 = {'VesMapping','RFmapping','dots3DMPtuning','dots3DMP','dots3DMP'};
+info.rec_group           = [1 1 1 1 1];
+info.comments            = {'','','','eye tracker issues, poor behavior',''};
+
+% >=1 value, different across probes (recording info)
+info.depths              = {10500*ones(size(info.rec_group))}; % MDI depth
+info.cellcomments        = {{'','','','',''},{'','','','',''}};
+
+savefilename = sprintf('%s%ddots3DMP_info.mat',info.subject,info.date);
+save([info.filepath savefilename],'info','-mat')
+% processTrellisData(info,1);
+
 %% 2023-06-01, pen 74
 
 % 1 value, fixed across session

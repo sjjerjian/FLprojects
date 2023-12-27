@@ -115,13 +115,24 @@ for p=1:length(pldaps_filenames)
     % pldaps iTrial is reset ([Inf iTrial], rather than iTrial==1, allows for pldaps to start
     % before Trellis recording, although this should be avoided if possible!)
     
+    
     try
+        % find the first unique_trial_number >= hhmm of current file
         firstTrial(p) = find( unique_trial_number(:,4)>=str2double(hhmm(1:2)) & unique_trial_number(:,5)>=str2double(hhmm(3:4)) & diff([Inf iTrial]')<=0,1);
 %     firstTrial(p) = find( unique_trial_number(:,4)>=str2double(hhmm(1:2)) & unique_trial_number(:,5)>=str2double(hhmm(3:4)) & iTrial==1,1);
     catch
-        disp('couldn''t find the relevant trials...check that pldaps_filenames are inputted correctly!')
-        keyboard
+        % just check the hour, if minute was not >= mm then must've been the turn of the hour
+        % added SJ 2023-10-03, for a file which started 1559 and first
+        % trial was at 1600 smh.
+        % better way might be to concatenate hhmm into one number?
+        try
+            firstTrial(p) = find(unique_trial_number(:,4)>=str2double(hhmm(1:2)) & diff([Inf iTrial]')<=0, 1);
+            disp('first trial at minute 00 of the hour, using hour only for identifying first trial PLDAPS')
+        catch
+            disp('couldn''t find the relevant trials...check that pldaps_filenames are inputted correctly!')
+        end    
     end
+    
     try
         lastTrial(p) = firstTrial(p) - 1 + find(diff(iTrial(firstTrial(p):end))<0,1); 
     catch
