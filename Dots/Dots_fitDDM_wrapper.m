@@ -10,14 +10,18 @@
 
 clear all; close all;
 
-datafile = 'tempsim.mat'; % simulated data, e.g. for (pre)param recovery
+% datafile = 'tempsim.mat'; % simulated data, e.g. for (pre)param recovery
 % datafile = 'doubtconf.mat'; % 'Doubt' dataset, Marton et al.
-% datafile = 'Hanzo_data_fall2020_withFall2021.mat';
+datafile = 'Hanzo_data_fall2020_withFall2021.mat';
 % datafile = 'Genji_data';
 
 
-
 load(datafile)
+
+if ~isfield(data,'conf')
+    data.conf = data.PDW;
+end
+
 
 
 
@@ -34,7 +38,7 @@ else
 end
 
 options.RTtask = 1;
-options.conftask = 1; % 1=continuous/rating, 2=PDW
+options.conftask = 2; % 1=continuous/rating, 2=PDW
 cohs = unique(data.scoh);
 
 % parse trial data into aggregated and other support vars
@@ -151,29 +155,29 @@ switch modelID
                     TndR= 0.30;
                     TndL= 0.37;
                 case 'Genji'
-                    % GENJI: 'fit' choice
-                    k= 10;
-                    B= .76;
-                    theta= 1.22;
+%                     % GENJI: 'fit' choice
+%                     k= 10;
+%                     B= .76;
+%                     theta= 1.22;
+%                     alpha= 0;
+%                     TndR= 0.22;
+%                     TndL= 0.22;                
+
+%                      % GENJI: 'fit' RT
+%                     k= 14;
+%                     B= .74;
+%                     theta= 1.35;
+%                     alpha= 0;
+%                     TndR= 0.27;
+%                     TndL= 0.26;
+
+                    % GENJI: 'fit' Conf
+                    k= 19;
+                    B= .74;
+                    theta= 1.35;
                     alpha= 0;
-                    TndR= 0.22;
-                    TndL= 0.22;                
-
-    %                  % GENJI: 'fit' RT
-    %                 k= 14;
-    %                 B= .74;
-    %                 theta= 1.35;
-    %                 alpha= 0;
-    %                 TndR= 0.27;
-    %                 TndL= 0.26;
-
-    %                 % GENJI: 'fit' Conf
-    %                 k= 19;
-    %                 B= .74;
-    %                 theta= 1.35;
-    %                 alpha= 0;
-    %                 TndR= 0.28;
-    %                 TndL= 0.27;
+                    TndR= 0.28;
+                    TndL= 0.27;
     
             end
 

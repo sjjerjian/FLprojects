@@ -7,7 +7,7 @@
 
 clear all; close all;
 
-ntrials = 5000;
+ntrials = 50000;
 
 % different levels of motion strength ('coherence')
 % we use +/- eps instead of zero so that there is a direction (and hence a
@@ -30,7 +30,7 @@ k = 0.3; % 'drift rate' or sensitivity term: a constant converting stimulus
          % strength into units of momentary evidence
 sigma = 1; % standard deviation of momentary evidence; often fixed at 1
 B = 25; % height of the bound, or threshold, for decision termination
-Tnd = 300; %non-decision time
+Tnd = 300; % non-decision time
 
 %% simulate the diffusion process
 
@@ -54,9 +54,11 @@ for n = 1:ntrials
         end
         dv(n,1) = 0; % dv starts at zero (boundary condition)
         dv(n,2:maxdur+1) = cumsum(momentaryEvidence); % then evolves as the cumulative sum of M.E.
-        figure; plot(dv(n,:)); hold on; 
+        figure; plot(dv(n,:)); hold on; title('example trial');
         plot(1:length(dv),ones(1,length(dv))*B,'g-');
         plot(1:length(dv),ones(1,length(dv))*-B,'r-');
+        tempRT = find(abs(dv(n,:))>=B, 1);
+        xlim([0 tempRT + 200]); ylim([-B*1.5 B*1.5]);
         xlabel('Time (ms)'); ylabel('Accum. evidence (DV)');
         % (evidence is shown continuing to accumulate past the bound,
         % although it realy stops there; this can be useful
@@ -82,11 +84,11 @@ toc
 
 RT = RT + Tnd;
 
-% quick sanity check to see if params give reasonable performance
-pCorrect_total = sum(sign(choice)==sign(coh)) / ntrials
+% % quick sanity check to see if params give reasonable performance
+% % pCorrect_total = sum(sign(choice)==sign(coh)) / ntrials 
 
 
-%% plot proportion "rightward" (choice=1) and reaction time as a function of coherence
+%% plot proportion rightward (choice=1) and RT as a function of coherence
 
 for c = 1:length(cohs)
     I = coh==cohs(c);

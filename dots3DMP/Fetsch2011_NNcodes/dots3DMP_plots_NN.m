@@ -29,6 +29,8 @@ for c = 1:length(cohs)
     try, changeAxesFontSize(gca,15,15); end
 end
 
+set(gcf,'Color',[1 1 1],'Position',[300 1000 450+300*(length(cohs)-2) 500],'PaperPositionMode','auto'); clf;
+
 
 %% now separate by delta
 
