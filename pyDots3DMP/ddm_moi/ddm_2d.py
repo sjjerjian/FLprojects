@@ -7,7 +7,7 @@ from scipy.signal import convolve
 from scipy.stats import norm, truncnorm, skewnorm
 from collections import OrderedDict, namedtuple
 
-from typing import Optional, Sequence
+from typing import Optional, Union, Sequence
 from functools import wraps
 from codetiming import Timer
 
@@ -136,17 +136,20 @@ def objective(params: dict, data: pd.DataFrame, outputs: Optional[Sequence] = No
     model_results = namedtuple('ModelResults', ['neg_llh', 'llhs', 'model_data', 'wager_maps'])
     return model_results(neg_llh, model_llh, model_data, wager_maps)
 
+
 # get the wrapped function out for when we want to call it without running the optimization!
 get_llhs = objective.__wrapped__
 
 
 @Timer(name="ddm_run_timer")
 def generate_data(params: dict, data: pd.DataFrame, accum_kw: dict,
-                  pred_method: Optional[str] = 'proba', rt_method: Optional[str] = 'lh',
-                  save_dv: [bool] = False,
-                  stim_scaling: Optional[tuple[bool, tuple]] = True, 
-                  cue_weights: Optional[tuple[tuple, str]] = 'optimal', seed: Optional[int] = None, 
-                  return_wager: [bool] = True, wager_odds_maps=None, wager_thres: str = 'log_odds') -> tuple[pd.DataFrame, np.ndarray]:
+                  pred_method: Optional[str] = 'proba',
+                  rt_method: Optional[str] = 'lh',
+                  save_dv: Optional[bool] = False, stim_scaling: Optional[Union[bool, tuple]] = True,
+                  cue_weights: Optional[Union[str, tuple]] = 'optimal', seed: Optional[int] = None,
+                  return_wager: Optional[bool] = True, wager_odds_maps: Optional[Sequence] = None,
+                  wager_thres: Optional[str] = 'log_odds') \
+        -> tuple[pd.DataFrame, list, np.ndarray]:
     """
     Generates model outputs for behavioral variables given parameters and trial conditions.
     For producing behavioral outputs (choice, PDW, RT), several options are available.
@@ -159,7 +162,7 @@ def generate_data(params: dict, data: pd.DataFrame, accum_kw: dict,
     # ---- input handling ----
     assert pred_method == 'proba' or pred_method == 'sim_dv' or pred_method == 'sample', "pred_method must be one of 'proba', 'sim_dv', or 'sample'"
     assert rt_method == 'mean' or rt_method == 'max' or rt_method == 'lh', "rt_method must be one of 'mean', 'max', or 'lh'"
-    assert cue_weights == 'optimal' or cue_weights == 'random' or (isinstance(cue_weights, tuple) and len(cue_weights)==2), \
+    assert cue_weights == 'optimal' or cue_weights == 'random' or (isinstance(cue_weights, tuple) and len(cue_weights) == 2), \
         "cue_weights must be one of 'optimal', 'random', or a tuple of length 2"
     assert wager_thres == 'log_odds' or wager_thres == 'time' or wager_thres == 'evidence', \
         "wager_thres must be one of 'log_odds', 'time' or 'evidence"
