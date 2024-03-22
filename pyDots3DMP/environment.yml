@@ -8,7 +8,7 @@ dependencies:
   - scikit-learn
   - seaborn
   - scikit-learn-intelex
-  - scipy=1.9
+  - scipy=1.7
   - python=3.9
   - matplotlib
   - statsmodels
