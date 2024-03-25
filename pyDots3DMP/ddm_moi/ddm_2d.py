@@ -141,6 +141,63 @@ def objective(params: dict, data: pd.DataFrame, outputs: Optional[Sequence] = No
 get_llhs = objective.__wrapped__
 
 
+
+def calc_3dmp_drift_rates(
+    b_t: np.ndarray, b_k: Union[float, np.ndarray[float, float]],
+    tmax: float,
+    hdgs: np.ndarray, delta: Optional[float] = 0.0, 
+    return_abs: Optional[bool] = False,
+    cue_weights: Optional[tuple[float, float]] = None) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Calculate drift rates
+    if cue_weights is None, optimal cue weights calculated from k's
+    """
+
+    assert len(b_k) == b_t.shape[1], 'some message here'
+
+    cumul_bt = np.cumsum((b_t**2)/(b_t**2).sum(axis=0), axis=0)
+
+    sin_uhdgs = np.sin(np.deg2rad(hdgs))
+    if return_abs:
+        sin_uhdgs = sin_uhdgs[sin_uhdgs >= 0]
+
+    
+    if cumul_bt.shape[1] == 1:
+        # only one sensitivity - ves or vis, same calculation
+
+        b_t = b_t.reshape(-1, 1)
+        tvec = cumul_bt * tmax
+        abs_drifts = np.cumsum(b_t**2 * b_k * sin_uhdgs, axis=0)
+        # abs_drifts = b_k * sin_uhdgs   # w/o stim scaling, reduces to this
+
+    else:
+        # two sensitivities - combined condition
+        if cue_weights is None:
+            k2 = b_k**2
+            cue_weights = np.sqrt(k2 / k2.sum())
+        else:
+            cue_weights = cue_weights.toarray()
+                                        
+        if return_abs:
+            drift_ves = np.cumsum(b_t[:, 0]**2 * b_k[0] * sin_uhdgs, axis=0)
+            drift_vis = np.cumsum(b_t[:, 1]**2 * b_k[1] * sin_uhdgs, axis=0)
+        else:
+            # +ve delta means ves to the left, vis to the right
+            # eq suggests cumsum each modality separately first, then do the weighted sum     
+            drift_ves = np.cumsum(b_t[:, 0]**2 * b_k[0] * np.sin(np.deg2rad(hdgs - delta / 2)), axis=0)
+            drift_vis = np.cumsum(b_t[:, 1]**2 * b_k[1] * np.sin(np.deg2rad(hdgs + delta / 2)), axis=0)
+
+
+        # Eq 14
+        tvec = cue_weights**2 * cumul_bt * tmax
+        abs_drifts = w_ves * drift_ves + w_vis * drift_vis
+
+
+    return abs_drifts, tvec
+
+    
+
+
 @Timer(name="ddm_run_timer")
 def generate_data(params: dict, data: pd.DataFrame, accum_kw: dict,
                   pred_method: Optional[str] = 'proba',
