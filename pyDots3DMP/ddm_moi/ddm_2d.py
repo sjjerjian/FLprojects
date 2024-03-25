@@ -172,9 +172,6 @@ def generate_data(params: dict, data: pd.DataFrame, accum_kw: dict,
     else:
         rng = np.random.RandomState()
         
-    if wager_odds_maps is not None:
-        assert isinstance(wager_odds_maps, list) and len(wager_odds_maps) == len(mods), \
-            "wager_odds_maps must be a list equal to the number of unique modalities"
 
     # ---- initialize model_data output dataframe ----
     mods = np.unique(data['modality'])
@@ -182,6 +179,10 @@ def generate_data(params: dict, data: pd.DataFrame, accum_kw: dict,
     hdgs = np.unique(data['heading'])
     deltas = np.unique(data['delta'])
 
+    if wager_odds_maps is not None:
+        assert isinstance(wager_odds_maps, list) and len(wager_odds_maps) == len(mods), \
+            "wager_odds_maps must be a list equal to the number of unique modalities"
+        
     model_data = data.loc[:, ['heading', 'coherence', 'modality', 'delta']]
     model_data[['choice', 'PDW', 'RT']] = np.nan
 
