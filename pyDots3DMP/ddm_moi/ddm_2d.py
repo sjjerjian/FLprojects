@@ -106,8 +106,8 @@ def objective(params: dict, data: pd.DataFrame, outputs: Optional[Sequence] = No
 
     # get model predictions (probabilistic) given parameters
     model_data, wager_maps, _ = generate_data(params=params, data=data,
-                                                return_wager=return_wager,
-                                                 **gen_data_kwargs)
+                                              return_wager=return_wager,
+                                              **gen_data_kwargs)
 
     # calculate log likelihoods of parameters, given observed data
     model_llh = dict()
@@ -224,13 +224,10 @@ def generate_data(params: dict, data: pd.DataFrame, accum_kw: dict,
     elif stim_scaling is True:
         b_vis, b_ves = get_stim_urgs(tvec=accumulator.tvec)
 
-        # new elapsed time is squared accumulated time course of sensitivity
-        cumul_bves = np.cumsum((b_ves**2)/(b_ves**2).sum())
+    # new elapsed time is squared accumulated time course of sensitivity
+    cumul_bves = np.cumsum((b_ves**2)/(b_ves**2).sum())
     cumul_bvis = np.cumsum((b_vis**2)/(b_vis**2).sum())
     kmult_scaling = 1
-
-    # to be nx1 arrays, for later convenience of broadcasting with drift rates
-    b_ves, b_vis = b_ves.reshape(-1, 1), b_vis.reshape(-1, 1)
 
     # scale back up, because we downweighted the input to keep all parameters at a similar order of magnitude
     kmult = [k * kmult_scaling for k in params['kmult']]
@@ -245,6 +242,9 @@ def generate_data(params: dict, data: pd.DataFrame, accum_kw: dict,
             kvis = kmult[1] * cohs.T
         else:
             kvis = kmult[1:]  # 3 independent kmults
+
+    # to be nx1 arrays, for later convenience of broadcasting with drift rates
+    b_ves, b_vis = b_ves.reshape(-1, 1), b_vis.reshape(-1, 1)
 
     # ====== generate pdfs and log_odds for confidence ======
     # looping over modalities
@@ -384,8 +384,8 @@ def generate_data(params: dict, data: pd.DataFrame, accum_kw: dict,
                     t_comb = w_ves**2 * cumul_bves + w_vis**2 * cumul_bvis
                     accumulator.tvec = t_comb * orig_tvec[-1]
 
-                        # +ve delta means ves to the left, vis to the right
-                        # read the eq as cumsum each modality separately first, then do the weighted sum
+                    # +ve delta means ves to the left, vis to the right
+                    # read the eq as cumsum each modality separately first, then do the weighted sum
                     drift_ves = np.cumsum(b_ves**2 * kves * np.sin(np.deg2rad(hdgs - delta / 2)), axis=0)
                     drift_vis = np.cumsum(b_vis**2 * kvis[c] * np.sin(np.deg2rad(hdgs + delta / 2)), axis=0)
 
