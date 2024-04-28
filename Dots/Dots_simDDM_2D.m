@@ -21,7 +21,7 @@ confModel = 'evidence+time'; % default, Kiani 2014 etc
 % confModel = 'time_only';
     % ^ these require different units for theta, time and evidence respectively
 
-ntrials = 10000;
+ntrials = 1000;
 
 dbstop if error
 
@@ -32,7 +32,7 @@ coh = randsample(cohs,ntrials,'true')';
 % time step
 dT = 1; % ms
 
-% max duration, 
+% max duration,
 max_dur = 3000;
 
 allowNonHB = 0; % allow non-hit-bound trials? if set to 0 and a trial lasts
@@ -51,7 +51,7 @@ mu = k*coh; % mean of momentary evidence (drift rate)
 sigma = 1; % unit variance (Moreno-Bote 2010), not a free param           
 theta = 1.2; % threshold for high bet in units of ...
              %... [log odds correct (Kiani & Shadlen 09, 14), evidence only, or time only]
-alpha = 0.1; % base rate of low bets (offset to PDW curve, as seen in data)
+alpha = 0; % base rate of low bets (offset to PDW curve, as seen in data)
 
 
 % % alternate slate of params, to check robustness of fitting code (pre-param recovery)
@@ -129,6 +129,9 @@ expectedPctCorr = nan(ntrials,1); % expected probability correct (converted to c
 conf = nan(ntrials,1); % confidence rating
 pdw = nan(ntrials,1); % post-decision wager
 
+% OPTIONAL: save dv (diffusion paths) from every trial
+DVsaved = nan(max_dur,2,ntrials);
+
 tic
 for n = 1:ntrials
     
@@ -140,6 +143,7 @@ for n = 1:ntrials
 % %     CC = corrcoef(ME); corrcoef_me = CC(1,2)
 
     dv = [0 0; cumsum(ME)];
+    DVsaved(:,:,n) = dv;
     
     % Note: because Mu is signed according to direction (positive=right),
     % dv(:,1) corresponds to evidence favoring rightward, not evidence
@@ -220,6 +224,29 @@ for n = 1:ntrials
 end
 toc
 
-% run script for post-processing
-Dots_simDDM_postProcessing % (standardized for 1D and 2D models)
+
+%% TEMP: plot average trajectories conditioned on coh and/or outcome
+
+scoh = cohs(cohs>0);
+
+for c = 1:length(scoh)
+    I = choice==1 & coh==scoh(c) & pdw==1;
+    meanDV(:,c) = mean(DVsaved(:,1,I),3);
+end
+figure;plot(meanDV);
+legend('0','3.2','6.4','12.8','25.6','51.2','location','northwest')
+
+
+for c = 1:length(scoh)
+    I = choice==1 & coh==scoh(c) & pdw==0;
+    meanDV(:,c) = mean(DVsaved(:,1,I),3);
+end
+figure;plot(meanDV);
+legend('0','3.2','6.4','12.8','25.6','51.2','location','northwest')
+
+
+
+
+%% run script for post-processing
+% Dots_simDDM_postProcessing % (standardized for 1D and 2D models)
 

@@ -45,8 +45,8 @@ toc
 tic
 
 % nNeurons = 36;
-nNeurons = 180;
-% nNeurons = 360;
+% nNeurons = 180;
+nNeurons = 360;
 
 dirAxis = 0:360/nNeurons:360-360/nNeurons;
 

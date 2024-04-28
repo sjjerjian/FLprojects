@@ -185,8 +185,8 @@ for c = 1:length(cohs) % loop through signed cohs, because that is what defines 
                 pLeftLow =  sum(sum(Pxt2.*(dvMap>-theta)));
             case 'time_only'
                 % here, theta is treated as a time deadline, after which
-                % the condience is 'low' (decision time in seconds, thus
-                % inversely related to conf
+                % the confidence is 'low' (decision time in seconds, thus
+                % inversely related to conf)
                 pRightHigh = sum(sum(Pxt1.*(timeMap<=theta)));
                 pRightLow = sum(sum(Pxt1.*(timeMap>theta)));
                 pLeftHigh = sum(sum(Pxt2.*(timeMap<=theta)));
