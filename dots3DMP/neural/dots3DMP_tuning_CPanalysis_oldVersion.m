@@ -37,7 +37,7 @@ dots3DMP_neuralAnalysis_prelims
 %%%%%%%%%%%%%%%%
 C=1; % counter for valid units, across all sessions
 
-for n = 1:length(newDataStruct)
+for n = 1 %:length(newDataStruct)
     disp(['session ' num2str(n)]);
     
     for c = 1:nU(n)
@@ -106,7 +106,7 @@ for n = 1:length(newDataStruct)
 
         if sum(isnan(spRate_tun(length(dir)-5:length(dir)))) > 3; keyboard; end % possible mismatch in ntrials given by dir, vs. spRate
 
-        % tuning curves & PSTHs from tuning block
+        % plot tuning curves & PSTHs from tuning block
 
         clr{1,1} = 'k';
         clr{2,1} = 'm'; clr{2,2} = 'r';
@@ -143,6 +143,22 @@ for n = 1:length(newDataStruct)
                     changeAxesFontSize(gca, 16, 16);
                 end
                 
+                % fit a line to middle few headings, to establish a slope-around-zero criterion
+                J = I & abs(hdg)<20;
+                [P,S] = polyfit(hdg(J),spRate_tun(J),1);
+                se = sqrt(diag(inv(S.R)*inv(S.R')).*S.normr.^2./S.df);
+                t = abs(P(1)/se(1));
+                slope(C,m) = P(1);
+                pval_ttest_slope(C,m) = 2*(1-tcdf(t,S.df)); % two-tailed
+                
+                % identify pref direction across all headings [for referencing CPs below]
+                % here we want to avoid using task data, because Zaidel.
+                % so just compare spike rates on R vs L trials during tuning block
+% %                 pref(m) = double(nanmean(spRate_tun(hdg>0)) > nanmean(spRate_tun(hdg<0)));
+                % OR use slope of line fit to the middle ~3 hdgs
+                pref(m) = (sign(P(1))+1)/2;
+                
+                
                 if plotTuningPSTH
                     figure(n*100+c); set(gcf, 'Color', 'w', 'Position', [400 500 800 800], 'PaperPositionMode', 'auto');                                
                     suptitle(['session ' num2str(n) ', cell ' num2str(c)]);
@@ -170,12 +186,9 @@ for n = 1:length(newDataStruct)
 %             end
         end
         
-    % identify pref direction across all headings [for referencing CPs below]
-        % here we want to avoid using task data, because Zaidel.
-        % so just compare spike rates on R vs L trials during tuning block
-        % (alternative is to use slope of line fit to the middle ~3 hdgs)
-        pref = double(nanmean(spRate_tun(hdg>0)) > nanmean(spRate_tun(hdg<0)));
 
+
+        
     %*****************************
     % TASK (exp)
     %*****************************
@@ -280,7 +293,6 @@ for n = 1:length(newDataStruct)
         
         % PSTHs now go first, so we can adaptively select the window for
         % spike rate for CP based on the peak time (NOT DONE)
-        
 % % %         % *****ON HOLD*****
 % % %         % start with all headings, to find peak time (for spRate)
 % % %         % but still enforce a min RT
@@ -291,35 +303,37 @@ for n = 1:length(newDataStruct)
 % % %         wideKernel = fspecial('average', [1 100]);
 % % %         psthAll = smoothRaster(nanmean(squeeze(raster_stimOn(C,J,:)))*1e3, wideKernel);
 % % %         % *****ON HOLD*****
+
+        for m = 1:length(mods)
         
         % for conditioned PSTH, use only small/zero hdgs
         % or else there's a confound (later we'll pool across hdg)
-        J = abs(hdg)<=maxHdg & RT >= minRT;
+        J = mod==mods(m) & abs(hdg)<=maxHdg & RT >= minRT;
 
         % aligned stim-on
         clear psth
         % first, irrespective of choice/PDW, to subtract for residuals
         psthAll = smoothRaster(nanmean(squeeze(raster_stimOn(C,J,:)))*1e3, convKernel);
         % now condition on each outcome
-        I = J & choice==pref & pdw==1; % pref-high
+        I = J & choice==pref(m) & pdw==1; % pref-high
         psth(1,:) = smoothRaster(nanmean(squeeze(raster_stimOn(C,I,:)))*1e3, convKernel);        
-        I = J & choice==pref & pdw==0; % pref-low
+        I = J & choice==pref(m) & pdw==0; % pref-low
         psth(2,:) = smoothRaster(nanmean(squeeze(raster_stimOn(C,I,:)))*1e3, convKernel);
-        I = J & choice~=pref & pdw==1; % null-high
+        I = J & choice~=pref(m) & pdw==1; % null-high
         psth(3,:) = smoothRaster(nanmean(squeeze(raster_stimOn(C,I,:)))*1e3, convKernel);        
-        I = J & choice~=pref & pdw==0; % null-low
+        I = J & choice~=pref(m) & pdw==0; % null-low
         psth(4,:) = smoothRaster(nanmean(squeeze(raster_stimOn(C,I,:)))*1e3, convKernel);
         
         rMax = max(max(psth(:,1:psth_xlim1)));
-        psthNorm_stimOn_one(C,:) = psth(1,:)/rMax;
-        psthNorm_stimOn_two(C,:) = psth(2,:)/rMax;
-        psthNorm_stimOn_three(C,:) = psth(3,:)/rMax;
-        psthNorm_stimOn_four(C,:) = psth(4,:)/rMax;
+        psthNorm_stimOn_one{m}(C,:) = psth(1,:)/rMax;
+        psthNorm_stimOn_two{m}(C,:) = psth(2,:)/rMax;
+        psthNorm_stimOn_three{m}(C,:) = psth(3,:)/rMax;
+        psthNorm_stimOn_four{m}(C,:) = psth(4,:)/rMax;
         % and the residuals
-        psthResid_stimOn_one(C,:) = (psth(1,:)-psthAll)/rMax;
-        psthResid_stimOn_two(C,:) = (psth(2,:)-psthAll)/rMax;
-        psthResid_stimOn_three(C,:) = (psth(3,:)-psthAll)/rMax;
-        psthResid_stimOn_four(C,:) = (psth(4,:)-psthAll)/rMax;
+        psthResid_stimOn_one{m}(C,:) = (psth(1,:)-psthAll)/rMax;
+        psthResid_stimOn_two{m}(C,:) = (psth(2,:)-psthAll)/rMax;
+        psthResid_stimOn_three{m}(C,:) = (psth(3,:)-psthAll)/rMax;
+        psthResid_stimOn_four{m}(C,:) = (psth(4,:)-psthAll)/rMax;
         
         if plotTaskPSTH && c<5
             figure(n*1000); set(gcf, 'Color', 'w', 'Position', [900 425 600 1000], 'PaperPositionMode', 'auto');
@@ -348,23 +362,23 @@ for n = 1:length(newDataStruct)
         % first, irrespective of choice/PDW, to subtract for residuals
         psthAll = smoothRaster(nanmean(squeeze(raster_RT(C,J,:)))*1e3, convKernel);
         % now condition on each outcome
-        I = J & choice==pref & pdw==1; % pref-high
+        I = J & choice==pref(m) & pdw==1; % pref-high
         psth(1,:) = smoothRaster(nanmean(squeeze(raster_RT(C,I,:)))*1e3, convKernel);
-        I = J & choice==pref & pdw==0; % pref-low
+        I = J & choice==pref(m) & pdw==0; % pref-low
         psth(2,:) = smoothRaster(nanmean(squeeze(raster_RT(C,I,:)))*1e3, convKernel);
-        I = J & choice~=pref & pdw==1; % null-high
+        I = J & choice~=pref(m) & pdw==1; % null-high
         psth(3,:) = smoothRaster(nanmean(squeeze(raster_RT(C,I,:)))*1e3, convKernel);
-        I = J & choice~=pref & pdw==0; % null-low
+        I = J & choice~=pref(m) & pdw==0; % null-low
         psth(4,:) = smoothRaster(nanmean(squeeze(raster_RT(C,I,:)))*1e3, convKernel);
-        psthNorm_RT_one(C,:) = psth(1,:)/rMax;
-        psthNorm_RT_two(C,:) = psth(2,:)/rMax;
-        psthNorm_RT_three(C,:) = psth(3,:)/rMax;
-        psthNorm_RT_four(C,:) = psth(4,:)/rMax;
+        psthNorm_RT_one{m}(C,:) = psth(1,:)/rMax;
+        psthNorm_RT_two{m}(C,:) = psth(2,:)/rMax;
+        psthNorm_RT_three{m}(C,:) = psth(3,:)/rMax;
+        psthNorm_RT_four{m}(C,:) = psth(4,:)/rMax;
         % and the residuals
-        psthResid_RT_one(C,:) = (psth(1,:)-psthAll)/rMax;
-        psthResid_RT_two(C,:) = (psth(2,:)-psthAll)/rMax;
-        psthResid_RT_three(C,:) = (psth(3,:)-psthAll)/rMax;
-        psthResid_RT_four(C,:) = (psth(4,:)-psthAll)/rMax;
+        psthResid_RT_one{m}(C,:) = (psth(1,:)-psthAll)/rMax;
+        psthResid_RT_two{m}(C,:) = (psth(2,:)-psthAll)/rMax;
+        psthResid_RT_three{m}(C,:) = (psth(3,:)-psthAll)/rMax;
+        psthResid_RT_four{m}(C,:) = (psth(4,:)-psthAll)/rMax;
 
         if plotTaskPSTH && c<5
             figure(n*10000); set(gcf, 'Color', 'w', 'Position', [1000 125 600 1000], 'PaperPositionMode', 'auto');
@@ -394,49 +408,68 @@ for n = 1:length(newDataStruct)
         % which data?
 %         respForCP = spCountFixedWin;
         respForCP = spRate_exp;
-%         respForCP = spCountPeak; % MOT READY YET
+%         respForCP = spCountPeak; % NOT READY YET
         
-        % small headings only, or else there's a confound (later we'll pool across hdg)
-        % and enforce the min RT
-        J = abs(hdg)<=maxHdg & RT >= minRT;
-
         % there are 4 choices available, so CP and ConfP each come in 2 flavors:
-        I = J & choice==pref & pdw==1;
+        I = J & choice==pref(m) & pdw==1;
             X = respForCP(I); % pref-high        
-        I = J & choice~=pref & pdw==1;
+        I = J & choice~=pref(m) & pdw==1;
             Y = respForCP(I); % null-high
-        CP_high(C) = rocN(X(~isnan(X)),Y(~isnan(Y)),100);
+        try
+            CP_high(C,m) = rocN(X(~isnan(X)),Y(~isnan(Y)),100);
+        catch
+            CP_high(C,m) = NaN;
+        end
                 
-        I = J & choice==pref & pdw==0;
+        I = J & choice==pref(m) & pdw==0;
             X = respForCP(I); % pref-low        
-        I = J & choice~=pref & pdw==0;
+        I = J & choice~=pref(m) & pdw==0;
             Y = respForCP(I); % null-low
-        CP_low(C) = rocN(X(~isnan(X)),Y(~isnan(Y)),100);
+        try
+            CP_low(C,m) = rocN(X(~isnan(X)),Y(~isnan(Y)),100);
+        catch
+            CP_low(C,m) = NaN;
+        end
         
-        I = J & choice==pref;
+        I = J & choice==pref(m);
             X = respForCP(I); % pref-all        
-        I = J & choice~=pref;
+        I = J & choice~=pref(m);
             Y = respForCP(I); % null-all
-        CP_all(C) = rocN(X(~isnan(X)),Y(~isnan(Y)),100);
+        try
+            CP_all(C,m) = rocN(X(~isnan(X)),Y(~isnan(Y)),100);
+        catch
+            CP_all(C,m) = NaN;
+        end
         
-        I = J & choice==pref & pdw==1;
+        I = J & choice==pref(m) & pdw==1;
             X = respForCP(I); % pref-high        
-        I = J & choice==pref & pdw==0;
+        I = J & choice==pref(m) & pdw==0;
             Y = respForCP(I); % pref-low
-        ConfP_pref(C) = rocN(X(~isnan(X)),Y(~isnan(Y)),100);
+        try
+            ConfP_pref(C,m) = rocN(X(~isnan(X)),Y(~isnan(Y)),100);
+        catch
+            ConfP_pref(C,m) = NaN;
+        end
         
-        I = J & choice~=pref & pdw==1;
+        I = J & choice~=pref(m) & pdw==1;
             X = respForCP(I); % null-high        
-        I = J & choice~=pref & pdw==0;
+        I = J & choice~=pref(m) & pdw==0;
             Y = respForCP(I); % null-low
-        ConfP_null(C) = rocN(X(~isnan(X)),Y(~isnan(Y)),100);
+        try
+            ConfP_null(C,m) = rocN(X(~isnan(X)),Y(~isnan(Y)),100);
+        catch
+            ConfP_null(C,m) = NaN;
+        end
         
         I = J & pdw==1;
             X = respForCP(I); % all-high        
         I = J & pdw==0;
             Y = respForCP(I); % all-low
-        ConfP_all(C) = rocN(X(~isnan(X)),Y(~isnan(Y)),100);
-                
+        try
+            ConfP_all(C,m) = rocN(X(~isnan(X)),Y(~isnan(Y)),100);
+        catch
+            ConfP_all(C,m) = NaN;
+        end        
         
 % % grab an example pair of histograms, eg for talk figure
 % if n==17 && c==3
@@ -467,6 +500,8 @@ for n = 1:length(newDataStruct)
 %             
 %         end
 
+        end % mods
+
         
         sessID(C) = n;
         C = C+1;
@@ -480,8 +515,8 @@ end
 
 %% save, to save time later
 
-% clear newDataStruct raster_stimOn raster_RT raster_tun
-% save(['/Users/chris/Documents/MATLAB/temp.mat']);
+clear newDataStruct raster_stimOn raster_RT raster_tun
+save(['/Users/chris/Documents/MATLAB/temp.mat']);
 
 
 
@@ -496,6 +531,9 @@ end
 
     % aligned stimOn
 clear psth
+
+
+
 
 I = nansum(psthNorm_stimOn_one,2)>10; % pick some selection criteria; for now it's all cells (w nonzero spike count) 
 
@@ -519,6 +557,7 @@ xlabel('Time from motion on (ms)');
 ylabel('Firing rate (normalized)');
 changeAxesFontSize(gca, 22, 22);
 h = legend('pref choice, high bet','pref choice, low bet','null choice, high bet','null choice, low bet','Location','Northwest'); legend('boxoff');
+saveas(gcf, '3a', 'pdf')
 
     % aligned RT
 clear psth
@@ -541,6 +580,7 @@ set(gca, 'XLim', XLim, 'YLim', YLim, 'TickDir','out', 'YAxisLocation', 'Right');
 xlabel('Time from saccade (ms)');
 changeAxesFontSize(gca, 22, 22);
 % h = legend('pref choice, high bet','pref choice, low bet','null choice, high bet','null choice, low bet','Location','Northwest'); legend('boxoff');
+saveas(gcf, '3b', 'pdf')
 
 
 
@@ -571,6 +611,7 @@ xlabel('Time from dots on (ms)');
 ylabel('Residual firing rate (normalized)');
 changeAxesFontSize(gca, 22, 22);
 % h = legend('pref choice, high bet','pref choice, low bet','null choice, high bet','null choice, low bet','Location','Northeast'); legend('boxoff');
+saveas(gcf, '4a', 'pdf')
 
     % aligned RT
 clear psth
@@ -592,6 +633,7 @@ end
 set(gca, 'XLim', XLim, 'YLim', YLim, 'TickDir','out', 'YAxisLocation', 'Right'); box off;
 xlabel('Time from saccade (ms)');
 changeAxesFontSize(gca, 22, 22);
+saveas(gcf, '4b', 'pdf')
 
 
 
@@ -631,8 +673,7 @@ ConfPse = std(ConfP)/sqrt(length(ConfP));
 [~,P] = ttest(ConfP,0.5)
 
 
-
-%% scatter whole-trial CP vs ConfP
+% scatter whole-trial CP vs ConfP
 
 figure; set(gcf, 'Color', 'w', 'Position', [400 200 450 450], 'PaperPositionMode', 'auto');
 plot([0 1],[0 1],'k--',[0 1],[0.5 0.5],'k:',[0.5 0.5],[0 1],'k:');
@@ -641,38 +682,23 @@ hold on; plot(CP,ConfP,'ko','MarkerSize',11,'MarkerFaceColor',[1 1 1]); axis squ
 set(gca,'XLim',[0.1 0.9],'YLim',[0.1 0.9],'xtick',0.1:0.2:0.9,'ytick',0.1:0.2:0.9,'TickDir','out')
 xlabel('Choice probability'); ylabel('Confidence probability');
 changeAxesFontSize(gca, 22, 22);
+saveas(gcf, '5a', 'pdf')
 
 figure; set(gcf, 'Color', 'w', 'Position', [800 200 450 80], 'PaperPositionMode', 'auto');
 [histCP,E] = histcounts(CP,0:0.05:1);
 bar(E(2:end)-0.025,histCP); box('off');
 set(gca,'XLim',[0.1 0.9],'xtick',0.1:0.2:0.9,'xticklabel',[],'TickDir','out');
 changeAxesFontSize(gca, 14, 14);
+saveas(gcf, '5b', 'pdf')
 
 figure; set(gcf, 'Color', 'w', 'Position', [800 100 80 450], 'PaperPositionMode', 'auto');
 [histCP,E] = histcounts(ConfP,0:0.05:1);
 barh(E(2:end)-0.025,histCP); box('off');
 set(gca,'YLim',[0.1 0.9],'ytick',0.1:0.2:0.9,'yticklabel',[],'TickDir','out');
 changeAxesFontSize(gca, 14, 14);
+saveas(gcf, '5c', 'pdf')
 
 [r,p] = corrcoef(CP,ConfP)
-
-
-
-
-%% repeat CP using residuals (grand-CP)
-
-% to-do
-
-
-
-
-
-
-
-
-
-
-
 
 
 

@@ -4,6 +4,10 @@
 tuning_vonMises = @(b,dir) b(1) * exp(b(2)*cosd(dir-b(3))) / (2*pi*besseli(0,b(2))) + b(4);
 tuning_vonMises_err = @(b,dir,FR) nansum((tuning_vonMises(b,dir)-FR).^2); % sum squared error
 
+tuning_line = @(b,dir) b(1) + b(2)*dir;
+tuning_line_err = @(b,dir,FR) nansum((tuning_line(b,dir)-FR).^2); % sum squared error
+
+
 % check max trial len, nunits, ntrials (for preallocation)
 for n = 1:length(newDataStruct)
 
@@ -41,15 +45,17 @@ raster_tun =    nan(nUnit,max(nTrials_tun),rasterLen_tun+sum(extRaster));
 raster_stimOn = nan(nUnit,max(nTrials_exp),rasterLen_exp+sum(extRaster));
 raster_RT =     nan(nUnit,max(nTrials_exp),rasterLen_exp+sum(extRaster));
 
-% aggregated, normalized psth [unit,conditions(x4),time]:
-psthNorm_stimOn_one =   nan(nUnit,rasterLen_exp+sum(extRaster));
-psthNorm_stimOn_two =   nan(nUnit,rasterLen_exp+sum(extRaster));
-psthNorm_stimOn_three = nan(nUnit,rasterLen_exp+sum(extRaster));
-psthNorm_stimOn_four =  nan(nUnit,rasterLen_exp+sum(extRaster));
-psthNorm_RT_one =       nan(nUnit,rasterLen_exp+sum(extRaster));
-psthNorm_RT_two =       nan(nUnit,rasterLen_exp+sum(extRaster));
-psthNorm_RT_three =     nan(nUnit,rasterLen_exp+sum(extRaster));
-psthNorm_RT_four =      nan(nUnit,rasterLen_exp+sum(extRaster));
+% aggregated, normalized psth {modality}[unit,conditions(x4),time]:
+for m=1:3
+    psthNorm_stimOn_one{m} =   nan(nUnit,rasterLen_exp+sum(extRaster));
+    psthNorm_stimOn_two{m} =   nan(nUnit,rasterLen_exp+sum(extRaster));
+    psthNorm_stimOn_three{m} = nan(nUnit,rasterLen_exp+sum(extRaster));
+    psthNorm_stimOn_four{m} =  nan(nUnit,rasterLen_exp+sum(extRaster));
+    psthNorm_RT_one{m} =       nan(nUnit,rasterLen_exp+sum(extRaster));
+    psthNorm_RT_two{m} =       nan(nUnit,rasterLen_exp+sum(extRaster));
+    psthNorm_RT_three{m} =     nan(nUnit,rasterLen_exp+sum(extRaster));
+    psthNorm_RT_four{m} =      nan(nUnit,rasterLen_exp+sum(extRaster));
+end
 
 % spike rates/counts: [unit,trials]
 % % % spRate_tun =  nan(nUnit,max(nTrials_tun));
