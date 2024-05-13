@@ -14,13 +14,12 @@ clear; close all
 
 % all these folder settings are user specific and shouldn't be in the script
 
-% datafolder = '/Users/chris/Documents/MATLAB';
-% codefolder = '/Users/chris/Documents/MATLAB/Projects/offlineTools/dots3DMP/behav_models';
+datafolder = '/Users/chris/Documents/MATLAB/data/dots3DMP_DDM';
+codefolder = '/Users/chris/Documents/MATLAB/git/FLprojects/dots3DMP/behav_models';
 
-datafolder = '/Users/stevenjerjian/Desktop/FetschLab/Analysis/data/dots3DMP_DDM';
-codefolder = '/Users/stevenjerjian/Desktop/FetschLab/Analysis/codes/FLprojects/dots3DMP/behav_models';
+% savefilename = 'sim_sepConfMaps_humanSaccEP';
+savefilename = 'sim_sepConfMaps_PDW';
 
-savefilename = 'sim_sepConfMaps_humanSaccEP';
 
 %% MODEL SPECIFICATIONS and CONDITIONS
 
@@ -30,16 +29,17 @@ modelID = 1; % 1 will be 2Dacc model ('Candidate model' against which others are
 
 % task type
 RTtask   = 1;
-conftask = 1; % 1 - sacc endpoint, 2 - PDW
+conftask = 2; % 1 - sacc endpoint, 2 - PDW
 
 nreps = 500; % number of repetitions of each unique trial type % (ntrials depends on num unique trial types)
 
 % stimulus conditions
 mods  = [1 2 3];        % stimulus modalities: ves, vis, comb
 cohs  = [0.4 0.8];      % visual coherence levels (these are really just labels, since k's are set manually)
+
+% hdgs = [-10 -3.5 -1.25 1.25 3.5 10];
 hdgs  = [-12 -6 -3 -1.5 0 1.5 3 6 12];
 
-hdgs = [-10 -3.5 -1.25 1.25 3.5 10];
 % deltas = [-3 0 3];    % conflict angle; positive means vis to the right
 deltas  = 0;
 
@@ -49,7 +49,10 @@ max_dur = 2100; % stimulus duration (ms)
 
 % maybe these become supplanted by modelVar eventually
 confModel  = 'evidence+time'; % 'evidence+time','evidence_only','time_only'
-useVelAcc  = 0; 
+useVelAcc  = 1; 
+% sigma_stimulus = 140;
+sigma_stimulus = 220;
+
 allowNonHB = 0; % allow non-hit-bound trials? if set to 0 and a trial lasts
 % longer than max_dur, it is discarded. If set to 1, those trials are
 % assigned RT = max_dur (affects comparison with mean RT in images_dtb, 
@@ -79,7 +82,8 @@ alpha       = 0.03;             % base rate of low bets (offset to PDW curve, as
 % Tconf       = 0;              % (ms), delay between choice and conf report, unused for now
 
  % Tnd = non-decision time (ms), to account for sensory/motor latencies
-TndMean     = [600 800 700];    % must have different Tnds for [ves, vis, comb]
+% TndMean     = [600 800 700];    % must have different Tnds for [ves, vis, comb]
+TndMean     = [700 700 700];    % must have different Tnds for [ves, vis, comb]
 TndSD       = [0 0 0];          % 50-100 works well; set to 0 for fixed Tnd 
 TndMin      = TndMean/2;        % need to truncate the Tnd dist
 TndMax      = TndMean+TndMin;
@@ -98,7 +102,7 @@ if useVelAcc
     
     % our theoretical settings (before tf)
     ampl = 0.16; % movement in metres
-    pos = normcdf(1:max_dur,max_dur/2,140)*ampl;
+    pos = normcdf(1:max_dur,max_dur/2,sigma_stimulus)*ampl;
     vel = gradient(pos); % metres/s
     acc = gradient(vel); 
 
@@ -123,8 +127,10 @@ if useVelAcc
     end
 else % or fixed, i.e. no vel/acc weighting
     sves = ones(1,max_dur);
-    svis = sves;
+    svis = ones(1,max_dur);
 end
+
+
 
 %% store the generative parameters, to use e.g. for (pre)param recovery
 

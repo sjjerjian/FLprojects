@@ -8,7 +8,7 @@ dbstop if error
 
 
 %%
-plotTuningFits = 0;
+plotTuningFits = 1;
 plotTuningPSTH = 0;
 plotTaskPSTH = 0;
 
