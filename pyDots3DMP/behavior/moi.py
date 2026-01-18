@@ -3,12 +3,18 @@ Low-level helper functions for 2-D self-motion DDM using method of images.
 """
 
 from typing import Optional
+from collections import namedtuple
 
 import numpy as np
 from scipy.stats import multivariate_normal as mvn
 from scipy.stats import norm
 
 USE_MVNUN = False
+
+
+# %% ----------------------------------------------------------------
+# MOI Formalism
+# Implemented as in Drugowitsch et al. 2014
 
 def _sj_rot(j, s0, k):
     """
@@ -50,8 +56,6 @@ def _corr_num_images(num_images: int) -> tuple[np.ndarray, int]:
 
 # %% ----------------------------------------------------------------
 # CDF/PDF calculations
-
-# 
 
 def moi_pdf(
     xmesh: np.ndarray, 
@@ -150,11 +154,9 @@ def _multiple_logpdfs_vec_input(xs, means, covs):
     """multiple_logpdfs` assuming `xs` has shape (N samples, P features).
 
     https://gregorygundersen.com/blog/2020/12/12/group-multivariate-normal-pdf/
-    
-    Thanks to the above link, this provides a much faster way of computing the pdfs across time
-    compared to calling mvn pdf at each timepoint. 
-    TODO I did some crude checks using np.allclose that it gives the same results, but a unit test would be much better...
+    Much faster way of computing the pdfs across time compared to calling scipy mvn pdf at each timepoint. 
     """
+    
     # NumPy broadcasts `eigh`.
     vals, vecs = np.linalg.eigh(covs)
 
@@ -203,16 +205,30 @@ def pdf_at_timestep(
     return pdf
 
 
+def _get_s0_and_bounds(bound, margin_width: float = 0.025):
+
+    # invert bound to define s0 as particle starting position
+    s0 = -bound
+    b0, bm = -margin_width, 0
+    bound0 = np.array([b0, b0])  # top-right corner of third quadrant
+    bound1 = np.array([b0, bm])  # top boundary of third quadrant
+    bound2 = np.array([bm, b0])  # right boundary of third quadrant
+
+    return s0, bound0, bound1, bound2
+
+
+cdf_result = namedtuple('cdf_result', ['p_up', 'rt_dist', 'flux1', 'flux2'])
+
 def moi_cdf(
     tvec: np.ndarray, 
     mu: np.ndarray,
     bound = np.array([1, 1]),
     margin_width: float = 0.025,
     num_images: int = 7
-    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    ) -> cdf_result:
     """
     Calculate the cdf of a 2-D particle accumulator.
-
+        
     Returns:
         a) the probability of a correct choice
         b) the distribution of response times (bound crossings)
@@ -237,11 +253,7 @@ def moi_cdf(
     survival_prob = np.ones_like(tvec)
     flux1, flux2 = np.zeros_like(tvec), np.zeros_like(tvec)
 
-    s0 = -bound
-    b0, bm = -margin_width, 0
-    bound0 = np.array([b0, b0])
-    bound1 = np.array([b0, bm])  # top boundary of third quadrant
-    bound2 = np.array([bm, b0])  # right boundary of third quadrant
+    s0, bound0, bound1, bound2 = _get_s0_and_bounds(bound, margin_width)
 
     # for under the hood call to mvnun
     if USE_MVNUN:
@@ -326,7 +338,7 @@ def moi_cdf(
     # pdf_up = np.diff(flux2)
     # pdf_lo = np.diff(flux1)
 
-    return p_up, rt_dist, flux1, flux2
+    return cdf_result(p_up, rt_dist, flux1, flux2)
 
 
 def moi_cdf_vec(
@@ -335,20 +347,20 @@ def moi_cdf_vec(
     bound=np.array([1, 1]),
     margin_width: float = 0.025,
     num_images: int = 7,
-    bvn_n: int = 64,
-):
+    bvn_n: int = 128,
+) -> cdf_result:
     """
     Vectorized moi CDF over times (T) and images (J).
     Uses vectorized bivariate normal CDF implementation
+
+    Note this provides an approximation.
+    Higher bvn_n provides a more unbiased estimate of the true cdf
     
-    Returns same outputs as `moi_cdf`: p_up, rt_dist, flux1, flux2
+    Returns same outputs as `moi_cdf`:
     """
     sigma, k = _corr_num_images(num_images)
-    s0 = -bound
-    b0, bm = -margin_width, 0
-    bound0 = np.array([b0, b0])
-    bound1 = np.array([b0, bm])
-    bound2 = np.array([bm, b0])
+    
+    s0, bound0, bound1, bound2 = _get_s0_and_bounds(bound, margin_width)
 
     # safe copy so we don't mutate input
     tvec_safe = np.array(tvec, dtype=float, copy=True)
@@ -400,7 +412,7 @@ def moi_cdf_vec(
     p_up = np.sum(flux2) / np.sum(flux1 + flux2)
     rt_dist = np.diff(np.insert(1 - survival_prob, 0, 0))
 
-    return p_up, rt_dist, flux1, flux2
+    return cdf_result(p_up, rt_dist, flux1, flux2)
 
 
 def _bvn_cdf(h, k, rho, n=64):
