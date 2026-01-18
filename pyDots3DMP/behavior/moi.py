@@ -209,10 +209,12 @@ def _get_s0_and_bounds(bound, margin_width: float = 0.025):
 
     # invert bound to define s0 as particle starting position
     s0 = -bound
+
+    # cdf compute requires a rectangle
     b0, bm = -margin_width, 0
-    bound0 = np.array([b0, b0])  # top-right corner of third quadrant
-    bound1 = np.array([b0, bm])  # top boundary of third quadrant
-    bound2 = np.array([bm, b0])  # right boundary of third quadrant
+    bound0 = np.array([b0, b0])  # defines within boundary region
+    bound1 = np.array([b0, bm])  # top boundary "region" of third quadrant
+    bound2 = np.array([bm, b0])  # right boundary "region" of third quadrant
 
     return s0, bound0, bound1, bound2
 
@@ -359,7 +361,7 @@ def moi_cdf_vec(
     Returns same outputs as `moi_cdf`:
     """
     sigma, k = _corr_num_images(num_images)
-    
+
     s0, bound0, bound1, bound2 = _get_s0_and_bounds(bound, margin_width)
 
     # safe copy so we don't mutate input
@@ -387,6 +389,7 @@ def moi_cdf_vec(
     rho_param = sigma[0, 1]
 
     # standardized limits shape (T,J)
+    # leggauss in _bvn_cdf operates on standard bivariate normal, so apply standardization here
     h0 = (bound0[0] - means[..., 0]) / sd
     k0 = (bound0[1] - means[..., 1]) / sd
     h1 = (bound1[0] - means[..., 0]) / sd
@@ -394,7 +397,7 @@ def moi_cdf_vec(
     h2 = (bound2[0] - means[..., 0]) / sd
     k2 = (bound2[1] - means[..., 1]) / sd
 
-    # compute cdfs
+    # compute cdfs for all T timepoints and J images at once
     cdf0 = _bvn_cdf(h0, k0, rho_param, n=bvn_n)
     cdf1_arr = _bvn_cdf(h1, k1, rho_param, n=bvn_n) - cdf0
     cdf2_arr = _bvn_cdf(h2, k2, rho_param, n=bvn_n) - cdf0
@@ -405,9 +408,11 @@ def moi_cdf_vec(
     cdf2 = np.sum(weights * cdf2_arr, axis=1)
 
     survival_prob = np.ones_like(tvec_safe)
+    flux1, flux2 = np.zeros_like(tvec_safe), np.zeros_like(tvec_safe)
+    
     survival_prob[1:] = cdf_rest[1:]
-    flux1 = np.zeros_like(tvec_safe); flux2 = np.zeros_like(tvec_safe)
-    flux1[1:] = cdf1[1:]; flux2[1:] = cdf2[1:]
+    flux1[1:] = cdf1[1:]
+    flux2[1:] = cdf2[1:]
 
     p_up = np.sum(flux2) / np.sum(flux1 + flux2)
     rt_dist = np.diff(np.insert(1 - survival_prob, 0, 0))
@@ -422,13 +427,15 @@ def _bvn_cdf(h, k, rho, n=64):
     (scipy.stats.multivariate_normal.cdf) is quite slow because it requires
     a loop over each timepoint and image, to account for the changing mean and covariance
     at each timepoint. This function provides a vectorized alternative using
-    Gauss-Legendre quadrature
+    Gauss-Legendre quadrature, using a transformation to map the integral from (-inf, h) to (-1,1).
+    Instead of the grid-based integration, this reduces the bivariate CDF to a single integral.
+    
+    Accepts scalars or 1-D arrays for h,k,rho and returns an array of the same shape.
 
-    Uses a transformation to map the integral from (-inf, h) to (-1,1) and
-    applies Gauss-Legendre quadrature. Accepts scalars or 1-D arrays for h,k,rho
-    and returns an array of the same shape.
+    h and k are the two threshold conditions, rho is the covariance matrix between the two variables.
     """
     from numpy.polynomial.legendre import leggauss
+    
     h = np.asarray(h)
     k = np.asarray(k)
     rho = np.asarray(rho)
@@ -448,16 +455,16 @@ def _bvn_cdf(h, k, rho, n=64):
     x = h[None, ...] - ((1.0 + u) / denom)[:, None, None]
     jac = (2.0 / (denom ** 2))[:, None, None]
 
-    # compute phi(x) and inner normal CDF Phi((k - rho*x)/sqrt(1-rho^2))
+    # compute outer integral phi(x), then inner normal CDF Phi((k - rho*x)/sqrt(1-rho^2))
     # phi(x) = exp(-x^2/2)/sqrt(2*pi)
     phi_x = np.exp(-0.5 * x**2) / np.sqrt(2.0 * np.pi)
 
+    # inner integral of (Y | X=x)
     denom_r = np.sqrt(1.0 - rho**2)
     inner = (k[None, ...] - rho[None, ...] * x) / denom_r[None, ...]
-
-    # use scipy's univariate normal CDF (vectorized)
     phi_inner = norm.cdf(inner)
 
+    # assemble: marginal density * conditional probability * jacobian
     integrand = phi_x * phi_inner * jac
 
     # integrate using weights (sum over nodes)
@@ -470,32 +477,50 @@ def sample_dv(
     mu: np.ndarray,
     s: np.ndarray = np.array([1, 1]),
     num_images: int = 7,
-    seed: Optional[int] = None
+    seed: Optional[int] = None,
+    use_vectorized: bool = True
     ) -> np.ndarray:
+    """
+    _summary_
 
-    sigma, k = _corr_num_images(num_images)
+    Args:
+        mu (np.ndarray): drift
+        s (np.ndarray, optional): diffusion noise. Defaults to np.array([1, 1]).
+        num_images (int, optional): Number of images. Defaults to 7.
+        seed (Optional[int], optional): random seed for reproducibility. Defaults to None.
+
+    Returns:
+        np.ndarray: decision variable over time
+
+    Vectorized sampling: draw all increments at once using a standard normal
+    and transform with Cholesky decomposition of V. 
+    Cheap trick to simulate diffusion according to covariance matrix V, 
+    without repeated calls to scipy.stats.multivariate_normal.rvs
+    
+    """
+    
+    sigma, _ = _corr_num_images(num_images)
     V = np.diag(s) * sigma * np.diag(s)
     
     dv = np.zeros_like(mu)
     T = mu.shape[0]
 
-    # Vectorized sampling: draw all increments at once using a standard normal
-    # and transform with Cholesky decomposition of V. Cheap trick to simulate 
-    # diffusion according to covariance matrix V, without repeated calls to
-    # scipy.stats.multivariate_normal.rvs
-    
+    rng = np.random.default_rng(seed)
+
     if T > 1:
 
-        # for t in range(1, T):
-        #     dv[t, :] = mvn(mu[t, :].T, cov=V).rvs()
-        # dv = dv.cumsum(axis=0)
+        if use_vectorized:
         
-        rng = np.random.default_rng(seed)
-        L = np.linalg.cholesky(V)
-        Z = rng.standard_normal(size=(T - 1, mu.shape[1]))
-        
-        increments = mu[1:] + (Z @ L.T)
-        dv[1:] = np.cumsum(increments, axis=0)
+            L = np.linalg.cholesky(V)
+            Z = rng.standard_normal(size=(T - 1, mu.shape[1]))
+            
+            increments = mu[1:] + (Z @ L.T)
+            dv[1:] = np.cumsum(increments, axis=0)
+
+        else:
+            for t in range(1, T):
+                dv[t, :] = mvn(mu[t, :].T, cov=V).rvs(random_state=seed)
+            dv = dv.cumsum(axis=0)
 
     return dv
 
