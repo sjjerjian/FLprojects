@@ -4,7 +4,7 @@ from typing import Optional, Union, Sequence
 import numpy as np
 
 # always import from base matplotlib first to avoid backend issues
-import matplotlib as mpl
+from matplotlib.animation import FuncAnimation, PillowWriter
 import matplotlib.pyplot as plt
 
 from .moi import moi_cdf, moi_cdf_vec, moi_pdf, moi_pdf_vec, sample_dv
@@ -118,7 +118,6 @@ class Accumulator:
             p_corr[d], rt_dist[d, :], flux1, flux2 = cdf_fcn(
                 self.tvec, drift, self.bound, 0.025, self.num_images
                 )
-            
         self.p_corr_ = p_corr
         self.rt_dist_ = rt_dist
 
@@ -217,14 +216,16 @@ class Accumulator:
         fig_cdf, axc = plt.subplots(2, 1, figsize=(4, 5))
         axc[0].plot(self.drift_labels, self.p_corr_, marker='o')
         axc[0].set_ylim([0, 1])
-        axc[0].set_xlabel('drift')
-        if self.drift_labels:
-            axc[0].set_xticks(self.drift_labels)
+        axc[0].set_xlabel('drift rate')
+        # axc[0].tick_params()
+        # if self.drift_labels:
+        #     axc[0].set_xticks(self.drift_labels)
+        axc[0].set_xticks(self.drift_labels, self.drift_labels, rotation=45, ha='right')
         axc[0].set_ylabel('prob. correct choice')
         axc[1].set_title('Accumulator CDF/PDF Results')
 
         axc[1].plot(self.tvec, self.rt_dist_.T)
-        # axc[1].legend(self.drift_labels, frameon=False)
+        axc[1].legend(self.drift_labels, frameon=False)
         axc[1].set_xlabel('Time (s)')
         axc[1].set_title('RT distribution (no NDT)')
         fig_cdf.tight_layout()
@@ -233,20 +234,30 @@ class Accumulator:
         has_log_odds = hasattr(self, 'log_odds_')
         n = 3 if has_log_odds else 2
         if hasattr(self, 'up_lose_pdf_'):
-            fig_pdf, axp = plt.subplots(n, 1, figsize=(5, 6))
-            contour = axp[0].contourf(self.tvec, self.grid_vec,
-                                      log_pmap(np.squeeze(self.up_lose_pdf_[d_ind, :, :])).T,
-                                      levels=100)
+            fig_pdf, axp = plt.subplots(n, 1, figsize=(5, n*2))
+            contour = axp[0].contourf(
+                self.tvec, 
+                self.grid_vec,
+                log_pmap(np.squeeze(self.up_lose_pdf_[d_ind, :, :])).T,
+                levels=100
+                )
             axp[1].contourf(self.tvec, self.grid_vec,
                             log_pmap(np.squeeze(self.lo_lose_pdf_[d_ind, :, :])).T,
                             levels=100)
-            axp[0].set_title(f"Losing accumulator | Correct, drift rate {self.drift_labels[d_ind]}")
-            axp[1].set_title(f"Losing accumulator | Error, drift rate {self.drift_labels[d_ind]}")
-            cbar = fig_cdf.colorbar(contour, ax=axp[0])
-            cbar = fig_cdf.colorbar(contour, ax=axp[1])
+            axp[0].set_title(f"Losing accumulator | Correct, drift rate {self.drift_labels[d_ind]}", fontsize=10)
+            axp[1].set_title(f"Losing accumulator | Error, drift rate {self.drift_labels[d_ind]}", fontsize=10)
+            axp[1].set_xlabel('Time (s)')
+            cbar = fig_pdf.colorbar(contour, ax=axp[0])
+            cbar = fig_pdf.colorbar(contour, ax=axp[1])
+            cbar.set_label("Log Probability")
+
+            axp[0].set_xticklabels([])
             fig_pdf.tight_layout()
+            fig_pdf.suptitle("Accumulator PDF and Log Odds Correct")
 
             if has_log_odds:
+                axp[1].set_xticklabels([])
+                axp[-1].set_xlabel("Time (s)")
                 vmin, vmax = 0, 3
                 contour = axp[2].contourf(self.tvec, self.grid_vec,
                                             self.log_odds_.T, vmin=vmin, vmax=vmax,
@@ -301,8 +312,8 @@ class Accumulator:
             title.set_text(f"Frame {i + 1} - {self.tvec[i]:.2f}, drift = {drift_str}")
             return im, title
 
-        anim = mpl.animation.FuncAnimation(fig, animate, frames=n_frames, blit=True)
-        writer = mpl.animation.PillowWriter(fps=10)
+        anim = FuncAnimation(fig, animate, frames=n_frames, blit=True)
+        writer = PillowWriter(fps=10)
         anim.save(f'{save_path}_{self.drift_labels[drift_ind]}.gif', writer=writer)
         plt.close(fig)
         
@@ -346,7 +357,7 @@ def log_odds(pdf1: np.ndarray, pdf2: np.ndarray) -> np.ndarray:
 
 
 def log_pmap(pdf: np.ndarray, q: int = 30) -> np.ndarray:
-    """Set cut-off on log odds map, for better visualization."""
+    """Set cut-off on pdf, for better visualization."""
     pdf = np.clip(pdf, a_min=10**(-q), a_max=None)
     return (np.log10(pdf)+q) / q
 
