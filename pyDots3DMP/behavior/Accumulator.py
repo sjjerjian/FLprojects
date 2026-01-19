@@ -173,10 +173,18 @@ class Accumulator:
         return self.log_odds_ >= self.wager_theta
 
 
-    def dv(self, drift, sigma):
-        """Return accumulated DV for given drift rate and diffusion noise."""
+    def dv(
+        self,
+        d_ind,
+        sigma=np.array([1, 1])
+        ):
+        """Return accumulated DV for given drift rate and diffusion noise.
+        default sigma is set to [1,1] for consistency with MOI model which assumes unit variance
+        """
+
+        dt = np.gradient(self.tvec)
         return sample_dv(
-            mu=drift*self.tvec.reshape(-1, 1),
+            mu=self.drift_rates[d_ind] * dt[:, None],
             s=sigma,
             num_images=self.num_images
             )

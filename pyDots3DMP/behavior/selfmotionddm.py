@@ -433,7 +433,6 @@ class SelfMotionDDM:
         :param seed: random seed for sampling
         :return: simulated DataFrame with columns choice, PDW, RT
 
-        
         """
         
         _, preds = self.predict(
@@ -467,7 +466,7 @@ class SelfMotionDDM:
                     ]
 
                     for itr in range(n_samples):
-                        dv = accum.dv(drift, sigma=np.array([1., 1.]))
+                        dv = accum.dv(drift)
 
                         is_hit_bnd = (dv >= accum.bound).any(axis=0)
                         t_bnd_cross = np.argmax((dv >= accum.bound) == 1, axis=0)
