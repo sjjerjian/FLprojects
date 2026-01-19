@@ -120,7 +120,6 @@ def moi_pdf_vec(
     sigma, k = _corr_num_images(num_images)
 
     nx, ny = xmesh.shape
-    pdf_result = np.zeros((len(tvec), nx, ny)).squeeze()
 
     xy_mesh = np.dstack((xmesh, ymesh))  # shape (X, Y, 2)
     xy_mesh = xy_mesh.reshape(-1, 2)     # shape (X*Y, 2)
@@ -130,7 +129,9 @@ def moi_pdf_vec(
     covs = tvec[:, None, None] * sigma
     mu_t = tvec[:, None] * mu
 
-    pdf_result += np.exp(_multiple_logpdfs_vec_input(xy_mesh, s0 + mu_t, covs))
+    # skip the first timestep, will be [0, 0]
+    pdf_result = np.zeros((len(tvec), nx, ny)).squeeze()
+    pdf_result[1:] += np.exp(_multiple_logpdfs_vec_input(xy_mesh, s0 + mu_t[1:], covs[1:]))
 
     for j in range(1, k*2):
         sj = _sj_rot(j, s0, k)
@@ -145,7 +146,7 @@ def moi_pdf_vec(
             aj_all[t] = a_j
 
         # use vectorized implementation for speed # TODO unit tests to verify correctness
-        pdf_result += (aj_all * np.exp(_multiple_logpdfs_vec_input(xy_mesh, sj + mu_t, covs)))
+        pdf_result[1:] += (aj_all[1:] * np.exp(_multiple_logpdfs_vec_input(xy_mesh, sj + mu_t[1:], covs[1:])))
 
     return pdf_result
 
