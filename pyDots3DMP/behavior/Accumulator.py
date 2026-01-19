@@ -284,7 +284,6 @@ class Accumulator:
         self,
         drift_ind=-1,
         save_path: str = 'pdf_animation',
-        filetype: str = '.mp4'
         ):
         """Create and save animation of the full PDF over time.
 
