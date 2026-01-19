@@ -52,9 +52,6 @@ class Accumulator:
         self.wager_theta = wager_theta
         self._is_fitted = False
 
-        if self.drift_rates:
-            self.drift_labels = self.drift_rates.copy()
-
 
     @property
     def is_fitted(self) -> bool:    
@@ -95,9 +92,11 @@ class Accumulator:
         # add corresponding negated value for anti-correlated accumulator
         # also update drift rates based on sensitivity and urgency, if provided
 
-        if labels is not None:
-            assert len(drifts) == len(labels), "drift rates and provided labels must match in length"
-            self.drift_labels = labels
+        if labels is None:
+            labels = list(range(len(drifts)))
+
+        assert len(drifts) == len(labels), "drift rates and provided labels must match in length"
+        self.drift_labels = labels
         
         for d, drift in enumerate(drifts):
             drift = drift * np.array([1, -1])
