@@ -251,8 +251,8 @@ class SelfMotionDDM:
                 # set accumulators with absolute drifts, for log odds mappings
                 accumulator = Accumulator(grid_vec=self.grid_vec, tvec=self.tvec, bound=bound[m])
 
-                abs_drifts, accumulator.tvec = self.calc_3dmp_drift_rates(
                     b_vals[m], k_vals_fixed[m], self.tvec[-1], hdgs[hdgs>=0], delta=0,
+                abs_drifts, accumulator.tvec = self.calc_selfmotion_drifts(
                     )
 
                 # run the method of images - diffusion to bound to extract pdfs, cdfs, and LPO
@@ -577,12 +577,12 @@ class SelfMotionDDM:
 
         
     @staticmethod
-    def calc_3dmp_drift_rates(
+    def calc_selfmotion_drifts(
         b_t: np.ndarray,
         b_k: Union[float, tuple[float, float]],
         tmax: float,
         hdgs: np.ndarray,
-        delta: Optional[float] = 0.0, 
+        delta: float = 0.0, 
         cue_weights: Optional[tuple[float, float]] = None
         ) -> tuple[np.ndarray, np.ndarray]:
         """
@@ -599,7 +599,7 @@ class SelfMotionDDM:
             b_t = b_t.reshape(-1, 1)
             tvec = cumul_bt * tmax
             drifts = np.cumsum(b_t**2 * b_k * sin_hdgs, axis=0)
-            # drifts2 = b_k * sin_uhdgs   # w/o stim scaling, reduces to this
+            # drifts = b_k * sin_uhdgs   # w/o stim scaling, reduces to this
 
         elif len(b_k) == 2:
             # two sensitivities/time-courses - combined condition
@@ -610,11 +610,6 @@ class SelfMotionDDM:
                 cue_weights = np.sqrt(k2 / k2.sum())
                 
             w_ves, w_vis = cue_weights
-            
-            # if return_abs:
-            #     drift_ves = np.cumsum(b_t[:, [0]]**2 * b_k[0] * sin_uhdgs, axis=0)
-            #     drift_vis = np.cumsum(b_t[:, [1]]**2 * b_k[1] * sin_uhdgs, axis=0)
-            # else:
             
             # +ve delta means ves to the left, vis to the right
             # Drugo eq suggests cumsum each modality separately first, then do the weighted sum     

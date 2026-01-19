@@ -57,7 +57,6 @@ class Accumulator:
     def is_fitted(self) -> bool:    
         return self._is_fitted
 
-    
     @property
     def bound(self):
         """return symmetric bound as 2-element array"""
@@ -67,11 +66,9 @@ class Accumulator:
         self._bound = np.array(b)
         return self._bound
 
-
     @bound.setter
     def bound(self, bound):
         self._bound = bound
-
 
     def apply_drifts(
         self,
@@ -114,12 +111,13 @@ class Accumulator:
         cdf_fcn = moi_cdf_vec if use_vectorized else moi_cdf
         
         for d, drift in enumerate(self.drift_rates):
-            p_corr[d], rt_dist[d, :], flux1, flux2 = cdf_fcn(
-                self.tvec, drift, self.bound, 0.025, self.num_images
+            cdf_res = cdf_fcn(
+                self.tvec, drift, self.bound, num_images=self.num_images
                 )
+            p_corr[d], rt_dist[d, :] = cdf_res.p_up, cdf_res.rt_dist
+            
         self.p_corr_ = p_corr
         self.rt_dist_ = rt_dist
-
 
     def pdf(self, use_vectorized=True, full_pdf=False):
 
