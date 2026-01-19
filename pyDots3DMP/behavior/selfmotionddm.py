@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 from pybads import BADS
 from scipy.signal import convolve
-from scipy.stats import norm, skewnorm
+from scipy.stats import norm, skewnorm, truncnorm
 from scipy.optimize import minimize
 
 from .utils import log_lik_bin, log_lik_cont, margconds_from_intersection
@@ -450,23 +450,35 @@ class SelfMotionDDM:
             
             Xu = X.drop_duplicates().values
             preds = pd.DataFrame(np.repeat(Xu, n_samples, axis=0), columns=X.columns)
+
+            mods = np.unique(X['modality']).astype(float)
+            non_dec_time = self._handle_param_mod(self.params_['non_dec_time'], mods)  
+            alphas = self._handle_param_mod(self.params_['wager_alpha'], mods)  
             
             for i, row in X.iterrows():
-                mod = row['modality']
+                mod = int(row['modality'])
                 coh = row['coherence']
                 delta = row['delta']
 
                 accum = self.accumulators_[(mod, coh, delta)]
 
-                for hdg, drift in enumerate(zip(accum.drift_labels, accum.drift_rates)):
+                ndt_mean = non_dec_time[mod-1]
+                ndt_std = 0.050
+                ndt_min = ndt_mean / 2
+                ndt_max = ndt_mean + ndt_min
+                
+                for ihdg, hdg in enumerate(accum.drift_labels):
 
                     trial_inds = preds.index[
                         (preds["modality"]==mod) & (preds["coherence"]==coh) & \
                             (preds["delta"]==delta) & (preds["heading"]==hdg)
-                    ]
+                    ].to_numpy()
+                    
+                    ndt = truncnorm.rvs(ndt_min, ndt_max, loc=ndt_mean, scale=ndt_std, 
+                                    size=len(trial_inds))
 
                     for itr in range(n_samples):
-                        dv = accum.dv(drift)
+                        dv = accum.dv(ihdg)
 
                         is_hit_bnd = (dv >= accum.bound).any(axis=0)
                         t_bnd_cross = np.argmax((dv >= accum.bound) == 1, axis=0)
@@ -499,16 +511,15 @@ class SelfMotionDDM:
                             wager_accum = self.accumulators_[('wager', mod)]
                             
                             # log_odds = wager_odds_maps[m][rt_ind, grid_ind]
-                            wager = int(wager_odds_above_threshold[m][rt_ind, grid_ind])
-                            wager *= (np.random.random() > params['alpha'])  # incorporate base-rate of low bets
-                            preds.loc[trial_inds[itr], 'PDW'] = wager
+                            wager = int(wager_accum.wager_map[rt_ind, grid_ind])
+                            wager *= (np.random.random() > alphas[mod-1])  # incorporate base-rate of low bets
+                            preds.loc[trial_inds[itr].item(), 'PDW'] = wager
 
                         # flip choice result so that left choices = 0, right choices = 1 in the output
-                        preds.loc[these_trials[tr], 'choice'] = choice ^ 1
+                        preds.loc[trial_inds[itr].item(), 'choice'] = choice ^ 1
 
-                        # RT = decision time + non-decision time - motion onset latency
-                        preds.loc[these_trials[tr], 'RT'] = \
-                            orig_tvec[rt_ind] + non_dec_time[tr] - 0.3
+                        # RT = decision time + non-decision time
+                        preds.loc[trial_inds[itr].item(), 'RT'] = self.tvec[rt_ind] + ndt[itr]
 
         return preds
         
