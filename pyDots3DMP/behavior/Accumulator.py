@@ -30,7 +30,7 @@ class Accumulator:
 
     # Use __slots__ to reduce per-instance memory usage and speed attribute access.
     __slots__ = (
-        'tvec', 'grid_vec', '_bound', 'drift_rates', 'num_images', 'wager_theta',
+        'tvec', 'dt', 'grid_vec', '_bound', 'drift_rates', 'num_images', 'wager_theta',
         '_is_fitted', 'drift_labels', 'p_corr_', 'rt_dist_', 'pdf3D_', 'up_lose_pdf_',
         'lo_lose_pdf_', 'log_odds_'
     )
@@ -42,7 +42,8 @@ class Accumulator:
         drift_rates: Optional[list] = None, 
         bound: Optional[Union[float, Sequence, np.ndarray]] = 1.0,
         num_images: Optional[int]=7,
-        wager_theta: Optional[float]=1.0
+        wager_theta: Optional[float]=1.0,
+        dt: Optional[np.ndarray] = None,
         ):
         self.tvec = tvec
         self.grid_vec = grid_vec
@@ -51,7 +52,10 @@ class Accumulator:
         self.num_images = num_images
         self.wager_theta = wager_theta
         self._is_fitted = False
+        self.dt = dt
 
+        if self.dt is None:
+            self.dt = tvec[1] - tvec[0]
 
     @property
     def is_fitted(self) -> bool:    
@@ -98,9 +102,9 @@ class Accumulator:
         for d, drift in enumerate(drifts):
             drift = drift * np.array([1, -1])
             drifts_posneg = _urgency_scaling(drift * sensitivity, self.tvec, urgency)
+            # drifts_posneg = np.cumsum(drifts_posneg * self.dt, axis=0)
             self.drift_rates.append(drifts_posneg)
             
-
     def cdf(self, use_vectorized: bool = True):
         """calculate cdf at boundaries for each drift rate, returns
         probability of correct choice and RT distribution (no NDT)"""

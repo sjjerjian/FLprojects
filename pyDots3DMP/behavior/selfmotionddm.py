@@ -213,17 +213,16 @@ class SelfMotionDDM:
         hdgs = hdgs.astype(float)
 
         k_scale = 1e3
-        # get stimulus-driven urgency signals if specified, for scaling drifts
         if not self.stim_scaling:
             b_ves, b_vis = np.ones_like(self.tvec), np.ones_like(self.tvec)
-            b_ves /= len(b_ves)
-            b_vis /= len(b_vis)
         elif isinstance(self.stim_scaling, tuple):
             b_ves, b_vis = self.stim_scaling
         else:
-            b_ves, b_vis = self.get_stim_urgs(self.tvec)
-            k_scale = 10
-
+            b_ves, b_vis = get_stim_urgs(self.tvec)
+            k_scale = 5e3
+            
+        b_ves /= len(b_ves)
+        b_vis /= len(b_vis)
         b_vals = [b_ves, b_vis, np.vstack((b_ves, b_vis)).T]
 
         # handle parameters per modality
@@ -251,8 +250,8 @@ class SelfMotionDDM:
                 # set accumulators with absolute drifts, for log odds mappings
                 accumulator = Accumulator(grid_vec=self.grid_vec, tvec=self.tvec, bound=bound[m])
 
-                    b_vals[m], k_vals_fixed[m], self.tvec[-1], hdgs[hdgs>=0], delta=0,
-                abs_drifts, accumulator.tvec = self.calc_selfmotion_drifts(
+                abs_drifts, accumulator.tvec = calc_selfmotion_drifts(
+                    b_vals[m], k_vals_fixed[m], self.tvec, hdgs[hdgs>=0], delta=0,
                     )
 
                 # run the method of images - diffusion to bound to extract pdfs, cdfs, and LPO
@@ -286,14 +285,14 @@ class SelfMotionDDM:
 
                     # set up accumulator for this condition
                     accumulator = Accumulator(grid_vec=self.grid_vec, tvec=self.tvec, bound=bound[m])
-                    drifts, accumulator.tvec = self.calc_3dmp_drift_rates(
-                        b_vals[m], k_vals[m], self.tvec[-1], hdgs, delta=delta,
+                    drifts, t_eff = calc_selfmotion_drifts(
+                        b_vals[m], k_vals[m], self.tvec, hdgs, delta=delta,
                         )
                     # this time use signed headings
                     accumulator.apply_drifts(drifts, hdgs) 
 
                     # run the method of images - diffusion to bound to extract pdfs, cdfs, and LPO
-                    accumulator.compute_distrs(return_pdf=self.return_wager)
+                    accumulator.compute_distrs(return_pdf=self.return_wager, use_vectorized=False)
 
                     if cache_accumulators:
                         self.accumulators_[(mod, coh, delta)] = accumulator
@@ -554,73 +553,96 @@ class SelfMotionDDM:
 
         raise ValueError("Length of param list does not match number of modalities")
 
+# %% -----------------------
 
-    @staticmethod
-    def get_stim_urgs(tvec: np.ndarray, pos=None, skew_params=None):
+def get_stim_urgs(
+    tvec: np.ndarray,
+    pos: Optional[np.ndarray] = None,
+    skew_params: Optional[tuple] = None
+    ):
+    """
+    Return acceleration and velocity profiles for stimulus weighting
 
-        if pos is None:
-            ampl = 0.16
+    Args:
+        tvec (np.ndarray): time vector, used to create position profile with skew_params. 
+                            Ignored if pos provided directly.
+        pos (Optional[np.ndarray], optional): position profile. Defaults to None.
+        skew_params (Optional[tuple], optional): args for skewnorm.cdf. Defaults to (2, 0.8, 0.4).
 
-            # pos = norm.cdf(tvec, 0.9, 0.3) * ampl
-            if skew_params is None:
-                pos = skewnorm.cdf(tvec, 2, 0.8, 0.4) * ampl  # emulate tf
-            else:
-                pos = skewnorm.cdf(tvec, **skew_params) * ampl
+    Returns:
+        np.ndarray, np.ndarray: acceleration, velocity vectors
+    """
+    if pos is None:
+        ampl = 0.16
 
-        vel = np.gradient(pos)
-        acc = np.gradient(vel)
+        # pos = norm.cdf(tvec, 0.9, 0.3) * ampl
+        if skew_params is None:
+            skew_params = (2, 0.8, 0.4)
+        pos = skewnorm.cdf(tvec, *skew_params) * ampl
 
-        vel /= vel.max()
-        acc /= acc.max()
-        
-        return acc, vel
+    vel = np.gradient(pos)
+    acc = np.gradient(vel)
 
-        
-    @staticmethod
-    def calc_selfmotion_drifts(
-        b_t: np.ndarray,
-        b_k: Union[float, tuple[float, float]],
-        tmax: float,
-        hdgs: np.ndarray,
-        delta: float = 0.0, 
-        cue_weights: Optional[tuple[float, float]] = None
-        ) -> tuple[np.ndarray, np.ndarray]:
-        """
-        Calculate drift rates
-        if cue_weights is None, optimal cue weights calculated from k's
-        """
+    vel /= vel.max()
+    acc /= acc.max()
+    
+    return acc, vel
 
-        sin_hdgs = np.sin(np.deg2rad(hdgs))
+    
+def calc_selfmotion_drifts(
+    b_t: np.ndarray,
+    b_k: Union[float, tuple[float, float]],
+    tvec: float,
+    hdgs: np.ndarray,
+    delta: float = 0.0, 
+    cue_weights: Optional[tuple[float, float]] = None
+    ) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Calculate instaneous drift rates given time course and modality sensitivities
+    See Drugowitsch et al 2014 eLife supplementary equations
 
-        cumul_bt = np.cumsum((b_t**2)/(b_t**2).sum(axis=0), axis=0)
+    b_t:  time-course sensitivity
+    b_k:  stimulus modality sensitivity (tuple --> bimodal condition)
+    tvec: original (linear) time vector
+    hdgs: heading values
+    delta: heading delta (combined modality)
+    cue_weights: tuple for custom override of cue weights
+        (default is None, in which case optimal cue weights are computed from b_k)
 
-        if isinstance(b_k, (int, float)):
-            # only one sensitivity and time-course - ves or vis (logic is the same)
-            b_t = b_t.reshape(-1, 1)
-            tvec = cumul_bt * tmax
-            drifts = np.cumsum(b_t**2 * b_k * sin_hdgs, axis=0)
-            # drifts = b_k * sin_uhdgs   # w/o stim scaling, reduces to this
+    Returns:
+       drifts - array of instantaneous drift rates (T x drifts)
+       t_eff - effective time (momentary power of stimulus)
+       
+    """
 
-        elif len(b_k) == 2:
-            # two sensitivities/time-courses - combined condition
+    sin_hdgs = np.sin(np.deg2rad(hdgs))
+    dt = np.gradient(tvec)
 
-            b_k = np.array(b_k, dtype=float)
-            if cue_weights is None:
-                k2 = b_k**2
-                cue_weights = np.sqrt(k2 / k2.sum())
-                
-            w_ves, w_vis = cue_weights
+    if isinstance(b_k, (int, float)):
+        # only one sensitivity and time-course - ves or vis (logic is the same)
+        b_t = b_t.reshape(-1, 1)
+        t_eff = np.cumsum(b_t**2, axis=0) * dt
+        drifts = b_t**2 * b_k * sin_hdgs # see Drugowitsch et al. 2014 supp eq 2 & 7
+        # drifts = b_k * sin_uhdgs   # w/o stim scaling, reduces to this
+
+    elif len(b_k) == 2:
+        # two sensitivities/time-courses - combined condition
+
+        b_k = np.array(b_k, dtype=float)
+        if cue_weights is None:
+            k2 = b_k**2
+            cue_weights = np.sqrt(k2 / k2.sum())
             
-            # +ve delta means ves to the left, vis to the right
-            # Drugo eq suggests cumsum each modality separately first, then do the weighted sum     
-            drift_ves = np.cumsum(b_t[:, [0]]**2 * b_k[0] * np.sin(np.deg2rad(hdgs - delta / 2)), axis=0)
-            drift_vis = np.cumsum(b_t[:, [1]]**2 * b_k[1] * np.sin(np.deg2rad(hdgs + delta / 2)), axis=0)
+        w_ves, w_vis = cue_weights
+        
+        # +ve delta means ves to the left, vis to the right
+        drift_ves = b_t[:, [0]]**2 * b_k[0] * np.sin(np.deg2rad(hdgs - delta / 2))
+        drift_vis = b_t[:, [1]]**2 * b_k[1] * np.sin(np.deg2rad(hdgs + delta / 2))
+        
+        drifts = w_ves * drift_ves + w_vis * drift_vis
 
-            # Eq 14
-            tvec = w_ves**2 * cumul_bt[:,0] + w_vis**2 * cumul_bt[:,1]
-            tvec *= tmax
-            drifts = w_ves * drift_ves + w_vis * drift_vis
+        # Drugowitsch et al. 2014 supp eq 14
+        t_eff = w_ves**2 * b_t[:,0]**2 + w_vis**2 * b_t[:,1]**2
+        t_eff = np.cumsum(t_eff) * dt
 
-        drifts /= tvec[:, None]
-
-        return drifts, tvec
+    return drifts, t_eff

@@ -14,7 +14,8 @@ USE_MVNUN = False
 
 # %% ----------------------------------------------------------------
 # MOI Formalism
-# Implemented as in Drugowitsch et al. 2014
+# Implementation from Shan, Moreno-Bote & Drugowitsch 2019
+# See Table 1
 
 def _sj_rot(j, s0, k):
     """
@@ -270,16 +271,21 @@ def moi_cdf(
     # future Scipy releases without warning...
     # https://stackoverflow.com/questions/76524943/how-to-compute-faster-scipy-stats-multivariate-normal-cdf-a-large-number-of-ti
 
+    # mu_T = mu * tvec[:,None]
+
+    # integrate drift for particle position in linear time
+    dt = tvec[1] - tvec[0]
+    mu_T = np.cumsum(np.insert(mu[:-1], 0, 0, 0) * dt, axis=0)
+
     # skip the first sample (t starts at 1)
     for t in range(1, len(tvec)):
 
-        dt = np.clip(tvec[t], 1e-8)
-
-        mu_t = mu[t, :].T * tvec[t]
+        t_curr = np.clip(tvec[t], a_min=1e-8, a_max=None)
+        mu_t = mu_T[t, :]
 
         # define frozen mv object
         if not USE_MVNUN:
-            mvn_0 = mvn(mean=s0 + mu_t, cov=sigma * dt)
+            mvn_0 = mvn(mean=s0 + mu_t, cov=sigma * t_curr)
             mvn_0.maxpts = 10000*2
 
             # total density within boundaries
@@ -291,18 +297,18 @@ def moi_cdf(
 
         else:
             # total density within boundaries
-            cdf_rest = _mvn.mvnun(low, bound0, s0 + mu_t, sigma * dt, **opts)[0]
+            cdf_rest = _mvn.mvnun(low, bound0, s0 + mu_t, sigma * t_curr, **opts)[0]
 
             # density beyond boundary, in one or other direction
-            cdf1 = _mvn.mvnun(low, bound1, s0 + mu_t, sigma * dt, **opts)[0] - cdf_rest
-            cdf2 = _mvn.mvnun(low, bound2, s0 + mu_t, sigma * dt, **opts)[0] - cdf_rest
+            cdf1 = _mvn.mvnun(low, bound1, s0 + mu_t, sigma * t_curr, **opts)[0] - cdf_rest
+            cdf2 = _mvn.mvnun(low, bound2, s0 + mu_t, sigma * t_curr, **opts)[0] - cdf_rest
 
         # loop over images
         for j in range(1, k*2):
             sj = _sj_rot(j, s0, k)
 
             if not USE_MVNUN:
-                mvn_j = mvn(mean=sj + mu_t, cov=sigma * dt)
+                mvn_j = mvn(mean=sj + mu_t, cov=sigma * t_curr)
                 mvn_j.maxpts = 10000*2
 
                 # total density WITHIN boundaries for jth image
@@ -314,11 +320,11 @@ def moi_cdf(
 
             else:
                 # total density WITHIN boundaries for jth image
-                cdf_add = _mvn.mvnun(low, bound0, sj + mu_t, sigma * dt, **opts)[0]
+                cdf_add = _mvn.mvnun(low, bound0, sj + mu_t, sigma * t_curr, **opts)[0]
 
                 # density BEYOND boundary in one or other direction, for jth image
-                cdf_add1 = _mvn.mvnun(low, bound1, sj + mu_t, sigma * dt, **opts)[0] - cdf_add
-                cdf_add2 = _mvn.mvnun(low, bound2, sj + mu_t, sigma * dt, **opts)[0] - cdf_add
+                cdf_add1 = _mvn.mvnun(low, bound1, sj + mu_t, sigma * t_curr, **opts)[0] - cdf_add
+                cdf_add2 = _mvn.mvnun(low, bound2, sj + mu_t, sigma * t_curr, **opts)[0] - cdf_add
 
             a_j = _weightj(j, mu[t, :].T, sigma, sj, s0)
             cdf_rest += (a_j * cdf_add)
@@ -362,13 +368,16 @@ def moi_cdf_vec(
 
     s0, bound0, bound1, bound2 = _get_s0_and_bounds(bound, margin_width)
 
-    tvec_safe = np.clip(tvec, 1e-8)
+    tvec_safe = np.clip(tvec, a_min=1e-8, a_max=None)
 
     # build all image starting positions (J,2)
     sj_list = [s0] + [_sj_rot(j, s0, k) for j in range(1, k*2)]
     sj_all = np.vstack(sj_list)             # (J,2)
+    
     # means: (T, J, 2)
-    mu_t = mu * tvec_safe[:, None]         # (T,2)
+    # mu_t = mu * tvec_safe[:, None]         # (T,2)
+    dt = tvec[1] - tvec[0]
+    mu_t = np.cumsum(np.insert(mu[:-1], 0, 0, 0) * dt, axis=0)
     means = mu_t[:, None, :] + sj_all[None, :, :]  # (T,J,2)
 
     # weights: (T, J)
