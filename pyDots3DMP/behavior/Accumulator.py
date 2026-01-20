@@ -177,19 +177,34 @@ class Accumulator:
     def dv(
         self,
         d_ind,
-        sigma=np.array([1, 1])
+        sigma=np.array([1, 1]),
+        show=False,
         ):
         """Return accumulated DV for given drift rate and diffusion noise.
         default sigma is set to [1,1] for consistency with MOI model which assumes unit variance
         """
 
-        dt = np.gradient(self.tvec)
-        return sample_dv(
-            mu=self.drift_rates[d_ind] * dt[:, None],
-            s=sigma,
-            num_images=self.num_images
+        dv = sample_dv(
+                mu=self.drift_rates[d_ind],
+                dt=self.dt.item(),
+                s=sigma,
+                num_images=self.num_images
             )
 
+        if not show:
+            return dv
+
+        fig, ax = plt.subplots()
+        ax.set_prop_cycle(
+            color=['blue', 'red', 'blue', 'red'],
+            linestyle=['-','-',':',':']
+            )
+        plt.plot(self.tvec, dv)
+        plt.plot(self.tvec, np.cumsum(self.drift_rates[-1]*self.dt, axis=0))
+        plt.axhline(y=1.0, color='k', linestyle='--', label='bound')
+        plt.title(f"DV simulation")
+        plt.xlabel("Time (s)")
+        return dv, fig
 
     def compute_distrs(self, use_vectorized=True, return_pdf=False):
         """Calculate cdf and pdf for accumulator object. Returns self for chaining commands"""

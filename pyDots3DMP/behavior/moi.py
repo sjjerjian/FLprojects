@@ -477,6 +477,7 @@ def _bvn_cdf(h, k, rho, n=64):
 
 def sample_dv(
     mu: np.ndarray,
+    dt: float,
     s: np.ndarray = np.array([1, 1]),
     num_images: int = 7,
     seed: Optional[int] = None,
@@ -488,8 +489,11 @@ def sample_dv(
     Args:
         mu (np.ndarray): drift
         s (np.ndarray, optional): diffusion noise. Defaults to np.array([1, 1]).
+        dt (float): time delta
         num_images (int, optional): Number of images. Defaults to 7.
         seed (Optional[int], optional): random seed for reproducibility. Defaults to None.
+        use_vectorized (bool, default true): if true, use cholesky decomposition to draw all 
+            steps at once. if false, use explicity mvn.rvs call in a loop.
 
     Returns:
         np.ndarray: decision variable over time
@@ -508,6 +512,9 @@ def sample_dv(
     T = mu.shape[0]
 
     rng = np.random.default_rng(seed)
+
+    mu = mu * dt
+    V = V * np.sqrt(dt)
 
     if T > 1:
 
