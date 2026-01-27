@@ -200,7 +200,7 @@ class Accumulator:
             linestyle=['-','-',':',':']
             )
         plt.plot(self.tvec, dv)
-        plt.plot(self.tvec, np.cumsum(self.drift_rates[-1]*self.dt, axis=0))
+        plt.plot(self.tvec, np.cumsum(self.drift_rates[d_ind]*self.dt, axis=0))
         plt.axhline(y=1.0, color='k', linestyle='--', label='bound')
         plt.title(f"DV simulation")
         plt.xlabel("Time (s)")
