@@ -212,21 +212,21 @@ class SelfMotionDDM:
         hdgs, hdg_inds = np.unique(X['heading'], return_inverse=True)
         hdgs = hdgs.astype(float)
 
-        k_scale = 1e3
+        K_SCALE_FACTOR = 5e4
         if not self.stim_scaling:
             b_ves, b_vis = np.ones_like(self.tvec), np.ones_like(self.tvec)
         elif isinstance(self.stim_scaling, tuple):
             b_ves, b_vis = self.stim_scaling
         else:
             b_ves, b_vis = get_stim_urgs(self.tvec)
-            k_scale = 5e3
-            
+            K_SCALE_FACTOR = 1e4
+
         b_ves /= len(b_ves)
         b_vis /= len(b_vis)
         b_vals = [b_ves, b_vis, np.vstack((b_ves, b_vis)).T]
 
         # handle parameters per modality
-        kves, kvis = self._handle_kmult(self.params_['kmult'], cohs.T, k_scale=k_scale) 
+        kves, kvis = self._handle_kmult(self.params_['kmult'], cohs.T, k_scale=K_SCALE_FACTOR) 
         bound = self._handle_param_mod(self.params_['bound'], mods)  
         non_dec_time = self._handle_param_mod(self.params_['non_dec_time'], mods)  
         thetas = self._handle_param_mod(self.params_['wager_thr'], mods)  
