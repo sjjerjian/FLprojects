@@ -179,7 +179,8 @@ class Accumulator:
         d_ind,
         sigma=np.array([1, 1]),
         show=False,
-        ):
+        use_vectorized=True
+    ):
         """Return accumulated DV for given drift rate and diffusion noise.
         default sigma is set to [1,1] for consistency with MOI model which assumes unit variance
         """
@@ -188,7 +189,8 @@ class Accumulator:
                 mu=self.drift_rates[d_ind],
                 dt=self.dt.item(),
                 s=sigma,
-                num_images=self.num_images
+                num_images=self.num_images,
+                use_vectorized=use_vectorized
             )
 
         if not show:
@@ -204,6 +206,7 @@ class Accumulator:
         plt.axhline(y=1.0, color='k', linestyle='--', label='bound')
         plt.title(f"DV simulation")
         plt.xlabel("Time (s)")
+        plt.ylabel("DV (arb. units)")
         return dv, fig
 
     def compute_distrs(self, use_vectorized=True, return_pdf=False):
