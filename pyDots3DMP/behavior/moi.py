@@ -252,24 +252,12 @@ def moi_cdf(
     0.025 seems to work ok for now.
 
     """
+
     sigma, k = _corr_num_images(num_images)
+    s0, bound0, bound1, bound2 = _get_s0_and_bounds(bound, margin_width)
 
     survival_prob = np.ones_like(tvec)
     flux1, flux2 = np.zeros_like(tvec), np.zeros_like(tvec)
-
-    s0, bound0, bound1, bound2 = _get_s0_and_bounds(bound, margin_width)
-
-    # for under the hood call to mvnun
-    if USE_MVNUN:
-        low = np.asarray([-np.inf, -np.inf]) # evaluate cdf from -inf to 0 (bound)
-        opts = dict(maxpts=None, abseps=1e-5, releps=1e-5)
-
-    # calling the lower-level Fortran for generating the mv normal distribution is MUCH MUCH faster
-    # lots of overhead associated with repeated calls of mvn.cdf...
-    # downside is that this is a private function, so have to be more careful as it skips a lot of
-    # typical checks e.g. on positive definite-ness of cov matrix. It could also change in 
-    # future Scipy releases without warning...
-    # https://stackoverflow.com/questions/76524943/how-to-compute-faster-scipy-stats-multivariate-normal-cdf-a-large-number-of-ti
 
     # mu_T = mu * tvec[:,None]
 
@@ -284,49 +272,32 @@ def moi_cdf(
         mu_t = mu_T[t, :]
 
         # define frozen mv object
-        if not USE_MVNUN:
-            mvn_0 = mvn(mean=s0 + mu_t, cov=sigma * t_curr)
-            mvn_0.maxpts = 10000*2
+        mvn_0 = mvn(mean=s0 + mu_t, cov=sigma * t_curr)
+        mvn_0.maxpts = 10000*2
 
-            # total density within boundaries
-            cdf_rest = mvn_0.cdf(bound0)
+        # total density within boundaries
+        cdf_rest = mvn_0.cdf(bound0)
 
-            # density beyond boundary, in one or other direction
-            cdf1 = mvn_0.cdf(bound1) - cdf_rest
-            cdf2 = mvn_0.cdf(bound2) - cdf_rest
-
-        else:
-            # total density within boundaries
-            cdf_rest = _mvn.mvnun(low, bound0, s0 + mu_t, sigma * t_curr, **opts)[0]
-
-            # density beyond boundary, in one or other direction
-            cdf1 = _mvn.mvnun(low, bound1, s0 + mu_t, sigma * t_curr, **opts)[0] - cdf_rest
-            cdf2 = _mvn.mvnun(low, bound2, s0 + mu_t, sigma * t_curr, **opts)[0] - cdf_rest
+        # density beyond boundary, in one or other direction
+        cdf1 = mvn_0.cdf(bound1) - cdf_rest
+        cdf2 = mvn_0.cdf(bound2) - cdf_rest
 
         # loop over images
         for j in range(1, k*2):
             sj = _sj_rot(j, s0, k)
 
-            if not USE_MVNUN:
-                mvn_j = mvn(mean=sj + mu_t, cov=sigma * t_curr)
-                mvn_j.maxpts = 10000*2
+            mvn_j = mvn(mean=sj + mu_t, cov=sigma * t_curr)
+            mvn_j.maxpts = 10000*2
 
-                # total density WITHIN boundaries for jth image
-                cdf_add = mvn_j.cdf(bound0)
+            # total density WITHIN boundaries for jth image
+            cdf_add = mvn_j.cdf(bound0)
 
-                # density BEYOND boundary in one or other direction, for jth image
-                cdf_add1 = mvn_j.cdf(bound1) - cdf_add
-                cdf_add2 = mvn_j.cdf(bound2) - cdf_add
+            # density BEYOND boundary in one or other direction, for jth image
+            cdf_add1 = mvn_j.cdf(bound1) - cdf_add
+            cdf_add2 = mvn_j.cdf(bound2) - cdf_add
 
-            else:
-                # total density WITHIN boundaries for jth image
-                cdf_add = _mvn.mvnun(low, bound0, sj + mu_t, sigma * t_curr, **opts)[0]
-
-                # density BEYOND boundary in one or other direction, for jth image
-                cdf_add1 = _mvn.mvnun(low, bound1, sj + mu_t, sigma * t_curr, **opts)[0] - cdf_add
-                cdf_add2 = _mvn.mvnun(low, bound2, sj + mu_t, sigma * t_curr, **opts)[0] - cdf_add
-
-            a_j = _weightj(j, mu[t, :].T, sigma, sj, s0)
+            a_j = _weightj(j, mu_t, sigma, sj, s0)
+            # a_j = _weightj(j, mu[t, :].T, sigma, sj, s0)
             cdf_rest += (a_j * cdf_add)
             cdf1 += (a_j * cdf_add1)
             cdf2 += (a_j * cdf_add2)
@@ -347,6 +318,76 @@ def moi_cdf(
     return cdf_result(p_up, rt_dist, flux1, flux2)
 
 
+def moi_cdf_mvnun(
+    tvec: np.ndarray,
+    mu: np.ndarray,
+    bound=np.array([1, 1]),
+    margin_width: float = 0.025,
+    num_images: int = 7,
+    ) -> cdf_result:
+    
+    # calling the lower-level Fortran for generating the mv normal distribution is MUCH MUCH faster
+    # lots of overhead associated with repeated calls of mvn.cdf...
+    # downside is that this is a private function, so have to be more careful as it skips a lot of
+    # typical checks e.g. on positive definite-ness of cov matrix. It could also change in 
+    # future Scipy releases without warning...
+    # https://stackoverflow.com/questions/76524943/how-to-compute-faster-scipy-stats-multivariate-normal-cdf-a-large-number-of-ti
+
+    from scipy.stats import multivariate_normal as _mvn
+    
+    sigma, k = _corr_num_images(num_images)
+    s0, bound0, bound1, bound2 = _get_s0_and_bounds(bound, margin_width)
+
+    survival_prob = np.ones_like(tvec)
+    flux1, flux2 = np.zeros_like(tvec), np.zeros_like(tvec)
+
+    low = np.asarray([-np.inf, -np.inf]) # evaluate cdf from -inf to 0 (bound)
+    opts = dict(maxpts=None, abseps=1e-5, releps=1e-5)
+
+    # mu_T = mu * tvec[:,None]
+
+    # integrate drift for particle position in linear time
+    dt = tvec[1] - tvec[0]
+    mu_T = np.cumsum(np.insert(mu[:-1], 0, 0, 0) * dt, axis=0)
+
+    # skip the first sample (t starts at 1)
+    for t in range(1, len(tvec)):
+
+        t_curr = np.clip(tvec[t], a_min=1e-8, a_max=None)
+        mu_t = mu_T[t, :]
+
+        cdf_rest = _mvn.mvnun(low, bound0, s0 + mu_t, sigma * t_curr, **opts)[0]
+
+        # density beyond boundary, in one or other direction
+        cdf1 = _mvn.mvnun(low, bound1, s0 + mu_t, sigma * t_curr, **opts)[0] - cdf_rest
+        cdf2 = _mvn.mvnun(low, bound2, s0 + mu_t, sigma * t_curr, **opts)[0] - cdf_rest
+
+        # loop over images
+        for j in range(1, k*2):
+            sj = _sj_rot(j, s0, k)
+
+            cdf_add = _mvn.mvnun(low, bound0, sj + mu_t, sigma * t_curr, **opts)[0]
+
+            # density BEYOND boundary in one or other direction, for jth image
+            cdf_add1 = _mvn.mvnun(low, bound1, sj + mu_t, sigma * t_curr, **opts)[0] - cdf_add
+            cdf_add2 = _mvn.mvnun(low, bound2, sj + mu_t, sigma * t_curr, **opts)[0] - cdf_add
+
+            a_j = _weightj(j, mu_t, sigma, sj, s0)
+            # a_j = _weightj(j, mu[t, :].T, sigma, sj, s0)
+            cdf_rest += (a_j * cdf_add)
+            cdf1 += (a_j * cdf_add1)
+            cdf2 += (a_j * cdf_add2)
+
+        survival_prob[t] = cdf_rest
+        flux1[t] = cdf1
+        flux2[t] = cdf2
+
+    p_up = np.sum(flux2) / np.sum(flux1 + flux2)
+    rt_dist = np.diff(np.insert(1-survival_prob, 0, 0))
+
+    return cdf_result(p_up, rt_dist, flux1, flux2)
+
+
 def moi_cdf_vec(
     tvec: np.ndarray,
     mu: np.ndarray,
@@ -354,7 +395,7 @@ def moi_cdf_vec(
     margin_width: float = 0.025,
     num_images: int = 7,
     bvn_n: int = 128,
-) -> cdf_result:
+    ) -> cdf_result:
     """
     Vectorized moi CDF over times (T) and images (J).
     Uses vectorized bivariate normal CDF implementation
@@ -364,8 +405,8 @@ def moi_cdf_vec(
     
     Returns same outputs as `moi_cdf`:
     """
+    
     sigma, k = _corr_num_images(num_images)
-
     s0, bound0, bound1, bound2 = _get_s0_and_bounds(bound, margin_width)
 
     tvec_safe = np.clip(tvec, a_min=1e-8, a_max=None)
