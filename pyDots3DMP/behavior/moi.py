@@ -259,11 +259,11 @@ def moi_cdf(
     survival_prob = np.ones_like(tvec)
     flux1, flux2 = np.zeros_like(tvec), np.zeros_like(tvec)
 
-    # mu_T = mu * tvec[:,None]
+    mu_T = mu * tvec[:,None]
 
     # integrate drift for particle position in linear time
-    dt = tvec[1] - tvec[0]
-    mu_T = np.cumsum(np.insert(mu[:-1], 0, 0, 0) * dt, axis=0)
+    # dt = tvec[1] - tvec[0]
+    # mu_T = np.cumsum(np.insert(mu[:-1], 0, 0, 0) * dt, axis=0)
 
     # skip the first sample (t starts at 1)
     for t in range(1, len(tvec)):
@@ -296,8 +296,8 @@ def moi_cdf(
             cdf_add1 = mvn_j.cdf(bound1) - cdf_add
             cdf_add2 = mvn_j.cdf(bound2) - cdf_add
 
-            a_j = _weightj(j, mu_t, sigma, sj, s0)
-            # a_j = _weightj(j, mu[t, :].T, sigma, sj, s0)
+            # a_j = _weightj(j, mu_t, sigma, sj, s0)
+            a_j = _weightj(j, mu[t, :].T, sigma, sj, s0)
             cdf_rest += (a_j * cdf_add)
             cdf1 += (a_j * cdf_add1)
             cdf2 += (a_j * cdf_add2)
@@ -344,11 +344,11 @@ def moi_cdf_mvnun(
     low = np.asarray([-np.inf, -np.inf]) # evaluate cdf from -inf to 0 (bound)
     opts = dict(maxpts=None, abseps=1e-5, releps=1e-5)
 
-    # mu_T = mu * tvec[:,None]
+    mu_T = mu * tvec[:,None]
 
     # integrate drift for particle position in linear time
-    dt = tvec[1] - tvec[0]
-    mu_T = np.cumsum(np.insert(mu[:-1], 0, 0, 0) * dt, axis=0)
+    # dt = tvec[1] - tvec[0]
+    # mu_T = np.cumsum(np.insert(mu[:-1], 0, 0, 0) * dt, axis=0)
 
     # skip the first sample (t starts at 1)
     for t in range(1, len(tvec)):
@@ -373,7 +373,6 @@ def moi_cdf_mvnun(
             cdf_add2 = _mvn.mvnun(low, bound2, sj + mu_t, sigma * t_curr, **opts)[0] - cdf_add
 
             a_j = _weightj(j, mu_t, sigma, sj, s0)
-            # a_j = _weightj(j, mu[t, :].T, sigma, sj, s0)
             cdf_rest += (a_j * cdf_add)
             cdf1 += (a_j * cdf_add1)
             cdf2 += (a_j * cdf_add2)
@@ -416,9 +415,10 @@ def moi_cdf_vec(
     sj_all = np.vstack(sj_list)             # (J,2)
     
     # means: (T, J, 2)
-    # mu_t = mu * tvec_safe[:, None]         # (T,2)
-    dt = tvec[1] - tvec[0]
-    mu_t = np.cumsum(np.insert(mu[:-1], 0, 0, 0) * dt, axis=0)
+    mu_t = mu * tvec_safe[:, None]         # (T,2)
+    # dt = tvec[1] - tvec[0]
+    # mu_t = np.cumsum(np.insert(mu[:-1], 0, 0, 0) * dt, axis=0)
+    
     means = mu_t[:, None, :] + sj_all[None, :, :]  # (T,J,2)
 
     # weights: (T, J)
@@ -429,6 +429,7 @@ def moi_cdf_vec(
     weights = signs[None, :] * np.exp(exponent)
 
     sd = np.sqrt(tvec_safe)[:, None]        # (T,1)
+    sd = np.clip(sd, a_min=0.1, a_max=None)
     rho_param = sigma[0, 1]
 
     # standardized limits shape (T,J)

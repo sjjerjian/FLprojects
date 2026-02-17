@@ -82,28 +82,23 @@ class Accumulator:
         urgency: Optional[Union[np.ndarray,float]] = None
         ):
         """
-        Set accumulator drift rates. Optionally add label for each drift.
-        This also adds a mirrored drift rate for the anti-correlated accumulator, and 
-        updates drift rates based on sensitivity and urgency parameters.
+        Set drift rates for anti-correlated accumulators.
         """
 
         if isinstance(drifts, np.ndarray):
             drifts = np.split(drifts, drifts.shape[1], axis=1)
-        
-        # add corresponding negated value for anti-correlated accumulator
-        # also update drift rates based on sensitivity and urgency, if provided
 
         if labels is None:
             labels = list(range(len(drifts)))
-
-        assert len(drifts) == len(labels), "drift rates and provided labels must match in length"
         self.drift_labels = labels
+
+        assert len(drifts) == len(labels), "drift rates and labels \
+            must have the same number of elements"
         
-        for d, drift in enumerate(drifts):
-            drift = drift * np.array([1, -1])
-            drifts_posneg = _urgency_scaling(drift * sensitivity, self.tvec, urgency)
-            # drifts_posneg = np.cumsum(drifts_posneg * self.dt, axis=0)
-            self.drift_rates.append(drifts_posneg)
+        for drift in drifts:
+            drift2 = drift * np.array([1, -1])
+            drift2 = np.broadcast_to(drift2, (self.tvec.size, 2))
+            self.drift_rates.append(drift2)
             
     def cdf(self, use_vectorized: bool = True):
         """calculate cdf at boundaries for each drift rate, returns

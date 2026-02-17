@@ -212,7 +212,7 @@ class SelfMotionDDM:
         hdgs, hdg_inds = np.unique(X['heading'], return_inverse=True)
         hdgs = hdgs.astype(float)
 
-        K_SCALE_FACTOR = 5e4
+        K_SCALE_FACTOR = 1e3
         if not self.stim_scaling:
             b_ves, b_vis = np.ones_like(self.tvec), np.ones_like(self.tvec)
         elif isinstance(self.stim_scaling, tuple):
@@ -250,13 +250,14 @@ class SelfMotionDDM:
                 # set accumulators with absolute drifts, for log odds mappings
                 accumulator = Accumulator(grid_vec=self.grid_vec, tvec=self.tvec, bound=bound[m])
 
-                abs_drifts, accumulator.tvec = calc_selfmotion_drifts(
+                abs_drifts, t_eff = calc_selfmotion_drifts(
                     b_vals[m], k_vals_fixed[m], self.tvec, hdgs[hdgs>=0], delta=0,
                     )
+                accumulator.tvec = t_eff
 
                 # run the method of images - diffusion to bound to extract pdfs, cdfs, and LPO
                 accumulator.apply_drifts(abs_drifts, hdgs[hdgs>=0])
-                accumulator.compute_distrs(return_pdf=True) # get the pdfs for wager calculation
+                accumulator.compute_distrs(return_pdf=True, use_vectorized=True) # get the pdfs for wager calculation
 
                 if cache_accumulators:
                     self.accumulators_[('wager', mod)] = accumulator
@@ -288,11 +289,13 @@ class SelfMotionDDM:
                     drifts, t_eff = calc_selfmotion_drifts(
                         b_vals[m], k_vals[m], self.tvec, hdgs, delta=delta,
                         )
+                    accumulator.tvec = t_eff
+                    
                     # this time use signed headings
                     accumulator.apply_drifts(drifts, hdgs) 
 
                     # run the method of images - diffusion to bound to extract pdfs, cdfs, and LPO
-                    accumulator.compute_distrs(return_pdf=self.return_wager, use_vectorized=False)
+                    accumulator.compute_distrs(return_pdf=self.return_wager, use_vectorized=True)
 
                     if cache_accumulators:
                         self.accumulators_[(mod, coh, delta)] = accumulator
@@ -618,11 +621,12 @@ def calc_selfmotion_drifts(
     sin_hdgs = np.sin(np.deg2rad(hdgs))
     dt = np.gradient(tvec)
 
+    cumul_bt = np.cumsum((b_t**2)/(b_t**2).sum(axis=0), axis=0)
+    
     if isinstance(b_k, (int, float)):
         # only one sensitivity and time-course - ves or vis (logic is the same)
-        b_t = b_t.reshape(-1, 1)
-        t_eff = np.cumsum(b_t**2, axis=0) * dt
-        drifts = b_t**2 * b_k * sin_hdgs # see Drugowitsch et al. 2014 supp eq 2 & 7
+        t_eff = cumul_bt * tvec[-1]
+        drifts = np.reshape(b_t, (-1, 1))**2 * b_k * sin_hdgs # see Drugowitsch et al. 2014 supp eq 2 & 7
         # drifts = b_k * sin_uhdgs   # w/o stim scaling, reduces to this
 
     elif len(b_k) == 2:
@@ -642,7 +646,9 @@ def calc_selfmotion_drifts(
         drifts = w_ves * drift_ves + w_vis * drift_vis
 
         # Drugowitsch et al. 2014 supp eq 14
-        t_eff = w_ves**2 * b_t[:,0]**2 + w_vis**2 * b_t[:,1]**2
-        t_eff = np.cumsum(t_eff) * dt
+        t_eff = (w_ves**2 * cumul_bt[:,0] + w_vis**2 * cumul_bt[:,1]) * tvec[-1]
+
+    # cumsum over time, then divide by t_eff to get instantaneous drifts
+    drifts = np.cumsum(drifts, axis=0) / t_eff[:, None]
 
     return drifts, t_eff
