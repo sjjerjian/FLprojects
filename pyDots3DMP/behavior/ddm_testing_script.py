@@ -1,6 +1,6 @@
-# DDM Testing Script
+# %% # DDM Testing Script
 
-# %%
+
 import time
 
 import numpy as np
@@ -11,7 +11,7 @@ from behavior.Accumulator import Accumulator
 
 from behavior.selfmotionddm import SelfMotionDDM, get_stim_urgs
 from behavior.utils import dots3DMP_create_trial_list
-from behavior.descriptive import plot_behavior_hdg, gauss_fit_hdg_group
+from behavior.descriptive import plot_behavior_hdg, behavior_means
 
 def tic():
     return time.perf_counter()
@@ -30,7 +30,7 @@ time_vec = np.arange(0, 2, 0.025)
 
 acc, vel = get_stim_urgs(time_vec)
 
-# %% demonstrate use of single Accumulator object
+# %% ==== demonstrate use of single Accumulator object ====
 
 drifts = [0.25, 0.5, 1., 2.]
 accum = Accumulator(
@@ -49,14 +49,14 @@ print(f"Accumulator run took {time_taken:.3f} seconds")
 accum.log_posterior_odds()
 accum.plot();
 
-# %% Plot simulation of actual decision variable
+# %% ==== Plot simulation of actual decision variable ====
 
 # dotted lines show underlying accumulator drifts
 # solid lines show simulated anti-correlated accumulators drawn from sampling
 # black line shows the bound
 dec_var, dv_fig = accum.dv(d_ind=1, show=True)
 
-# %%
+# %% ==== Initialize DDM object ====
 
 init_params = {
     'kmult': [0.5, 0.5],        # ves, vis sensitivites
@@ -84,16 +84,21 @@ ddm = SelfMotionDDM(
     return_wager=True   # whether to compute pdfs and log odds maps, and return wagers
     )
 
-# %%
+# %% ==== Generate model predictions ====
 
 _, preds_model = ddm.predict(X, n_samples=1, cache_accumulators=True)
 
-# %%
+# %% ==== Plot wager accumulator ====
 ves_accum = ddm.accumulators_[('wager', 1.0)]
 ves_accum.plot()
 
-# %%
-# preds_simul = ddm.simulate(X, n_samples=5, sample_dvs=True, seed=1)
-# all_data = pd.concat((X, preds_model), axis=1)
-# all_data.sort_values(by=['modality', 'coherence', 'heading'])
+# %% ==== Simulate and visualize model predictions ====
+
+preds_simul = ddm.simulate(X, n_samples=100, sample_dvs=True, seed=1)
+all_data = pd.concat((X, preds_model), axis=1)
+all_data.sort_values(by=['modality', 'coherence', 'heading'])
+
+df_means = behavior_means(all_data, by_conds=['modality', 'coherence', 'heading'], long_format=True)
+
+plot_behavior_hdg(df_means, row='variable', col='coherence', hue='modality')
 # %%
