@@ -11,7 +11,7 @@ from behavior.Accumulator import Accumulator
 
 from behavior.selfmotionddm import SelfMotionDDM, get_stim_urgs
 from behavior.utils import dots3DMP_create_trial_list
-from behavior.descriptive import plot_behavior_hdg, behavior_means
+from behavior.descriptive import plot_behavior_hdg, behavior_means, replicate_ves
 
 def tic():
     return time.perf_counter()
@@ -59,7 +59,7 @@ dec_var, dv_fig = accum.dv(d_ind=1, show=True)
 # %% ==== Initialize DDM object ====
 
 init_params = {
-    'kmult': [0.5, 0.5],        # ves, vis sensitivites
+    'kmult': [1, 1.5],        # ves, vis sensitivites
     'bound': [1, 1, 1],         # ves, vis, comb bounds
     'non_dec_time': [0.3],      # non-decision time (secs)
     'wager_thr': [0.5, 0.5, 0.5],     # log odds threshold for high bets
@@ -67,12 +67,11 @@ init_params = {
 }
 
 # generate list of unique conditions
+# default delta=0 and nreps=1
 X = dots3DMP_create_trial_list(
-    hdgs=[-12, -6, -3, 3, 6, 12],
+    hdgs=[-12, -6, -3, 0, 3, 6, 12],
     mods=[1, 2, 3],
     cohs=[0.3, 0.7],
-    deltas=[0],
-    nreps=1
 )
 
 # initialize DDM object (just for inference/prediction)
@@ -86,19 +85,33 @@ ddm = SelfMotionDDM(
 
 # %% ==== Generate model predictions ====
 
-_, preds_model = ddm.predict(X, n_samples=1, cache_accumulators=True)
+_, preds_model = ddm.predict(X, n_samples=5000, cache_accumulators=True)
 
 # %% ==== Plot wager accumulator ====
 ves_accum = ddm.accumulators_[('wager', 1.0)]
 ves_accum.plot()
 
+
 # %% ==== Simulate and visualize model predictions ====
 
-preds_simul = ddm.simulate(X, n_samples=100, sample_dvs=True, seed=1)
-all_data = pd.concat((X, preds_model), axis=1)
-all_data.sort_values(by=['modality', 'coherence', 'heading'])
+# Note the errorbars here aren't "real" because we haven't really simulated trials,
+# we've just drawn the probabilities for n_sample predictions for each of the unique conditions
+# in general, we would use these preds_model as the data_fit points rather than the observations
 
-df_means = behavior_means(all_data, by_conds=['modality', 'coherence', 'heading'], long_format=True)
+preds_full = pd.concat((X, preds_model), axis=1)
+preds_full = replicate_ves(preds_full) 
+preds_full.sort_values(by=['modality', 'coherence', 'heading'])
 
-plot_behavior_hdg(df_means, row='variable', col='coherence', hue='modality')
+df_means = behavior_means(preds_full, by_conds=['modality', 'coherence', 'heading'], long_format=True)
+
+mod_map = {1: "ves", 2: "vis", 3: "comb"}
+df_means['modality'] = df_means['modality'].map(mod_map)
+
+plot_behavior_hdg(
+    df_means,
+    col='coherence',
+    hue='modality',
+    palette=['k', 'r', 'b'],
+    hue_order=['ves', 'vis', 'comb'],
+    )
 # %%

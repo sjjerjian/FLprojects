@@ -186,9 +186,15 @@ def cue_weighting(fit_results):
 # %%
 
 
-def plot_behavior_hdg(data_obs, data_fit: Optional[pd.DataFrame] = None,
-                      row: str = 'variable', col: str ='coherence',
-                      hue: str = 'modality', palette=sns.color_palette(), **fig_kwargs):
+def plot_behavior_hdg(
+    data_obs,
+    data_fit: Optional[pd.DataFrame] = None,
+    row: str = 'variable',
+    col: str ='coherence',
+    hue: str = 'modality',
+    palette=sns.color_palette(),        
+    **fig_kwargs
+    ):  
 
     def _errbar_plot(x, y, yerr, **kwargs):
         plt.errorbar(x, y, yerr, **kwargs)
@@ -198,11 +204,10 @@ def plot_behavior_hdg(data_obs, data_fit: Optional[pd.DataFrame] = None,
                       palette=palette, sharey=False,
                       **fig_kwargs)
 
-    ln_stl = ''
-    if data_fit is None:
-        ln_stl = '-'
-    g.map_dataframe(_errbar_plot, 'heading', 'mean', 'se',
-                    linestyle=ln_stl, marker='.')
+    line_style = '-' if data_fit is None else ''
+    g.map_dataframe(
+        _errbar_plot, 'heading', 'mean', 'se', linestyle=line_style, marker='.'
+        )
 
     # overlay the fit data as a line
     for ax_key, ax in g.axes_dict.items():
@@ -214,17 +219,24 @@ def plot_behavior_hdg(data_obs, data_fit: Optional[pd.DataFrame] = None,
                 ax_data = data_fit.copy()
                 y = ax_key
 
-            sns.lineplot(data=ax_data, x='heading', y=y,
-                         hue=hue, ax=ax, palette=palette, legend=False)
+            sns.lineplot(
+                data=ax_data,
+                x='heading',
+                y=y,
+                hue=hue,
+                ax=ax,
+                palette=palette,
+                label=ax_key
+                )
 
         ax.set_title("")
         if 'choice' in ax_key:
             ax.set_title(f"coh = {ax_key[1]}")
             ax.set_ylim([0, 1])
-            ax.set_ylabel('prop. right')
+            ax.set_ylabel('prop. right choices')
         elif 'PDW' in ax_key:
             ax.set_ylim([0, 1])
-            ax.set_ylabel('prop. high')
+            ax.set_ylabel('prop. high bets')
         elif 'RT' in ax_key:
             # ax.set_ylim([0.5, 1.2])
             ax.set_ylabel('mean RT (s)')
@@ -233,7 +245,7 @@ def plot_behavior_hdg(data_obs, data_fit: Optional[pd.DataFrame] = None,
         ax.set_xticks(xhdgs)
         ax.set_xticklabels(xhdgs, rotation=40, ha='right')
 
-    # TODO add legend back in
+    g.add_legend(title="modality")
     plt.show()
 
     return g
