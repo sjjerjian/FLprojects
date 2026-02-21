@@ -85,7 +85,7 @@ ddm = SelfMotionDDM(
 
 # %% ==== Generate model predictions ====
 
-_, preds_model = ddm.predict(X, n_samples=5000, cache_accumulators=True)
+_, preds_model = ddm.predict(X, n_samples=1, cache_accumulators=True)
 
 # %% ==== Plot wager accumulator ====
 ves_accum = ddm.accumulators_[('wager', 1.0)]
@@ -94,10 +94,14 @@ ves_accum.plot()
 
 # %% ==== Simulate and visualize model predictions ====
 
-# Note the errorbars here aren't "real" because we haven't really simulated trials,
-# we've just drawn the probabilities for n_sample predictions for each of the unique conditions
-# in general, we would use these preds_model as the data_fit points rather than the observations
-
+# here we generate 100 trials of each condition, then set n_samples to 1 to get a 0/1 choice etc
+X = dots3DMP_create_trial_list(
+    hdgs=[-12, -6, -3, 0, 3, 6, 12],
+    mods=[1, 2, 3],
+    cohs=[0.3, 0.7],
+    nreps=100,
+)
+_, preds_model = ddm.predict(X, n_samples=1)
 preds_full = pd.concat((X, preds_model), axis=1)
 preds_full = replicate_ves(preds_full) 
 preds_full.sort_values(by=['modality', 'coherence', 'heading'])
@@ -114,4 +118,15 @@ plot_behavior_hdg(
     palette=['k', 'r', 'b'],
     hue_order=['ves', 'vis', 'comb'],
     )
+# %% =====  DV simulation =====
+
+
+
+# %% ==== fit model
+
+y = preds_model
+fixed_params = ["non_dec_time", "wager_alpha"]
+ddm.fit(X, y, method='Nelder-Mead')
+
+
 # %%
