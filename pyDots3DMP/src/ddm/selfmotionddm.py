@@ -15,7 +15,7 @@ from scipy.signal import convolve
 from scipy.stats import norm, skewnorm, truncnorm
 from scipy.optimize import minimize
 
-from .utils import log_lik_bin, log_lik_cont, margconds_from_intersection
+from behavior.utils import log_lik_bin, log_lik_cont, margconds_from_intersection
 from .Accumulator import Accumulator
 
 logger = logging.getLogger(__name__)

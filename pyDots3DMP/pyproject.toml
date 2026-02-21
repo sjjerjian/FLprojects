@@ -13,7 +13,7 @@ requires-python = ">=3.12"
 dependencies = [
     "ipywidgets>=8.1.8",
     "matplotlib>=3.10.8",
-    "numpy>=2.4.0",
+    "numpy>=2.4.2",
     "pandas>=2.3.3",
     "pybads>=1.0.6",
     "scikit-learn>=1.8.0",
@@ -27,3 +27,10 @@ interactive = [
     "ipykernel>=7.1.0",
     "ipympl>=0.9.8",
 ]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]

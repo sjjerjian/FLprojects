@@ -7,9 +7,9 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from behavior.Accumulator import Accumulator
+from ddm.Accumulator import Accumulator
 
-from behavior.selfmotionddm import SelfMotionDDM, get_stim_urgs
+from ddm.selfmotionddm import SelfMotionDDM, get_stim_urgs
 from behavior.utils import dots3DMP_create_trial_list
 from behavior.descriptive import plot_behavior_hdg, behavior_means, replicate_ves
 
