@@ -75,7 +75,7 @@ class SelfMotionDDM:
         X: pd.DataFrame,
         y: pd.DataFrame,
         fixed_params: Optional[list[str]]=None,
-        # optim_bounds: Optional[Union[OptimBounds, dict]]=None,
+        method='bads',
         ) -> 'SelfMotionDDM':
         """fit model to data in X and y, with optional fixed parameters"""
 
@@ -96,10 +96,8 @@ class SelfMotionDDM:
             # pass data as fixed inputs to objective function
             optim_fcn_part = lambda params: self._objective_fcn(params, X, y)
 
-            min_method = 'bads'
-            # min_method = 'Nelder-Mead'
             
-            if min_method == 'bads':
+            if method.lower() == 'bads':
 
                 lb = params_array * 0.25
                 ub = params_array * 3.0
@@ -128,7 +126,7 @@ class SelfMotionDDM:
                     self._objective_fcn,
                     params_array,
                     args=(X, y),
-                    method=min_method,
+                    method=method,
                     options={'maxiter': 5000, 'disp': True}
                     )
                 
