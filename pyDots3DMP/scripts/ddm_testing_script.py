@@ -7,9 +7,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from ddm.Accumulator import Accumulator
-
-from ddm.selfmotionddm import SelfMotionDDM, get_stim_urgs
+from ddm import Accumulator, SelfMotionDDM, get_stim_urgs
 from behavior.utils import dots3DMP_create_trial_list
 from behavior.descriptive import plot_behavior_hdg, behavior_means, replicate_ves
 
@@ -23,7 +21,6 @@ def toc(tstart):
 # NOTE: 
 # going too low on time_vec (like 0.01) can start to introduce some weirdness
 # other values also have sweet spots e.g. bound ~1 and grid_vec -3 --> 0.
-# e.g. try changing the bound to 3...weird stuff happens.
 
 grid_vec = np.arange(-3, 0, 0.01) 
 time_vec = np.arange(0, 2, 0.025)   
