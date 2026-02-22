@@ -171,6 +171,8 @@ X_pred = dots3DMP_create_trial_list(
     shuff=False,
 )
 
+# use the wager maps from fitting to the short list of headings, don't recompute them with the full heading range
+preds_, preds_samples = ddm_fit.predict(X_pred, n_samples=100, use_cached_wager_maps=True)
 preds_['RT'] = preds_samples['RT']
 
 preds_full = pd.concat((X_pred, preds_), axis=1)

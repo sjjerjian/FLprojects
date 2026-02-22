@@ -32,9 +32,10 @@ class SelfMotionDDM:
         kmult: list = [0.3, 0.3],
         bound: list = [1., 1., 1.],
         non_dec_time: list = [0.3],
+        return_wager: bool = True,
         wager_thr: list = [1.],
         wager_alpha: list = [0.05],
-        return_wager: bool = True,
+        wager_maps: Optional[list] = None,
         wager_axis: Optional[int] = None,
         stim_scaling: Union[tuple[np.ndarray, np.ndarray], bool] = True,
         ):
@@ -44,9 +45,10 @@ class SelfMotionDDM:
         :param kmult: list of k multipliers [k_ves, k_vis]
         :param bound: list of bounds per modality [ves, vis, comb]      
         :param non_dec_time: list of non-decision times per modality
+        :param return_wager: whether to compute/return wager predictions
         :param wager_thr: list of wager thresholds per modality
         :param wager_alpha: list of wager alpha parameters per modality
-        :param return_wager: whether to compute wager predictions
+        :param wager_maps: list of existing wager maps to use for predictions
         :param wager_axis: axis for wager calculation (None = log odds)
         :param stim_scaling: whether to use stimulus-driven urgency signals
         """
@@ -55,9 +57,10 @@ class SelfMotionDDM:
         self.kmult = kmult
         self.bound = bound
         self.non_dec_time = non_dec_time
+        self.return_wager = return_wager
         self.wager_thr = wager_thr
         self.wager_alpha = wager_alpha
-        self.return_wager = return_wager
+        self.wager_maps = wager_maps
         self.wager_axis = wager_axis
         self.stim_scaling = stim_scaling
         # TODO add init option to set whether to use vectorized accumulator cdf/pdf calculations
@@ -69,7 +72,6 @@ class SelfMotionDDM:
 
         self.accumulators_ = {}  # cache of accumulators per condition if desired
 
-       
     def fit(
         self,
         X: pd.DataFrame,
@@ -145,7 +147,7 @@ class SelfMotionDDM:
         # combine params array passed to objective function with fixed params
         # to reconstruct full params dict expected by custom predict method
         self._build_params_dict(params_array, self.param_end_inds, fixed_params)
-        logger.info(params_array)
+        # logger.info(params_array)
         # print('Current params: %s', {k: [round(vv, 2) for vv in v] for k, v in self.params_.items()})
 
         t0_pred = time.perf_counter()
@@ -175,13 +177,13 @@ class SelfMotionDDM:
 
         return self.neg_llh_
 
-
     def predict(
         self,
         X,
         y=None,
         n_samples: int=1,
-        cache_accumulators=False,
+        cache_accumulators: bool = False,
+        use_cached_wager_maps: bool = False,
         seed=None
         ):
         """
@@ -189,6 +191,8 @@ class SelfMotionDDM:
         :param X: DataFrame with columns modality, coherence, delta, heading
         :param y: DataFrame with columns choice, PDW, RT (for RT likelihood calculation)
         :param n_samples: number of samples to draw for probabilistic predictions (0 = none)
+        :param cache_accumulators: (default = False) whether to cache accumulator objects
+        :param use_cached_wager_maps: (default = True) whether to use existing cached_wager_maps
         :param seed: random seed for sampling
         :return: 
             predictions - DataFrame with columns choice, PDW, RT (predicted likelihoods)
@@ -223,15 +227,16 @@ class SelfMotionDDM:
         thetas = self._handle_param_mod(self.params_['wager_thr'], mods)  
         alphas = self._handle_param_mod(self.params_['wager_alpha'], mods)  
 
-
         # initialize predictions dataframes
         predictions = pd.DataFrame(
             np.full((X.shape[0], 3), fill_value=np.nan), columns=['choice', 'PDW', 'RT']
             )
         pred_sample = deepcopy(predictions) if n_samples else None
 
-        self.wager_maps = []
-        if self.return_wager:
+        # compute wager maps if not existing, or cache not requested
+        if self.return_wager and (not use_cached_wager_maps or not self.wager_maps):
+
+            self.wager_maps = []
 
             # ves, vis, comb overall sensitivities
             k_vals_fixed = [kves, kvis.mean().item(), [kves, kvis.mean().item()]]
@@ -259,7 +264,8 @@ class SelfMotionDDM:
                 else:
                     raise NotImplementedError('alternatives to log odds not yet implemented')
 
-                wager_is_high = [p >= theta for p, theta in zip(self.wager_maps, thetas)]
+        # boolean mask on wager map for high bets
+        wager_is_high = [p >= theta for p, theta in zip(self.wager_maps, thetas)]
 
         # now loop over coherences and deltas with one accumulator each for actual predictions
         for c, coh in enumerate(cohs):
@@ -341,7 +347,7 @@ class SelfMotionDDM:
                             p_wager += np.array([-alphas[m], alphas[m]]) * p_wager[0]
                             p_wager = np.clip(p_wager, 1e-100, 1-1e-100)
 
-                            predictions.loc[trial_index, 'PDW'] = p_wager[0]
+                            predictions.loc[trial_index, 'PDW'] = p_wager[0] # proportion of high bets
 
                             if n_samples:
                                 pred_sample.loc[trial_index, 'PDW'] = rng.binomial(n_samples, p_wager[0], trial_index.sum()) / n_samples
@@ -372,6 +378,8 @@ class SelfMotionDDM:
                                 self.tvec, (trial_index.sum(), n_samples), replace=True, p=rt_dist
                                 )
                             pred_sample.loc[trial_index, 'RT'] = sampled_RTs.mean(axis=1)
+                        else:
+                            pred_sample.loc[trial_index, 'RT'] = np.dot(self.tvec, rt_dist)
 
         return predictions, pred_sample
     
