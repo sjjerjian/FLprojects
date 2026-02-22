@@ -181,9 +181,10 @@ class SelfMotionDDM:
         self,
         X,
         y=None,
-        n_samples: int=1,
+        n_samples: int = 1,
         cache_accumulators: bool = False,
         use_cached_wager_maps: bool = False,
+        rt_sampling_method: Literal["sample", "mean", "mode"] = "sample",
         seed=None
         ):
         """
@@ -193,10 +194,15 @@ class SelfMotionDDM:
         :param n_samples: number of samples to draw for probabilistic predictions (0 = none)
         :param cache_accumulators: (default = False) whether to cache accumulator objects
         :param use_cached_wager_maps: (default = True) whether to use existing cached_wager_maps
+        :param rt_sampling_method: (default="sample) how to draw predicted RTs from distribution - options are "sample", "mean", or "mode"
         :param seed: random seed for sampling
         :return: 
             predictions - DataFrame with columns choice, PDW, RT (predicted likelihoods)
-            pred_sample - DataFrame with sampled predictions (n_samples > 0 -> how many draws from binomial for choice/PDW)
+            pred_sample - DataFrame with sampled predictions, returns None if n_samples == 0 
+                (n_samples > 0 -> 
+                    how many draws from binomial for choice/PDW, or how many samples from RT_dist for RT
+                    if rt_sampling_method is "mean" or "mode", will instead take expected value or argmax of RT_dist
+                )
         """
         
         rng = np.random.RandomState(seed)
@@ -374,12 +380,15 @@ class SelfMotionDDM:
                             predictions.loc[trial_index, 'RT'] = rt_dist[dist_inds]
 
                         if n_samples:
-                            sampled_RTs = np.random.choice(
-                                self.tvec, (trial_index.sum(), n_samples), replace=True, p=rt_dist
-                                )
-                            pred_sample.loc[trial_index, 'RT'] = sampled_RTs.mean(axis=1)
-                        else:
-                            pred_sample.loc[trial_index, 'RT'] = np.dot(self.tvec, rt_dist)
+                            if rt_sampling_method == "sample":
+                                sampled_RTs = np.random.choice(
+                                    self.tvec, (trial_index.sum(), n_samples), replace=True, p=rt_dist
+                                    )
+                                pred_sample.loc[trial_index, 'RT'] = sampled_RTs.mean(axis=1)
+                            elif rt_sampling_method == "mean":
+                                pred_sample.loc[trial_index, 'RT'] = np.dot(self.tvec, rt_dist)
+                            elif rt_sampling_method == "mode":
+                                pred_sample.loc[trial_index, 'RT'] = self.tvec[np.argmax(rt_dist)]
 
         return predictions, pred_sample
     
