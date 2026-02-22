@@ -72,6 +72,12 @@ class SelfMotionDDM:
 
         self.accumulators_ = {}  # cache of accumulators per condition if desired
 
+    def print_params(self, ndigits: int = 4) -> None:
+        """Pretty-print params_ with rounded floats."""
+        rounded = {k: round_val(v, ndigits) for k, v in self.params_.items()}
+        for k, v in rounded.items():
+            print(f"  {k}: {v}")
+
     def to_dict(self) -> dict:
         """Return a JSON-serializable dict of attributes needed to reinstantiate."""
         def to_serializable(v):
@@ -131,6 +137,22 @@ class SelfMotionDDM:
         )
         obj.params_ = {k: v for k, v in params_.items()}
         return obj
+
+    @classmethod
+    def params_table(
+        cls,
+        *instances: "SelfMotionDDM",
+        ndigits: int = 4,
+    ) -> pd.DataFrame:
+        """Build a DataFrame of params_ across one or more instances (rows=instances, columns=param names)."""
+        if not instances:
+            return pd.DataFrame(columns=cls.PARAM_NAMES)
+        rows = [
+            {p: round_val(inst.params_[p], ndigits) for p in cls.PARAM_NAMES}
+            for inst in instances
+        ]
+        return pd.DataFrame(rows, columns=cls.PARAM_NAMES)
+
     def fit(
         self,
         X: pd.DataFrame,
@@ -719,3 +741,14 @@ def calc_selfmotion_drifts(
     drifts = np.cumsum(drifts, axis=0) / t_eff[:, None]
 
     return drifts, t_eff
+
+
+# param printing util
+def round_val(v, ndigits):
+    if isinstance(v, np.ndarray):
+        v = v.tolist()
+    if isinstance(v, (list, tuple)):
+        return [round(float(x), ndigits) if isinstance(x, (int, float, np.floating)) else x for x in v]
+    if isinstance(v, (int, float, np.floating)):
+        return round(float(v), ndigits)
+    return v
