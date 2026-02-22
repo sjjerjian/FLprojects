@@ -12,7 +12,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "matplotlib>=3.10.0",
-    "numpy>=2.4.2",
+    "numpy==1.26.4",
     "pandas>=2.3.3",
     "pybads>=1.0.6",
     "scikit-learn>=1.8.0",
