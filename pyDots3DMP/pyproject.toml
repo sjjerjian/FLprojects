@@ -11,8 +11,7 @@ maintainers = [
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "ipywidgets>=8.1.8",
-    "matplotlib>=3.10.8",
+    "matplotlib>=3.10.0",
     "numpy>=2.4.2",
     "pandas>=2.3.3",
     "pybads>=1.0.6",
@@ -20,12 +19,6 @@ dependencies = [
     "scipy>=1.16.3",
     "seaborn>=0.13.2",
     "statsmodels>=0.14.6",
-]
-
-[project.optional-dependencies]
-interactive = [
-    "ipykernel>=7.1.0",
-    "ipympl>=0.9.8",
 ]
 
 [build-system]

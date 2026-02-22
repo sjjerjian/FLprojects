@@ -23,6 +23,7 @@ Python codes for dots3DMP experiments modelling and analysis.
     python -m venv .venv
     source .venv/bin/activate  # macOS / Linux
     pip install -r requirements.txt
+    pip install -e .  # to include the package as an editable install
     ```
 
 ---
