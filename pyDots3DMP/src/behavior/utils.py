@@ -283,7 +283,7 @@ def dots3DMP_create_trial_list(
     cohs: list,
     deltas: Optional[list] = None,
     nreps: int = 1,
-    shuff: bool = True
+    shuff: bool = False
     ) -> pd.DataFrame:
     """Create a trial list of stimulus conditions for dots3DMP task"""
 
