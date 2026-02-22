@@ -220,37 +220,45 @@ class Accumulator:
         d_ind: int = -1,
         save_path: Optional[str] = None,
         ):
-        """
+        f"""
         Plot summary of accumulator results.
 
         Parameters
         ----------
         d_ind : INT, optional
             index of which drift rate to plot. The default is the last one.
+        save_path: STR, optional
+            path to save figures to (will be saved as <save_path>/cdf.png and /pdf.png)
 
         Returns
         -------
         fig_cdf & fig_pdf: figure handles
         """
+        
         if not hasattr(self, 'p_corr_'):
             raise ValueError('Accumulator distributions have not yet been calculated')
 
-        fig_cdf, axc = plt.subplots(2, 1, figsize=(4, 5))
+        fig_cdf, axc = plt.subplots(2, 1, figsize=(4, 5), constrained_layout=True)
         axc[0].plot(self.drift_labels, self.p_corr_, marker='o')
-        axc[0].set_ylim([0, 1])
+        axc[0].set_ylim([0, 1.05])
         axc[0].set_xlabel('drift rate')
         # axc[0].tick_params()
         # if self.drift_labels:
         #     axc[0].set_xticks(self.drift_labels)
         axc[0].set_xticks(self.drift_labels, self.drift_labels, rotation=45, ha='right')
         axc[0].set_ylabel('prob. correct choice')
-        axc[1].set_title('Accumulator CDF/PDF Results')
+        axc[0].spines[['right', 'top']].set_visible(False)
+        axc[0].set_title('Accumulator CDF/PDF Results')
 
         axc[1].plot(self.tvec, self.rt_dist_.T)
         axc[1].legend(self.drift_labels, frameon=False)
         axc[1].set_xlabel('Time (s)')
-        axc[1].set_title('RT distribution (no NDT)')
-        fig_cdf.tight_layout()
+        axc[1].set_ylabel('Likelihood')
+        axc[1].set_title('RT distribution (no non-dec-time)')
+        axc[1].spines[['right', 'top']].set_visible(False)
+
+        axc[0].grid(alpha=0.5)
+        axc[1].grid(alpha=0.5)
 
         fig_pdf = None
         has_log_odds = hasattr(self, 'log_odds_')
@@ -263,19 +271,21 @@ class Accumulator:
                 log_pmap(np.squeeze(self.up_lose_pdf_[d_ind, :, :])).T,
                 levels=100
                 )
-            axp[1].contourf(self.tvec, self.grid_vec,
-                            log_pmap(np.squeeze(self.lo_lose_pdf_[d_ind, :, :])).T,
-                            levels=100)
-            axp[0].set_title(f"Losing accumulator | Correct, drift rate {self.drift_labels[d_ind]}", fontsize=10)
-            axp[1].set_title(f"Losing accumulator | Error, drift rate {self.drift_labels[d_ind]}", fontsize=10)
-            axp[1].set_xlabel('Time (s)')
+            axp[1].contourf(
+                self.tvec,
+                self.grid_vec,
+                log_pmap(np.squeeze(self.lo_lose_pdf_[d_ind, :, :])).T,
+                levels=100
+                )
+            axp[0].set_title(f"Losing accumulator | Correct, drift rate {self.drift_labels[d_ind]}", fontsize=9)
+            axp[1].set_title(f"Losing accumulator | Error, drift rate {self.drift_labels[d_ind]}", fontsize=9)
+            if n == 2:
+                axp[1].set_xlabel('Time (s)')
             cbar = fig_pdf.colorbar(contour, ax=axp[0])
             cbar = fig_pdf.colorbar(contour, ax=axp[1])
             cbar.set_label("Log Probability")
 
             axp[0].set_xticklabels([])
-            fig_pdf.tight_layout()
-            fig_pdf.suptitle("Accumulator PDF and Log Odds Correct")
 
             if has_log_odds:
                 axp[1].set_xticklabels([])
@@ -284,7 +294,7 @@ class Accumulator:
                 contour = axp[2].contourf(self.tvec, self.grid_vec,
                                             self.log_odds_.T, vmin=vmin, vmax=vmax,
                                             levels=100)
-                axp[2].set_title("Log Odds of Correct Choice given Losing Accumulator")
+                axp[2].set_title("Log Odds of Correct Choice given Losing Accumulator", fontsize=9)
                 cbar = fig_pdf.colorbar(contour, ax=axp[2])
 
         if save_path:
