@@ -239,6 +239,7 @@ def plot_behavior_hdg(
                 hue_order=hue_order,
                 ax=ax,
                 palette=palette,
+                legend=False
                 )
 
         ax.set_title("")
@@ -259,8 +260,7 @@ def plot_behavior_hdg(
 
         if iax==0:
             ax.legend(handles=legend_handles, title=hue)
-        else:
-            ax.legend()    
+
     plt.show()
 
     return g
