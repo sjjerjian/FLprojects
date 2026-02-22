@@ -1,5 +1,6 @@
 # %% # DDM Demo Script
 
+import logging
 import time
 
 import numpy as np
@@ -14,6 +15,7 @@ def tic():
     return time.perf_counter()
 def toc(tstart):
     return time.perf_counter() - tstart
+
 
 # %% Initialize grid vectors for diffusion particle
 
@@ -85,7 +87,6 @@ _, preds_model = ddm.predict(X, n_samples=1, cache_accumulators=True)
 ves_accum = ddm.accumulators_[('wager', 1.0)]
 ves_accum.plot()
 
-
 # %% ==== Simulate and visualize model predictions ====
 
 # here we generate 100 trials of each condition, then set n_samples to 1 to get a 0/1 choice etc
@@ -112,15 +113,61 @@ plot_behavior_hdg(
     palette=['k', 'r', 'b'],
     hue_order=['ves', 'vis', 'comb'],
     )
-# %% =====  DV simulation =====
 
+# %% ==== fit simulated data
 
+# start from a few different points to before
+init_params = {
+    'kmult': [1.5, 1.0],            # ves, vis sensitivites
+    'bound': [0.5, 0.5, 0.5],       # ves, vis, comb bounds
+    'non_dec_time': [0.3],          # non-decision time (secs)
+    'wager_thr': [0.5, 0.5, 0.5],   # log odds threshold for high bets
+    'wager_alpha': [0.05],          # base rate of high bets
+}
 
-# %% ==== fit model
+# initialize DDM object (just for inference/prediction)
+ddm_fit = SelfMotionDDM(
+    grid_vec=grid_vec,
+    tvec=time_vec,
+    **init_params, 
+    stim_scaling=True,  # scale ves/vis according to acc/vel signals?
+    return_wager=True   # whether to compute pdfs and log odds maps, and return wagers
+    )
 
-y = preds_model
-fixed_params = ["non_dec_time", "wager_alpha"]
-ddm.fit(X, y, method='Nelder-Mead')
+fit_options = {
+        "random_seed": 42,
+        # "uncertainty_handling": True,
+        "max_fun_evals": 20,
+        # "noise_final_samples": 100,
+        "display": "full"
+    }
 
+ddm_fit.fit(X, preds_model, fixed_params=["non_dec_time", "wager_alpha"], fit_method='bads', fit_options=fit_options)
+print(ddm_fit.params_)
 
+# %% ----- now plot the fit results on top of the simulated data
+
+X = dots3DMP_create_trial_list(
+    hdgs=list(range(-12, 12)),
+    mods=[1, 2, 3],
+    cohs=[0.3, 0.7],
+    nreps=1,
+)
+preds_, preds_samples = ddm_fit.predict(X, n_samples=1)
+preds_['RT'] = preds_samples['RT']
+preds_full = pd.concat((X, preds_), axis=1)
+# preds_full = replicate_ves(preds_full) 
+preds_full.sort_values(by=['modality', 'coherence', 'heading'])
+
+mod_map = {1: "ves", 2: "vis", 3: "comb"}
+preds_full['modality'] = preds_full['modality'].map(mod_map)
+
+plot_behavior_hdg(
+    df_means,
+    data_fit=preds_full,
+    col='coherence',
+    hue='modality',
+    palette=['k', 'r', 'b'],
+    hue_order=['ves', 'vis', 'comb'],
+    )
 # %%

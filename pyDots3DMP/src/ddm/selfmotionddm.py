@@ -75,7 +75,8 @@ class SelfMotionDDM:
         X: pd.DataFrame,
         y: pd.DataFrame,
         fixed_params: Optional[list[str]]=None,
-        method='bads',
+        fit_method: str = 'bads',
+        fit_options: Optional[dict] = None,
         ) -> 'SelfMotionDDM':
         """fit model to data in X and y, with optional fixed parameters"""
 
@@ -96,28 +97,20 @@ class SelfMotionDDM:
             # pass data as fixed inputs to objective function
             optim_fcn_part = lambda params: self._objective_fcn(params, X, y)
 
-            
-            if method.lower() == 'bads':
+            if fit_method.lower() == 'bads':
 
+                # TODO expose these to the user
                 lb = params_array * 0.25
                 ub = params_array * 3.0
                 plb = params_array * 0.5
                 pub = params_array * 2.0
                 bads_bounds = (lb, ub, plb, pub)
-
-                options = {
-                        "random_seed": 42,
-                        # "uncertainty_handling": True,
-                        "max_fun_evals": 300,
-                        # "noise_final_samples": 100,
-                        "display": "full"
-                    }
                 
                 bads = BADS(
                     optim_fcn_part, 
                     params_array, 
                     *bads_bounds, 
-                    options=options
+                    options=fit_options
                     )
                 result = bads.optimize()
 
@@ -126,8 +119,8 @@ class SelfMotionDDM:
                     self._objective_fcn,
                     params_array,
                     args=(X, y),
-                    method=method,
-                    options={'maxiter': 5000, 'disp': True}
+                    method=fit_method,
+                    options=fit_options
                     )
                 
             # at the end, store fitted params back into dict, with fixed ones
@@ -153,7 +146,7 @@ class SelfMotionDDM:
         # to reconstruct full params dict expected by custom predict method
         self._build_params_dict(params_array, self.param_end_inds, fixed_params)
         logger.info(params_array)
-        # logger.info('Current params: %s', {k: [round(vv, 2) for vv in v] for k, v in self.params_.items()})
+        # print('Current params: %s', {k: [round(vv, 2) for vv in v] for k, v in self.params_.items()})
 
         t0_pred = time.perf_counter()
         y_pred, _ = self.predict(X, y)
