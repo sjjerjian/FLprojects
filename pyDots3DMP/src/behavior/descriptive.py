@@ -3,6 +3,8 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
+
 import seaborn as sns
 
 # from sklearn.linear_model import LogisticRegression
@@ -192,7 +194,8 @@ def plot_behavior_hdg(
     row: str = 'variable',
     col: str ='coherence',
     hue: str = 'modality',
-    palette=sns.color_palette(),        
+    palette = sns.color_palette(),     
+    hue_order: Optional[list] = None,
     **fig_kwargs
     ):  
 
@@ -200,33 +203,42 @@ def plot_behavior_hdg(
         plt.errorbar(x, y, yerr, **kwargs)
 
     # plot the empirical data points
-    g = sns.FacetGrid(data_obs, row=row, col=col, hue=hue,
-                      palette=palette, sharey=False,
-                      **fig_kwargs)
-
+    g = sns.FacetGrid(
+        data_obs,
+        row=row,
+        col=col,
+        hue=hue,
+        hue_order=hue_order,
+        palette=palette,
+        sharey=False,
+        **fig_kwargs
+        )   
+    
     line_style = '-' if data_fit is None else ''
     g.map_dataframe(
         _errbar_plot, 'heading', 'mean', 'se', linestyle=line_style, marker='.'
         )
 
+    # Single legend: three colors, same order as curves and points
+    legend_handles = [
+        Line2D([0], [0], color=c, lw=2, label=name)
+        for c, name in zip(palette, hue_order)
+    ]
+    
     # overlay the fit data as a line
-    for ax_key, ax in g.axes_dict.items():
-        if data_fit is not None:
-            if col is not None:
-                ax_data = data_fit.loc[data_fit[col]==ax_key[1], :]
-                y = ax_key[0]
-            else:
-                ax_data = data_fit.copy()
-                y = ax_key
+    for iax, (ax_key, ax) in enumerate(g.axes_dict.items()):
+        if data_fit is not None and col is not None:
+            ax_data = data_fit.loc[data_fit[col]==ax_key[1], :]
+            y = ax_key[0]
 
             sns.lineplot(
                 data=ax_data,
                 x='heading',
                 y=y,
                 hue=hue,
+                hue_order=hue_order,
                 ax=ax,
                 palette=palette,
-                label=ax_key
                 )
 
         ax.set_title("")
@@ -245,7 +257,10 @@ def plot_behavior_hdg(
         ax.set_xticks(xhdgs)
         ax.set_xticklabels(xhdgs, rotation=40, ha='right')
 
-    g.add_legend(title="modality")
+        if iax==0:
+            ax.legend(handles=legend_handles, title=hue)
+        else:
+            ax.legend()    
     plt.show()
 
     return g
