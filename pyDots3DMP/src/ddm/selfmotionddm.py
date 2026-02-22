@@ -4,7 +4,6 @@ from copy import deepcopy
 import itertools
 import json
 import logging
-from pprint import pprint
 import time
 from typing import Any, Literal, Optional, Union
 
@@ -103,13 +102,13 @@ class SelfMotionDDM:
             "stim_scaling": to_serializable(self.stim_scaling) if isinstance(self.stim_scaling, tuple) else self.stim_scaling,
         }
 
-    def save(self, path: str) -> None:
+    def save(self, path: Path | str) -> None:
         """Save the model state to a JSON file."""
         with open(path, "w") as f:
             json.dump(self.to_dict(), f, indent=2)
 
     @classmethod
-    def load(cls, path: str) -> "SelfMotionDDM":
+    def load(cls, path: Path | str) -> "SelfMotionDDM":
         """Recreate a SelfMotionDDM from a JSON file saved by save()."""
         with open(path) as f:
             d = json.load(f)
@@ -220,7 +219,7 @@ class SelfMotionDDM:
             self._build_params_dict(result.x, self.param_end_inds)
 
         fit_duration = time.perf_counter() - fit_start_time
-        logger.info(f"Fitting took {fit_duration:3f}s / {fit_duration/60:3f}mins")
+        logger.info(f"Fitting took {fit_duration:3f}s / {fit_duration/60:3f} mins")
         
         return self
 

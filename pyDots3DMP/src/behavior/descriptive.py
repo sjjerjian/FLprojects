@@ -202,7 +202,8 @@ def plot_behavior_hdg(
     def _errbar_plot(x, y, yerr, **kwargs):
         plt.errorbar(x, y, yerr, **kwargs)
 
-    # plot the empirical data points
+    # plot the empirical data points, using FacetGrid for convenient conditional plotting
+    # see https://seaborn.pydata.org/generated/seaborn.FacetGrid.html
     g = sns.FacetGrid(
         data_obs,
         row=row,
@@ -245,10 +246,10 @@ def plot_behavior_hdg(
         ax.set_title("")
         if 'choice' in ax_key:
             ax.set_title(f"coh = {ax_key[1]}")
-            ax.set_ylim([0, 1])
+            ax.set_ylim([0, 1.05])
             ax.set_ylabel('prop. right choices')
         elif 'PDW' in ax_key:
-            ax.set_ylim([0, 1])
+            ax.set_ylim([0, 1.05])
             ax.set_ylabel('prop. high bets')
         elif 'RT' in ax_key:
             # ax.set_ylim([0.5, 1.2])
@@ -261,7 +262,10 @@ def plot_behavior_hdg(
         if iax==0:
             ax.legend(handles=legend_handles, title=hue)
 
-    plt.show()
+    # set overall xlabel at bottom of figure
+    if hasattr(g.figure, 'supxlabel'):
+        g.figure.supxlabel("Heading angle (°)")
+
 
     return g
 

@@ -10,8 +10,8 @@ import numpy as np
 import pandas as pd
 
 # set a save location
-save_dir = "param_recov"
-Path.mkdir(Path(save_dir), parents=True, exist_ok=True)
+save_dir = Path("param_recov")
+Path.mkdir(save_dir, parents=True, exist_ok=True)
 
 # Set up logger to console and file - this will show us the logging info for our DDM, and the bads fitting routine
 logger = logging.getLogger()
@@ -90,7 +90,7 @@ init_params = {
     'bound': [1],               # ves, vis, comb bounds. 
     'non_dec_time': [0.3],      # non-decision time (secs)
     'wager_thr': [0.8],         # log odds threshold for high bets
-    'wager_alpha': [0],      # base rate of high bets
+    'wager_alpha': [0.05],      # base rate of high bets
 }
 
 # initialize DDM object
@@ -123,26 +123,34 @@ _, preds_model = ddm_obj.predict(X, n_samples=1, cache_accumulators=True)
 # Visualize model 'predictions' i.e. simulated data
 # # ===================================================
 
-preds_full = pd.concat((X, preds_model), axis=1)
-preds_full = replicate_ves(preds_full) # replicate ves for high coherence, for plotting convenience
-preds_full.sort_values(by=['modality', 'coherence', 'heading'])
+def process_predictions(X, y):
 
-# plot_behavior_hdg expects means
+    mod_map = {1: "ves", 2: "vis", 3: "comb"}
+
+    data = pd.concat((X, y), axis=1)
+
+    # replicate ves for high coherence, for plotting convenience
+    data = replicate_ves(data) 
+
+    # map modalities from ordinal to str labels
+    data['modality'] = data['modality'].map(mod_map)
+
+    return data
+
+preds_full = process_predictions(X, preds_model)
+
+# plot_behavior_hdg expects pre-computed means
 df_means = behavior_means(preds_full, by_conds=['modality', 'coherence', 'heading'], long_format=True)
-
-# map ordinal modality labels to strings
-mod_map = {1: "ves", 2: "vis", 3: "comb"}
-df_means['modality'] = df_means['modality'].map(mod_map)
 
 # plot simulated data. currently no fit curve, so will just draw lines between each
 # can fit with a gaussian eventually (using behavior.utils.gauss_fit_hdg_group)
-# plot_behavior_hdg(
-#     df_means,
-#     col='coherence',
-#     hue='modality',
-#     palette=['k', 'r', 'b'],
-#     hue_order=['ves', 'vis', 'comb'],
-#     )
+plot_behavior_hdg(
+    df_means,
+    col='coherence',
+    hue='modality',
+    palette=['k', 'r', 'b'],
+    hue_order=['ves', 'vis', 'comb'],
+    )
 
 # %% ================================================
 # Smoke test the model - start from new params and try and recover the original params
@@ -179,7 +187,7 @@ ddm_fit = SelfMotionDDM(
 # set some options for the BADS routine (or scipy.minimize)
 fit_options = {
         "random_seed": 42,
-        "max_fun_evals": 100,
+        "max_fun_evals": 200,
         "display": "full"
     }
 
@@ -191,6 +199,7 @@ ddm_fit.fit(
     fit_method='bads',
     fit_options=fit_options
 )
+ddm_fit.save(save_dir / "fitted_model.json")
 
 # print comparison table of params
 # TODO flip rows and columns here, or don't bother with in-built method...
@@ -218,14 +227,11 @@ preds_, preds_samples = ddm_fit.predict(X_pred, n_samples=1, use_cached_wager_ma
 # for choice and PDW we can use preds_ columns as is, because they are probabilities of the binary outcome
 
 preds_['RT'] = preds_samples['RT']
-preds_full = pd.concat((X_pred, preds_), axis=1)
-preds_full = replicate_ves(preds_full) 
-mod_map = {1: "ves", 2: "vis", 3: "comb"}
-preds_full['modality'] = preds_full['modality'].map(mod_map)
+preds_full = process_predictions(X_pred, preds_)
 
 g = plot_behavior_hdg(
-    df_means,
-    data_fit=preds_full,
+    df_means,               # original simulated data
+    data_fit=preds_full,    # model fit
     col='coherence',
     hue='modality',
     palette=['k', 'r', 'b'],
