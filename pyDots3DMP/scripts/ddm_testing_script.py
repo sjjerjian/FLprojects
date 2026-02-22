@@ -202,9 +202,11 @@ ddm_fit.fit(
 ddm_fit.save(save_dir / "fitted_model.json")
 
 # print comparison table of params
-# TODO flip rows and columns here, or don't bother with in-built method...
-print(SelfMotionDDM.params_table(ddm_obj, ddm_fit))
 
+rows = [init_params, init_params2, ddm_fit.params_]
+df_params = pd.DataFrame(rows)
+df_params['name'] = ['Sim', 'Start', 'Fit']
+print(df_params)
 
 # %% ================================================
 # Plot fitted curves on top of original simulated data
