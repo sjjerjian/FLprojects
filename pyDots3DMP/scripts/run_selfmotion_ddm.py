@@ -2,15 +2,9 @@
 from datetime import datetime
 import logging
 
-import numpy as np
-
-# temp hack to import from behavior module...should setup pydots3dmp as a package
-import os
-import sys
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from behavior.selfmotionddm import SelfMotionDDM
 from behavior.utils import data_cleanup
+from ddm import SelfMotionDDM
+import numpy as np
 
 # %% ----------------------------------------------------------------
 # Set up loggers
@@ -43,8 +37,8 @@ def setup_logger(log_file_path=None):
 # %% ----------------
 
 # co-ordinate vectors for accumulator process
-grid_vec = np.arange(-3, 0, 0.01)
-time_vec = np.arange(0, 2, 0.05)
+grid_vec = np.arange(-3, 0, 0.01) 
+time_vec = np.arange(0, 2, 0.025) 
 
 # NOTE on kmult:
 # three-element list --> independent sensitivites for ves, low coh vis and high coh vis
@@ -64,13 +58,21 @@ init_params = {
 }
 
 # initialize DDM object for fitting
-ddm = SelfMotionDDM(
-    grid_vec=grid_vec,
-    tvec=time_vec,
-    **init_params, 
-    stim_scaling=True,      # scale ves/vis according to acc/vel signals
-    return_wager=True       # whether to compute pdfs and log odds maps, and return wagers
-    )
+ddm_init = SelfMotionDDM(
+                grid_vec=grid_vec,
+                tvec=time_vec,
+                **init_params, 
+                stim_scaling=True,      # scale ves/vis according to acc/vel signals
+                return_wager=True       # whether to compute pdfs and log odds maps, and return wagers
+            )
+
+# ------ PARAM RECOVERY ------
+# to smoke test the model code, we *should* be able to simulate some data, and then recover the generative parameters by fitting
+
+
+
+
+# ------ FIT EMPIRICAL DATA
 
 
 # Get data for fitting

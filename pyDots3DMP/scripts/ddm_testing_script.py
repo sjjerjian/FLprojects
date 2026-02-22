@@ -1,5 +1,4 @@
-# %% # DDM Testing Script
-
+# %% # DDM Demo Script
 
 import time
 
@@ -7,7 +6,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from ddm import Accumulator, SelfMotionDDM, get_stim_urgs
+from ddm import Accumulator, SelfMotionDDM
 from behavior.utils import dots3DMP_create_trial_list
 from behavior.descriptive import plot_behavior_hdg, behavior_means, replicate_ves
 
@@ -24,8 +23,6 @@ def toc(tstart):
 
 grid_vec = np.arange(-3, 0, 0.01) 
 time_vec = np.arange(0, 2, 0.025)   
-
-acc, vel = get_stim_urgs(time_vec)
 
 # %% ==== demonstrate use of single Accumulator object ====
 
@@ -44,7 +41,7 @@ accum.compute_distrs(return_pdf=True, use_vectorized=True)
 time_taken = toc(tstart)
 print(f"Accumulator run took {time_taken:.3f} seconds")
 accum.log_posterior_odds()
-accum.plot();
+accum.plot(); # visualize 
 
 # %% ==== Plot simulation of actual decision variable ====
 
