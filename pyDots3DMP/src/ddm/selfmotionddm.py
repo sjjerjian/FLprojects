@@ -72,6 +72,65 @@ class SelfMotionDDM:
 
         self.accumulators_ = {}  # cache of accumulators per condition if desired
 
+    def to_dict(self) -> dict:
+        """Return a JSON-serializable dict of attributes needed to reinstantiate."""
+        def to_serializable(v):
+            if isinstance(v, np.ndarray):
+                return v.tolist()
+            if isinstance(v, (np.floating, np.integer)):
+                return float(v) if isinstance(v, np.floating) else int(v)
+            if isinstance(v, tuple) and len(v) == 2 and all(isinstance(x, np.ndarray) for x in v):
+                return {"_tuple_arrays": [v[0].tolist(), v[1].tolist()]}
+            if isinstance(v, list) and v and isinstance(v[0], np.ndarray):
+                return [x.tolist() if isinstance(x, np.ndarray) else x for x in v]
+            return v
+
+        return {
+            "grid_vec": to_serializable(self.grid_vec),
+            "tvec": to_serializable(self.tvec),
+            "params_": {k: to_serializable(v) for k, v in self.params_.items()},
+            "return_wager": self.return_wager,
+            "wager_maps": to_serializable(self.wager_maps) if self.wager_maps is not None else None,
+            "wager_axis": self.wager_axis,
+            "stim_scaling": to_serializable(self.stim_scaling) if isinstance(self.stim_scaling, tuple) else self.stim_scaling,
+        }
+
+    def save(self, path: str) -> None:
+        """Save the model state to a JSON file."""
+        with open(path, "w") as f:
+            json.dump(self.to_dict(), f, indent=2)
+
+    @classmethod
+    def load(cls, path: str) -> "SelfMotionDDM":
+        """Recreate a SelfMotionDDM from a JSON file saved by save()."""
+        with open(path) as f:
+            d = json.load(f)
+
+        grid_vec = np.array(d["grid_vec"])
+        tvec = np.array(d["tvec"])
+        params_ = d["params_"]
+        stim_scaling = d["stim_scaling"]
+        if isinstance(stim_scaling, dict) and "_tuple_arrays" in stim_scaling:
+            stim_scaling = tuple(np.array(a) for a in stim_scaling["_tuple_arrays"])
+        wager_maps = d["wager_maps"]
+        if wager_maps is not None:
+            wager_maps = [np.array(w) for w in wager_maps]
+
+        obj = cls(
+            grid_vec=grid_vec,
+            tvec=tvec,
+            kmult=params_["kmult"],
+            bound=params_["bound"],
+            non_dec_time=params_["non_dec_time"],
+            wager_thr=params_["wager_thr"],
+            wager_alpha=params_["wager_alpha"],
+            return_wager=d["return_wager"],
+            wager_maps=wager_maps,
+            wager_axis=d["wager_axis"],
+            stim_scaling=stim_scaling,
+        )
+        obj.params_ = {k: v for k, v in params_.items()}
+        return obj
     def fit(
         self,
         X: pd.DataFrame,
