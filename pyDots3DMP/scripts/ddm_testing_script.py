@@ -78,6 +78,11 @@ ddm = SelfMotionDDM(
     return_wager=True   # whether to compute pdfs and log odds maps, and return wagers
     )
 
+# save to disk, reload from disk, compare model parameters
+# ddm.save("model.json")
+# ddm2 = SelfMotionDDM.load("model.json")
+# print(SelfMotionDDM.params_table(ddm, ddm2))
+
 # here we generate 100 trials of each condition, but set n_samples to 1 to get model predictions
 # of choice and wager as binary outcomes for each trial
 X = dots3DMP_create_trial_list(
@@ -139,17 +144,17 @@ init_params2 = {
 ddm_fit = SelfMotionDDM(
     grid_vec=grid_vec,
     tvec=time_vec,
-    **init_params, 
+    **init_params2, 
     stim_scaling=True,  
     return_wager=True,
     )
 
 fit_options = {
         "random_seed": 42,
-        "max_fun_evals": 20,
+        "max_fun_evals": 100,
         "display": "full"
     }
-
+    
 ddm_fit.fit(
     X,
     preds_model,   # simulated choice, PDW, RT from initial setup
@@ -157,24 +162,30 @@ ddm_fit.fit(
     fit_method='bads',
     fit_options=fit_options
 )
-print(ddm_fit.params_)
+
+print(SelfMotionDDM.params_table(ddm, ddm_fit))
+
+
+
 
 # %% ================================================
 # Plot fitted curves on top of original simulated data
 # # ===================================================
 
+# create a nicely spaced set of headings to run predictions over using fitted parameters
 X_pred = dots3DMP_create_trial_list(
-    hdgs=list(range(-12, 12)),
+    hdgs=np.linspace(-12, 12, 100),
     mods=[1, 2, 3],
     cohs=[0.3, 0.7],
-    nreps=1,
+    nreps=1,        # only need 1
     shuff=False,
 )
 
-# use the wager maps from fitting to the short list of headings, don't recompute them with the full heading range
-preds_, preds_samples = ddm_fit.predict(X_pred, n_samples=100, use_cached_wager_maps=True)
-preds_['RT'] = preds_samples['RT']
+# use the wager maps from fitting to the short list of headings, i.e. don't recompute them with the full heading range!!
+preds_, preds_samples = ddm_fit.predict(X_pred, n_samples=1, use_cached_wager_maps=True, rt_sampling_method="mean")
 
+# a couple of kluges here to get the nice model predictions dataframe
+preds_['RT'] = preds_samples['RT']
 preds_full = pd.concat((X_pred, preds_), axis=1)
 preds_full = replicate_ves(preds_full) 
 mod_map = {1: "ves", 2: "vis", 3: "comb"}
