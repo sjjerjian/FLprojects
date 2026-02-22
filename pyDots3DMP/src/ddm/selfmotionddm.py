@@ -166,6 +166,8 @@ class SelfMotionDDM:
         """fit model to data in X and y, with optional fixed parameters"""
 
         logger.info('Starting model fitting')
+
+        fit_start_time = time.perf_counter()
         
         self.n_features_in_ = len(X.columns)
 
@@ -182,6 +184,8 @@ class SelfMotionDDM:
             # pass data as fixed inputs to objective function
             optim_fcn_part = lambda params: self._objective_fcn(params, X, y)
 
+            if self.save_dir is not None:
+                Path.mkdir(self.save_dir, exist_ok=True)
             if fit_method.lower() == 'bads':
 
                 # TODO expose these to the user
@@ -207,10 +211,17 @@ class SelfMotionDDM:
                     method=fit_method,
                     options=fit_options
                     )
-                
+
+            logger.info("================")
+            logger.info(result)
+            logger.info("================")
+                   
             # at the end, store fitted params back into dict, with fixed ones
             self._build_params_dict(result.x, self.param_end_inds)
 
+        fit_duration = time.perf_counter() - fit_start_time
+        logger.info(f"Fitting took {fit_duration:3f}s / {fit_duration/60:3f}mins")
+        
         return self
 
     def _objective_fcn(
@@ -236,7 +247,7 @@ class SelfMotionDDM:
         t0_pred = time.perf_counter()
         y_pred, _ = self.predict(X, y)
         t1_pred = time.perf_counter() - t0_pred
-        logger.info(f'single objective function prediction run took {t1_pred:.2f} seconds')
+        logger.debug(f'single objective function prediction run took {t1_pred:.2f} seconds')
         
         # calculate log likelihoods for each output
         log_lik_choice = log_lik_bin(y['choice'].to_numpy(), y_pred['choice'].to_numpy()) / len(y)
@@ -249,14 +260,14 @@ class SelfMotionDDM:
             'rt': log_lik_rt
         }
         if self.return_wager:
-            logger.info('Log likelihoods - choice: %.2f, PDW: %.2f, RT: %.2f', 
+            logger.debug('Log likelihoods - choice: %.2f, PDW: %.2f, RT: %.2f', 
                         log_lik_choice, log_lik_pdw, log_lik_rt)
             self.neg_llh_ = -sum([log_lik_choice, log_lik_pdw, log_lik_rt])
         else:
-            logger.info('Log likelihoods - choice: %.2f, RT: %.2f', 
+            logger.debug('Log likelihoods - choice: %.2f, RT: %.2f', 
                         log_lik_choice, log_lik_rt)
             self.neg_llh_ = -sum([log_lik_choice, log_lik_rt])
-        logger.info('Total loss:\t%.2f', self.neg_llh_)
+        logger.debug('Total loss:\t%.2f', self.neg_llh_)
 
         return self.neg_llh_
 
@@ -506,8 +517,8 @@ class SelfMotionDDM:
             self.fixed_params = {k: self.init_params[k] for k in fixed_params}
             
         self.fit_param_names = [k for k in self.init_params.keys() if k not in self.fixed_params.keys()]
-        logger.info(f'Fixed parameters: {self.fixed_params}')
-        logger.info(f'Fitting parameters: {self.fit_param_names}')
+        logger.debug(f'Fixed parameters: {self.fixed_params}')
+        logger.debug(f'Fitting parameters: {self.fit_param_names}')
 
         return [self.init_params[k] for k in self.fit_param_names]
 
