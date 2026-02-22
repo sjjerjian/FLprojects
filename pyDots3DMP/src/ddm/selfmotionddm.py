@@ -38,6 +38,7 @@ class SelfMotionDDM:
         wager_maps: Optional[list] = None,
         wager_axis: Optional[int] = None,
         stim_scaling: Union[tuple[np.ndarray, np.ndarray], bool] = True,
+        use_vectorized: bool = True,
         ):
         """3DMP accumulator model with confidence/wager readout
         :param grid_vec: vector of DV grid points
@@ -51,6 +52,7 @@ class SelfMotionDDM:
         :param wager_maps: list of existing wager maps to use for predictions
         :param wager_axis: axis for wager calculation (None = log odds)
         :param stim_scaling: whether to use stimulus-driven urgency signals
+        :param use_vectorized: whether to use vectorized cdf/pdf implementations
         """
         self.grid_vec = grid_vec
         self.tvec = tvec
@@ -63,7 +65,7 @@ class SelfMotionDDM:
         self.wager_maps = wager_maps
         self.wager_axis = wager_axis
         self.stim_scaling = stim_scaling
-        # TODO add init option to set whether to use vectorized accumulator cdf/pdf calculations
+        self.use_vectorized = use_vectorized
 
         # initialize internal containers used by fit/predict
         self.init_params = {k: getattr(self, k) for k in self.PARAM_NAMES}
@@ -340,7 +342,7 @@ class SelfMotionDDM:
 
                 # run the method of images - diffusion to bound to extract pdfs, cdfs, and LPO
                 accumulator.apply_drifts(abs_drifts, hdgs[hdgs>=0])
-                accumulator.compute_distrs(return_pdf=True, use_vectorized=True) # get the pdfs for wager calculation
+                accumulator.compute_distrs(return_pdf=True, use_vectorized=self.use_vectorized) # get the pdfs for wager calculation
 
                 if cache_accumulators:
                     self.accumulators_[('wager', mod)] = accumulator
@@ -379,7 +381,7 @@ class SelfMotionDDM:
                     accumulator.apply_drifts(drifts, hdgs) 
 
                     # run the method of images - diffusion to bound to extract pdfs, cdfs, and LPO
-                    accumulator.compute_distrs(return_pdf=self.return_wager, use_vectorized=True)
+                    accumulator.compute_distrs(return_pdf=self.return_wager, use_vectorized=self.use_vectorized)
 
                     if cache_accumulators:
                         self.accumulators_[(mod, coh, delta)] = accumulator
