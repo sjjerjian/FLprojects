@@ -64,7 +64,7 @@ init_params = {
     'wager_thr': [1, 1, 1],
     'wager_alpha': [0.05],
 }
-ddm = SelfMotionDDM(
+ddm_obj = SelfMotionDDM(
   grid_vec=grid_vec,
   tvec=time_vec,
   **init_params,
@@ -84,7 +84,7 @@ Data shapes expected:
 3. Fit the model:
 ```python
 # optionally specify parameters to hold fixed during fitting
-accum.fit(X, y, fixed_params=['kmult'])
+ddm_obj.fit(X, y, fixed_params=['kmult'])
 ```
 - `fixed_params` is an optional list of parameter names to keep constant during optimization - these do not get passed to the optimization call but are used by the `predict` method.
 - By default, optimization uses `pybads.BADS` (requires `pybads`); the code also contains a hook to use `scipy.optimize.minimize`.
@@ -95,28 +95,34 @@ y_pred, y_pred_samp = ddm.predict(X, n_samples=1, cache_accumulators=True, seed=
 ```
 - `predict` returns a DataFrame with predicted likelihoods for `choice`, `PDW`, and `RT` and an optional sampled predictions DataFrame when `n_samples > 0`.
 
-Key parameters (see `behavior/selfmotionddm.py` for defaults):
+Key parameters (see `ddm/selfmotionddm.py` for defaults):
 - `kmult` — k multipliers per modality (e.g., `[k_ves, k_vis]`)
 - `bound` — bounds per modality (e.g., `[ves, vis, comb]`)
 - `non_dec_time` — non-decision times per modality
 - `wager_thr` — wager threshold(s)
 - `wager_alpha` — wager mapping alpha(s)
-- `return_wager` — whether to compute wager/confidence predictions
-- `stim_scaling` — whether to compute stimulus-driven urgency signals (or pass tuple of urgency arrays)
+- `return_wager` — True/False, whether to compute wager/confidence predictions
+- `stim_scaling` — True/False, whether to compute stimulus-driven time-dependent sensitivities (or pass custom arrays)
 
 ---
 
 #### Notes & roadmap
 
-- The `Accumulator` class and helpers (`behavior/Accumulator.py`, `behavior/moi.py`) provides the low-level method-of-images computations (CDF/PDF, RT distributions, and log posterior odds) that `SelfMotionDDM` uses.
-- The older `ddm_2d` codebase is deprecated; you may still find legacy code under `archive/` but active analyses should use `SelfMotionDDM` and `Accumulator`.
+- `SelfMotionDDM` contains the infrastructure for `fit` and `predict` based on `X` (a set of trial conditions), and `y` (a set of choice, PDW, RT observations). It handles multiple accumulators for different conditions, and storing fitted vs fixed params appropriately.
+- The `Accumulator` class and helpers (`ddm/Accumulator.py`, `ddm/moi.py`) provides the low-level method-of-images computations (CDF/PDF, RT distributions, and log posterior odds) that `SelfMotionDDM` uses.
+- The older `ddm_2d` codebase is deprecated; you may still find legacy code under `archive/` but active work should use `SelfMotionDDM` and `Accumulator`.
 
 ---
 
 ## TO DO
 
-1. Some experimental features (cue-combination strategies, different confidence mappings) are skeletons and not fully implemented or tested.
-3. add unit tests.
-4. Improve and expand documentation.
-5. Improve and expand diagnostic visualizations of accumulators.
-6. Improve logging/saving of json results and iteration history for checks and resuming optimization runs.
+1. Implement and test model variants (cue-combination strategies, different confidence mappings)
+2. Build and test more conditional visualizations of simulated / param recovery outputs
+3. Test fitting on real data!
+4. Expose BADS bounds to user as option for initialization
+5. Wrapper code for running fitting with multiple seeds
+6. Use rng for seeding of fit runs and predict method
+
+5. add unit tests and more assertions/error handling
+6. Improve and expand documentation.
+7. Improve and expand diagnostic visualizations of accumulators.
