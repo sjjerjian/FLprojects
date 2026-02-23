@@ -181,7 +181,6 @@ ddm_fit = SelfMotionDDM(
     **init_params2, 
     stim_scaling=True,  
     return_wager=True,
-    save_dir=save_dir
     )
 
 # set some options for the BADS routine (or scipy.minimize)
