@@ -22,7 +22,7 @@ if not logger.handlers:
     ch.setLevel(logging.INFO)
     ch.setFormatter(fmt)
     logger.addHandler(ch)
-    log_path = Path(__file__).resolve().parent / "ddm_testing.log"
+    log_path = save_dir / "ddm_testing.log"
     fh = logging.FileHandler(log_path, encoding="utf-8")
     fh.setLevel(logging.INFO)
     fh.setFormatter(fmt)
@@ -60,7 +60,7 @@ tstart = time.perf_counter()
 accum.compute_distrs(return_pdf=True, use_vectorized=True) 
 print(f"Accumulator run took {time.perf_counter() - tstart:.3f} seconds")
 accum.log_posterior_odds()
-# accum.plot();
+accum.plot();
 
 # %% ================================================
 # plot simulation of actual decision variable

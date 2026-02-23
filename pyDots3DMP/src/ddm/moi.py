@@ -9,8 +9,6 @@ import numpy as np
 from scipy.stats import multivariate_normal as mvn
 from scipy.stats import norm
 
-USE_MVNUN = False
-
 
 # %% ----------------------------------------------------------------
 # MOI Formalism
