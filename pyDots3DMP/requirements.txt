@@ -20,7 +20,7 @@ matplotlib==3.10.8
     #   gpyreg
     #   pybads
     #   seaborn
-numpy==2.4.2
+numpy==1.26.4
     # via
     #   pydots3dmp (pyproject.toml)
     #   contourpy
