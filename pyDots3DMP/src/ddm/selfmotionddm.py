@@ -185,8 +185,6 @@ class SelfMotionDDM:
             # pass data as fixed inputs to objective function
             optim_fcn_part = lambda params: self._objective_fcn(params, X, y)
 
-            if self.save_dir is not None:
-                Path.mkdir(self.save_dir, exist_ok=True)
             if fit_method.lower() == 'bads':
 
                 # TODO expose these to the user
