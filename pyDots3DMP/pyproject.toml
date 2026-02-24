@@ -11,9 +11,8 @@ maintainers = [
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "ipykernel>=7.1.0",
-    "matplotlib>=3.10.8",
-    "numpy>=2.4.0",
+    "matplotlib>=3.10.0",
+    "numpy==1.26.4",
     "pandas>=2.3.3",
     "pybads>=1.0.6",
     "scikit-learn>=1.8.0",
@@ -21,3 +20,10 @@ dependencies = [
     "seaborn>=0.13.2",
     "statsmodels>=0.14.6",
 ]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]

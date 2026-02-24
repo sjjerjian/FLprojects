@@ -281,11 +281,14 @@ def dots3DMP_create_trial_list(
     hdgs: list,
     mods: list,
     cohs: list,
-    deltas: list,
+    deltas: Optional[list] = None,
     nreps: int = 1,
-    shuff: bool = True
+    shuff: bool = False
     ) -> pd.DataFrame:
     """Create a trial list of stimulus conditions for dots3DMP task"""
+
+    if deltas is None:
+        deltas = [0]
 
     if isinstance(shuff, int):
         np.random.seed(shuff) 

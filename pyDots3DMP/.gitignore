@@ -4,9 +4,9 @@
 *.pkl
 *.pyc
 *.png
-codes/build
-codes/.vscode/
-codes/pydots3DMP.egg-info/
+
+**/pydots3dmp.egg-info/
+**/__pycache__
 
 data/
 

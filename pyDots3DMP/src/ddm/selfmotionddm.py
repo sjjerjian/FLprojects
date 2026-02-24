@@ -1,21 +1,22 @@
 # %% ----------------------------------------------------------------
 
-from collections import namedtuple
 from copy import deepcopy
-from datetime import datetime
-import logging
 import itertools
+import json
+import logging
+from pathlib import Path
 import time
-from typing import Union, Optional, Any
+from typing import Any, Literal, Optional, Union
 
 import numpy as np
 import pandas as pd
 from pybads import BADS
-from scipy.signal import convolve
-from scipy.stats import norm, skewnorm
 from scipy.optimize import minimize
+from scipy.signal import convolve
+from scipy.stats import norm, skewnorm, truncnorm
 
-from .utils import log_lik_bin, log_lik_cont, margconds_from_intersection
+from behavior.utils import log_lik_bin, log_lik_cont, margconds_from_intersection
+
 from .Accumulator import Accumulator
 
 logger = logging.getLogger(__name__)
@@ -32,11 +33,13 @@ class SelfMotionDDM:
         kmult: list = [0.3, 0.3],
         bound: list = [1., 1., 1.],
         non_dec_time: list = [0.3],
+        return_wager: bool = True,
         wager_thr: list = [1.],
         wager_alpha: list = [0.05],
-        return_wager: bool = True,
+        wager_maps: Optional[list] = None,
         wager_axis: Optional[int] = None,
         stim_scaling: Union[tuple[np.ndarray, np.ndarray], bool] = True,
+        use_vectorized: bool = True,
         ):
         """3DMP accumulator model with confidence/wager readout
         :param grid_vec: vector of DV grid points
@@ -44,23 +47,26 @@ class SelfMotionDDM:
         :param kmult: list of k multipliers [k_ves, k_vis]
         :param bound: list of bounds per modality [ves, vis, comb]      
         :param non_dec_time: list of non-decision times per modality
+        :param return_wager: whether to compute/return wager predictions
         :param wager_thr: list of wager thresholds per modality
         :param wager_alpha: list of wager alpha parameters per modality
-        :param return_wager: whether to compute wager predictions
+        :param wager_maps: list of existing wager maps to use for predictions
         :param wager_axis: axis for wager calculation (None = log odds)
         :param stim_scaling: whether to use stimulus-driven urgency signals
+        :param use_vectorized: whether to use vectorized cdf/pdf implementations
         """
         self.grid_vec = grid_vec
         self.tvec = tvec
         self.kmult = kmult
         self.bound = bound
         self.non_dec_time = non_dec_time
+        self.return_wager = return_wager
         self.wager_thr = wager_thr
         self.wager_alpha = wager_alpha
-        self.return_wager = return_wager
+        self.wager_maps = wager_maps
         self.wager_axis = wager_axis
         self.stim_scaling = stim_scaling
-        # TODO add init option to set whether to use vectorized accumulator cdf/pdf calculations
+        self.use_vectorized = use_vectorized
 
         # initialize internal containers used by fit/predict
         self.init_params = {k: getattr(self, k) for k in self.PARAM_NAMES}
@@ -69,17 +75,100 @@ class SelfMotionDDM:
 
         self.accumulators_ = {}  # cache of accumulators per condition if desired
 
-       
+    def print_params(self, ndigits: int = 4) -> None:
+        """Pretty-print params_ with rounded floats."""
+        rounded = {k: round_val(v, ndigits) for k, v in self.params_.items()}
+        for k, v in rounded.items():
+            print(f"  {k}: {v}")
+
+    def to_dict(self) -> dict:
+        """Return a JSON-serializable dict of attributes needed to reinstantiate."""
+        def to_serializable(v):
+            if isinstance(v, np.ndarray):
+                return v.tolist()
+            if isinstance(v, (np.floating, np.integer)):
+                return float(v) if isinstance(v, np.floating) else int(v)
+            if isinstance(v, tuple) and len(v) == 2 and all(isinstance(x, np.ndarray) for x in v):
+                return {"_tuple_arrays": [v[0].tolist(), v[1].tolist()]}
+            if isinstance(v, list) and v and isinstance(v[0], np.ndarray):
+                return [x.tolist() if isinstance(x, np.ndarray) else x for x in v]
+            return v
+
+        return {
+            "grid_vec": to_serializable(self.grid_vec),
+            "tvec": to_serializable(self.tvec),
+            "params_": {k: to_serializable(v) for k, v in self.params_.items()},
+            "return_wager": self.return_wager,
+            "wager_maps": to_serializable(self.wager_maps) if self.wager_maps is not None else None,
+            "wager_axis": self.wager_axis,
+            "stim_scaling": to_serializable(self.stim_scaling) if isinstance(self.stim_scaling, tuple) else self.stim_scaling,
+        }
+
+    def save(self, path: Path | str) -> None:
+        """Save the model state to a JSON file."""
+        with open(path, "w") as f:
+            json.dump(self.to_dict(), f, indent=2)
+
+    @classmethod
+    def load(cls, path: Path | str) -> "SelfMotionDDM":
+        """Recreate a SelfMotionDDM from a JSON file saved by save()."""
+        with open(path) as f:
+            d = json.load(f)
+
+        grid_vec = np.array(d["grid_vec"])
+        tvec = np.array(d["tvec"])
+        params_ = d["params_"]
+        stim_scaling = d["stim_scaling"]
+        if isinstance(stim_scaling, dict) and "_tuple_arrays" in stim_scaling:
+            stim_scaling = tuple(np.array(a) for a in stim_scaling["_tuple_arrays"])
+        wager_maps = d["wager_maps"]
+        if wager_maps is not None:
+            wager_maps = [np.array(w) for w in wager_maps]
+
+        obj = cls(
+            grid_vec=grid_vec,
+            tvec=tvec,
+            kmult=params_["kmult"],
+            bound=params_["bound"],
+            non_dec_time=params_["non_dec_time"],
+            wager_thr=params_["wager_thr"],
+            wager_alpha=params_["wager_alpha"],
+            return_wager=d["return_wager"],
+            wager_maps=wager_maps,
+            wager_axis=d["wager_axis"],
+            stim_scaling=stim_scaling,
+        )
+        obj.params_ = {k: v for k, v in params_.items()}
+        return obj
+
+    @classmethod
+    def params_table(
+        cls,
+        *instances: "SelfMotionDDM",
+        ndigits: int = 4,
+    ) -> pd.DataFrame:
+        """Build a DataFrame of params_ across one or more instances (rows=instances, columns=param names)."""
+        if not instances:
+            return pd.DataFrame(columns=cls.PARAM_NAMES)
+        rows = [
+            {p: round_val(inst.params_[p], ndigits) for p in cls.PARAM_NAMES}
+            for inst in instances
+        ]
+        return pd.DataFrame(rows, columns=cls.PARAM_NAMES)
+
     def fit(
         self,
         X: pd.DataFrame,
         y: pd.DataFrame,
         fixed_params: Optional[list[str]]=None,
-        # optim_bounds: Optional[Union[OptimBounds, dict]]=None,
+        fit_method: str = 'bads',
+        fit_options: Optional[dict] = None,
         ) -> 'SelfMotionDDM':
         """fit model to data in X and y, with optional fixed parameters"""
 
         logger.info('Starting model fitting')
+
+        fit_start_time = time.perf_counter()
         
         self.n_features_in_ = len(X.columns)
 
@@ -96,30 +185,20 @@ class SelfMotionDDM:
             # pass data as fixed inputs to objective function
             optim_fcn_part = lambda params: self._objective_fcn(params, X, y)
 
-            min_method = 'bads'
-            # min_method = 'Nelder-Mead'
-            
-            if min_method == 'bads':
+            if fit_method.lower() == 'bads':
 
+                # TODO expose these to the user
                 lb = params_array * 0.25
                 ub = params_array * 3.0
                 plb = params_array * 0.5
                 pub = params_array * 2.0
                 bads_bounds = (lb, ub, plb, pub)
-
-                options = {
-                        "random_seed": 42,
-                        # "uncertainty_handling": True,
-                        "max_fun_evals": 300,
-                        # "noise_final_samples": 100,
-                        "display": "full"
-                    }
                 
                 bads = BADS(
                     optim_fcn_part, 
                     params_array, 
                     *bads_bounds, 
-                    options=options
+                    options=fit_options
                     )
                 result = bads.optimize()
 
@@ -128,13 +207,20 @@ class SelfMotionDDM:
                     self._objective_fcn,
                     params_array,
                     args=(X, y),
-                    method=min_method,
-                    options={'maxiter': 5000, 'disp': True}
+                    method=fit_method,
+                    options=fit_options
                     )
-                
+
+            logger.info("================")
+            logger.info(result)
+            logger.info("================")
+                   
             # at the end, store fitted params back into dict, with fixed ones
             self._build_params_dict(result.x, self.param_end_inds)
 
+        fit_duration = time.perf_counter() - fit_start_time
+        logger.info(f"Fitting took {fit_duration:3f}s / {fit_duration/60:3f} mins")
+        
         return self
 
     def _objective_fcn(
@@ -154,13 +240,13 @@ class SelfMotionDDM:
         # combine params array passed to objective function with fixed params
         # to reconstruct full params dict expected by custom predict method
         self._build_params_dict(params_array, self.param_end_inds, fixed_params)
-        logger.info(params_array)
-        # logger.info('Current params: %s', {k: [round(vv, 2) for vv in v] for k, v in self.params_.items()})
+        # logger.info(params_array)
+        # print('Current params: %s', {k: [round(vv, 2) for vv in v] for k, v in self.params_.items()})
 
         t0_pred = time.perf_counter()
         y_pred, _ = self.predict(X, y)
         t1_pred = time.perf_counter() - t0_pred
-        logger.info(f'single objective function prediction run took {t1_pred:.2f} seconds')
+        logger.debug(f'single objective function prediction run took {t1_pred:.2f} seconds')
         
         # calculate log likelihoods for each output
         log_lik_choice = log_lik_bin(y['choice'].to_numpy(), y_pred['choice'].to_numpy()) / len(y)
@@ -173,24 +259,25 @@ class SelfMotionDDM:
             'rt': log_lik_rt
         }
         if self.return_wager:
-            logger.info('Log likelihoods - choice: %.2f, PDW: %.2f, RT: %.2f', 
+            logger.debug('Log likelihoods - choice: %.2f, PDW: %.2f, RT: %.2f', 
                         log_lik_choice, log_lik_pdw, log_lik_rt)
             self.neg_llh_ = -sum([log_lik_choice, log_lik_pdw, log_lik_rt])
         else:
-            logger.info('Log likelihoods - choice: %.2f, RT: %.2f', 
+            logger.debug('Log likelihoods - choice: %.2f, RT: %.2f', 
                         log_lik_choice, log_lik_rt)
             self.neg_llh_ = -sum([log_lik_choice, log_lik_rt])
-        logger.info('Total loss:\t%.2f', self.neg_llh_)
+        logger.debug('Total loss:\t%.2f', self.neg_llh_)
 
         return self.neg_llh_
-
 
     def predict(
         self,
         X,
         y=None,
-        n_samples: int=1,
-        cache_accumulators=False,
+        n_samples: int = 1,
+        cache_accumulators: bool = False,
+        use_cached_wager_maps: bool = False,
+        rt_sampling_method: Literal["sample", "mean", "mode"] = "sample",
         seed=None
         ):
         """
@@ -198,10 +285,17 @@ class SelfMotionDDM:
         :param X: DataFrame with columns modality, coherence, delta, heading
         :param y: DataFrame with columns choice, PDW, RT (for RT likelihood calculation)
         :param n_samples: number of samples to draw for probabilistic predictions (0 = none)
+        :param cache_accumulators: (default = False) whether to cache accumulator objects
+        :param use_cached_wager_maps: (default = True) whether to use existing cached_wager_maps
+        :param rt_sampling_method: (default="sample) how to draw predicted RTs from distribution - options are "sample", "mean", or "mode"
         :param seed: random seed for sampling
         :return: 
             predictions - DataFrame with columns choice, PDW, RT (predicted likelihoods)
-            pred_sample - DataFrame with sampled predictions (n_samples > 0 -> how many draws from binomial for choice/PDW)
+            pred_sample - DataFrame with sampled predictions, returns None if n_samples == 0 
+                (n_samples > 0 -> 
+                    how many draws from binomial for choice/PDW, or how many samples from RT_dist for RT
+                    if rt_sampling_method is "mean" or "mode", will instead take expected value or argmax of RT_dist
+                )
         """
         
         rng = np.random.RandomState(seed)
@@ -212,27 +306,25 @@ class SelfMotionDDM:
         hdgs, hdg_inds = np.unique(X['heading'], return_inverse=True)
         hdgs = hdgs.astype(float)
 
-        k_scale = 1e3
-        # get stimulus-driven urgency signals if specified, for scaling drifts
+        K_SCALE_FACTOR = 1e3
         if not self.stim_scaling:
             b_ves, b_vis = np.ones_like(self.tvec), np.ones_like(self.tvec)
-            b_ves /= len(b_ves)
-            b_vis /= len(b_vis)
         elif isinstance(self.stim_scaling, tuple):
             b_ves, b_vis = self.stim_scaling
         else:
-            b_ves, b_vis = self.get_stim_urgs(self.tvec)
-            k_scale = 10
+            b_ves, b_vis = get_stim_urgs(self.tvec)
+            K_SCALE_FACTOR = 1e4
 
+        b_ves /= len(b_ves)
+        b_vis /= len(b_vis)
         b_vals = [b_ves, b_vis, np.vstack((b_ves, b_vis)).T]
 
         # handle parameters per modality
-        kves, kvis = self._handle_kmult(self.params_['kmult'], cohs.T, k_scale=k_scale) 
+        kves, kvis = self._handle_kmult(self.params_['kmult'], cohs.T, k_scale=K_SCALE_FACTOR) 
         bound = self._handle_param_mod(self.params_['bound'], mods)  
         non_dec_time = self._handle_param_mod(self.params_['non_dec_time'], mods)  
         thetas = self._handle_param_mod(self.params_['wager_thr'], mods)  
         alphas = self._handle_param_mod(self.params_['wager_alpha'], mods)  
-
 
         # initialize predictions dataframes
         predictions = pd.DataFrame(
@@ -240,8 +332,10 @@ class SelfMotionDDM:
             )
         pred_sample = deepcopy(predictions) if n_samples else None
 
-        self.wager_maps = []
-        if self.return_wager:
+        # compute wager maps if not existing, or cache not requested
+        if self.return_wager and (not use_cached_wager_maps or not self.wager_maps):
+
+            self.wager_maps = []
 
             # ves, vis, comb overall sensitivities
             k_vals_fixed = [kves, kvis.mean().item(), [kves, kvis.mean().item()]]
@@ -251,13 +345,14 @@ class SelfMotionDDM:
                 # set accumulators with absolute drifts, for log odds mappings
                 accumulator = Accumulator(grid_vec=self.grid_vec, tvec=self.tvec, bound=bound[m])
 
-                abs_drifts, accumulator.tvec = self.calc_3dmp_drift_rates(
-                    b_vals[m], k_vals_fixed[m], self.tvec[-1], hdgs[hdgs>=0], delta=0,
+                abs_drifts, t_eff = calc_selfmotion_drifts(
+                    b_vals[m], k_vals_fixed[m], self.tvec, hdgs[hdgs>=0], delta=0,
                     )
+                accumulator.tvec = t_eff
 
                 # run the method of images - diffusion to bound to extract pdfs, cdfs, and LPO
                 accumulator.apply_drifts(abs_drifts, hdgs[hdgs>=0])
-                accumulator.compute_distrs(return_pdf=True) # get the pdfs for wager calculation
+                accumulator.compute_distrs(return_pdf=True, use_vectorized=self.use_vectorized) # get the pdfs for wager calculation
 
                 if cache_accumulators:
                     self.accumulators_[('wager', mod)] = accumulator
@@ -268,7 +363,8 @@ class SelfMotionDDM:
                 else:
                     raise NotImplementedError('alternatives to log odds not yet implemented')
 
-                wager_is_high = [p >= theta for p, theta in zip(self.wager_maps, thetas)]
+        # boolean mask on wager map for high bets
+        wager_is_high = [p >= theta for p, theta in zip(self.wager_maps, thetas)]
 
         # now loop over coherences and deltas with one accumulator each for actual predictions
         for c, coh in enumerate(cohs):
@@ -286,14 +382,16 @@ class SelfMotionDDM:
 
                     # set up accumulator for this condition
                     accumulator = Accumulator(grid_vec=self.grid_vec, tvec=self.tvec, bound=bound[m])
-                    drifts, accumulator.tvec = self.calc_3dmp_drift_rates(
-                        b_vals[m], k_vals[m], self.tvec[-1], hdgs, delta=delta,
+                    drifts, t_eff = calc_selfmotion_drifts(
+                        b_vals[m], k_vals[m], self.tvec, hdgs, delta=delta,
                         )
+                    accumulator.tvec = t_eff
+                    
                     # this time use signed headings
                     accumulator.apply_drifts(drifts, hdgs) 
 
                     # run the method of images - diffusion to bound to extract pdfs, cdfs, and LPO
-                    accumulator.compute_distrs(return_pdf=self.return_wager)
+                    accumulator.compute_distrs(return_pdf=self.return_wager, use_vectorized=self.use_vectorized)
 
                     if cache_accumulators:
                         self.accumulators_[(mod, coh, delta)] = accumulator
@@ -348,7 +446,7 @@ class SelfMotionDDM:
                             p_wager += np.array([-alphas[m], alphas[m]]) * p_wager[0]
                             p_wager = np.clip(p_wager, 1e-100, 1-1e-100)
 
-                            predictions.loc[trial_index, 'PDW'] = p_wager[0]
+                            predictions.loc[trial_index, 'PDW'] = p_wager[0] # proportion of high bets
 
                             if n_samples:
                                 pred_sample.loc[trial_index, 'PDW'] = rng.binomial(n_samples, p_wager[0], trial_index.sum()) / n_samples
@@ -375,10 +473,15 @@ class SelfMotionDDM:
                             predictions.loc[trial_index, 'RT'] = rt_dist[dist_inds]
 
                         if n_samples:
-                            sampled_RTs = np.random.choice(
-                                self.tvec, (trial_index.sum(), n_samples), replace=True, p=rt_dist
-                                )
-                            pred_sample.loc[trial_index, 'RT'] = sampled_RTs.mean(axis=1)
+                            if rt_sampling_method == "sample":
+                                sampled_RTs = np.random.choice(
+                                    self.tvec, (trial_index.sum(), n_samples), replace=True, p=rt_dist
+                                    )
+                                pred_sample.loc[trial_index, 'RT'] = sampled_RTs.mean(axis=1)
+                            elif rt_sampling_method == "mean":
+                                pred_sample.loc[trial_index, 'RT'] = np.dot(self.tvec, rt_dist)
+                            elif rt_sampling_method == "mode":
+                                pred_sample.loc[trial_index, 'RT'] = self.tvec[np.argmax(rt_dist)]
 
         return predictions, pred_sample
     
@@ -413,8 +516,8 @@ class SelfMotionDDM:
             self.fixed_params = {k: self.init_params[k] for k in fixed_params}
             
         self.fit_param_names = [k for k in self.init_params.keys() if k not in self.fixed_params.keys()]
-        logger.info(f'Fixed parameters: {self.fixed_params}')
-        logger.info(f'Fitting parameters: {self.fit_param_names}')
+        logger.debug(f'Fixed parameters: {self.fixed_params}')
+        logger.debug(f'Fitting parameters: {self.fit_param_names}')
 
         return [self.init_params[k] for k in self.fit_param_names]
 
@@ -433,7 +536,6 @@ class SelfMotionDDM:
         :param seed: random seed for sampling
         :return: simulated DataFrame with columns choice, PDW, RT
 
-        
         """
         
         _, preds = self.predict(
@@ -451,23 +553,35 @@ class SelfMotionDDM:
             
             Xu = X.drop_duplicates().values
             preds = pd.DataFrame(np.repeat(Xu, n_samples, axis=0), columns=X.columns)
+
+            mods = np.unique(X['modality']).astype(float)
+            non_dec_time = self._handle_param_mod(self.params_['non_dec_time'], mods)  
+            alphas = self._handle_param_mod(self.params_['wager_alpha'], mods)  
             
             for i, row in X.iterrows():
-                mod = row['modality']
+                mod = int(row['modality'])
                 coh = row['coherence']
                 delta = row['delta']
 
                 accum = self.accumulators_[(mod, coh, delta)]
 
-                for hdg, drift in enumerate(zip(accum.drift_labels, accum.drift_rates)):
+                ndt_mean = non_dec_time[mod-1]
+                ndt_std = 0.050
+                ndt_min = ndt_mean / 2
+                ndt_max = ndt_mean + ndt_min
+                
+                for ihdg, hdg in enumerate(accum.drift_labels):
 
                     trial_inds = preds.index[
                         (preds["modality"]==mod) & (preds["coherence"]==coh) & \
                             (preds["delta"]==delta) & (preds["heading"]==hdg)
-                    ]
+                    ].to_numpy()
+                    
+                    ndt = truncnorm.rvs(ndt_min, ndt_max, loc=ndt_mean, scale=ndt_std, 
+                                    size=len(trial_inds))
 
                     for itr in range(n_samples):
-                        dv = accum.dv(drift, sigma=np.array([1., 1.]))
+                        dv = accum.dv(ihdg)
 
                         is_hit_bnd = (dv >= accum.bound).any(axis=0)
                         t_bnd_cross = np.argmax((dv >= accum.bound) == 1, axis=0)
@@ -500,16 +614,15 @@ class SelfMotionDDM:
                             wager_accum = self.accumulators_[('wager', mod)]
                             
                             # log_odds = wager_odds_maps[m][rt_ind, grid_ind]
-                            wager = int(wager_odds_above_threshold[m][rt_ind, grid_ind])
-                            wager *= (np.random.random() > params['alpha'])  # incorporate base-rate of low bets
-                            preds.loc[trial_inds[itr], 'PDW'] = wager
+                            wager = int(wager_accum.wager_map[rt_ind, grid_ind])
+                            wager *= (np.random.random() > alphas[mod-1])  # incorporate base-rate of low bets
+                            preds.loc[trial_inds[itr].item(), 'PDW'] = wager
 
                         # flip choice result so that left choices = 0, right choices = 1 in the output
-                        preds.loc[these_trials[tr], 'choice'] = choice ^ 1
+                        preds.loc[trial_inds[itr].item(), 'choice'] = choice ^ 1
 
-                        # RT = decision time + non-decision time - motion onset latency
-                        preds.loc[these_trials[tr], 'RT'] = \
-                            orig_tvec[rt_ind] + non_dec_time[tr] - 0.3
+                        # RT = decision time + non-decision time
+                        preds.loc[trial_inds[itr].item(), 'RT'] = self.tvec[rt_ind] + ndt[itr]
 
         return preds
         
@@ -544,78 +657,110 @@ class SelfMotionDDM:
 
         raise ValueError("Length of param list does not match number of modalities")
 
+# %% -----------------------
 
-    @staticmethod
-    def get_stim_urgs(tvec: np.ndarray, pos=None, skew_params=None):
+def get_stim_urgs(
+    tvec: np.ndarray,
+    pos: Optional[np.ndarray] = None,
+    skew_params: Optional[tuple] = None
+    ):
+    """
+    Return acceleration and velocity profiles for stimulus weighting
 
-        if pos is None:
-            ampl = 0.16
+    Args:
+        tvec (np.ndarray): time vector, used to create position profile with skew_params. 
+                            Ignored if pos provided directly.
+        pos (Optional[np.ndarray], optional): position profile. Defaults to None.
+        skew_params (Optional[tuple], optional): args for skewnorm.cdf. Defaults to (2, 0.8, 0.4).
 
-            # pos = norm.cdf(tvec, 0.9, 0.3) * ampl
-            if skew_params is None:
-                pos = skewnorm.cdf(tvec, 2, 0.8, 0.4) * ampl  # emulate tf
-            else:
-                pos = skewnorm.cdf(tvec, **skew_params) * ampl
+    Returns:
+        np.ndarray, np.ndarray: acceleration, velocity vectors
+    """
+    if pos is None:
+        ampl = 0.16
 
-        vel = np.gradient(pos)
-        acc = np.gradient(vel)
+        # pos = norm.cdf(tvec, 0.9, 0.3) * ampl
+        if skew_params is None:
+            skew_params = (2, 0.8, 0.4)
+        pos = skewnorm.cdf(tvec, *skew_params) * ampl
 
-        vel /= vel.max()
-        acc /= acc.max()
-        
-        return acc, vel
+    vel = np.gradient(pos)
+    acc = np.gradient(vel)
 
-        
-    @staticmethod
-    def calc_3dmp_drift_rates(
-        b_t: np.ndarray,
-        b_k: Union[float, tuple[float, float]],
-        tmax: float,
-        hdgs: np.ndarray,
-        delta: Optional[float] = 0.0, 
-        cue_weights: Optional[tuple[float, float]] = None
-        ) -> tuple[np.ndarray, np.ndarray]:
-        """
-        Calculate drift rates
-        if cue_weights is None, optimal cue weights calculated from k's
-        """
+    vel /= vel.max()
+    acc /= acc.max()
+    
+    return acc, vel
 
-        sin_hdgs = np.sin(np.deg2rad(hdgs))
+    
+def calc_selfmotion_drifts(
+    b_t: np.ndarray,
+    b_k: Union[float, tuple[float, float]],
+    tvec: float,
+    hdgs: np.ndarray,
+    delta: float = 0.0, 
+    cue_weights: Optional[tuple[float, float]] = None
+    ) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Calculate instaneous drift rates given time course and modality sensitivities
+    See Drugowitsch et al 2014 eLife supplementary equations
 
-        cumul_bt = np.cumsum((b_t**2)/(b_t**2).sum(axis=0), axis=0)
+    b_t:  time-course sensitivity
+    b_k:  stimulus modality sensitivity (tuple --> bimodal condition)
+    tvec: original (linear) time vector
+    hdgs: heading values
+    delta: heading delta (combined modality)
+    cue_weights: tuple for custom override of cue weights
+        (default is None, in which case optimal cue weights are computed from b_k)
 
-        if isinstance(b_k, (int, float)):
-            # only one sensitivity and time-course - ves or vis (logic is the same)
-            b_t = b_t.reshape(-1, 1)
-            tvec = cumul_bt * tmax
-            drifts = np.cumsum(b_t**2 * b_k * sin_hdgs, axis=0)
-            # drifts2 = b_k * sin_uhdgs   # w/o stim scaling, reduces to this
+    Returns:
+       drifts - array of instantaneous drift rates (T x drifts)
+       t_eff - effective time (momentary power of stimulus)
+       
+    """
 
-        elif len(b_k) == 2:
-            # two sensitivities/time-courses - combined condition
+    sin_hdgs = np.sin(np.deg2rad(hdgs))
+    dt = np.gradient(tvec)
 
-            b_k = np.array(b_k, dtype=float)
-            if cue_weights is None:
-                k2 = b_k**2
-                cue_weights = np.sqrt(k2 / k2.sum())
-                
-            w_ves, w_vis = cue_weights
+    cumul_bt = np.cumsum((b_t**2)/(b_t**2).sum(axis=0), axis=0)
+    
+    if isinstance(b_k, (int, float)):
+        # only one sensitivity and time-course - ves or vis (logic is the same)
+        t_eff = cumul_bt * tvec[-1]
+        drifts = np.reshape(b_t, (-1, 1))**2 * b_k * sin_hdgs # see Drugowitsch et al. 2014 supp eq 2 & 7
+        # drifts = b_k * sin_uhdgs   # w/o stim scaling, reduces to this
+
+    elif len(b_k) == 2:
+        # two sensitivities/time-courses - combined condition
+
+        b_k = np.array(b_k, dtype=float)
+        if cue_weights is None:
+            k2 = b_k**2
+            cue_weights = np.sqrt(k2 / k2.sum())
             
-            # if return_abs:
-            #     drift_ves = np.cumsum(b_t[:, [0]]**2 * b_k[0] * sin_uhdgs, axis=0)
-            #     drift_vis = np.cumsum(b_t[:, [1]]**2 * b_k[1] * sin_uhdgs, axis=0)
-            # else:
-            
-            # +ve delta means ves to the left, vis to the right
-            # Drugo eq suggests cumsum each modality separately first, then do the weighted sum     
-            drift_ves = np.cumsum(b_t[:, [0]]**2 * b_k[0] * np.sin(np.deg2rad(hdgs - delta / 2)), axis=0)
-            drift_vis = np.cumsum(b_t[:, [1]]**2 * b_k[1] * np.sin(np.deg2rad(hdgs + delta / 2)), axis=0)
+        w_ves, w_vis = cue_weights
+        
+        # +ve delta means ves to the left, vis to the right
+        drift_ves = b_t[:, [0]]**2 * b_k[0] * np.sin(np.deg2rad(hdgs - delta / 2))
+        drift_vis = b_t[:, [1]]**2 * b_k[1] * np.sin(np.deg2rad(hdgs + delta / 2))
+        
+        drifts = w_ves * drift_ves + w_vis * drift_vis
 
-            # Eq 14
-            tvec = w_ves**2 * cumul_bt[:,0] + w_vis**2 * cumul_bt[:,1]
-            tvec *= tmax
-            drifts = w_ves * drift_ves + w_vis * drift_vis
+        # Drugowitsch et al. 2014 supp eq 14
+        t_eff = (w_ves**2 * cumul_bt[:,0] + w_vis**2 * cumul_bt[:,1]) * tvec[-1]
 
-        drifts /= tvec[:, None]
+    # cumsum over time, then divide by t_eff to get instantaneous drifts
+    drifts = np.cumsum(drifts, axis=0) / t_eff[:, None]
 
-        return drifts, tvec
+    return drifts, t_eff
+
+
+# param printing util
+def round_val(v, ndigits):
+    if isinstance(v, np.ndarray):
+        v = v.tolist()
+    if isinstance(v, (list, tuple)):
+        return [round(float(x), ndigits) if isinstance(x, (int, float, np.floating)) else x for x in v]
+    if isinstance(v, (int, float, np.floating)):
+        return round(float(v), ndigits)
+    return v

@@ -4,7 +4,7 @@ from typing import Optional, Union, Sequence
 import numpy as np
 
 # always import from base matplotlib first to avoid backend issues
-import matplotlib as mpl
+from matplotlib.animation import FuncAnimation, PillowWriter
 import matplotlib.pyplot as plt
 
 from .moi import moi_cdf, moi_cdf_vec, moi_pdf, moi_pdf_vec, sample_dv
@@ -30,7 +30,7 @@ class Accumulator:
 
     # Use __slots__ to reduce per-instance memory usage and speed attribute access.
     __slots__ = (
-        'tvec', 'grid_vec', '_bound', 'drift_rates', 'num_images', 'wager_theta',
+        'tvec', 'dt', 'grid_vec', '_bound', 'drift_rates', 'num_images', 'wager_theta',
         '_is_fitted', 'drift_labels', 'p_corr_', 'rt_dist_', 'pdf3D_', 'up_lose_pdf_',
         'lo_lose_pdf_', 'log_odds_'
     )
@@ -42,7 +42,8 @@ class Accumulator:
         drift_rates: Optional[list] = None, 
         bound: Optional[Union[float, Sequence, np.ndarray]] = 1.0,
         num_images: Optional[int]=7,
-        wager_theta: Optional[float]=1.0
+        wager_theta: Optional[float]=1.0,
+        dt: Optional[np.ndarray] = None,
         ):
         self.tvec = tvec
         self.grid_vec = grid_vec
@@ -51,16 +52,15 @@ class Accumulator:
         self.num_images = num_images
         self.wager_theta = wager_theta
         self._is_fitted = False
+        self.dt = dt
 
-        if self.drift_rates:
-            self.drift_labels = self.drift_rates.copy()
-
+        if self.dt is None:
+            self.dt = tvec[1] - tvec[0]
 
     @property
     def is_fitted(self) -> bool:    
         return self._is_fitted
 
-    
     @property
     def bound(self):
         """return symmetric bound as 2-element array"""
@@ -70,11 +70,9 @@ class Accumulator:
         self._bound = np.array(b)
         return self._bound
 
-
     @bound.setter
     def bound(self, bound):
         self._bound = bound
-
 
     def apply_drifts(
         self,
@@ -84,27 +82,24 @@ class Accumulator:
         urgency: Optional[Union[np.ndarray,float]] = None
         ):
         """
-        Set accumulator drift rates. Optionally add label for each drift.
-        This also adds a mirrored drift rate for the anti-correlated accumulator, and 
-        updates drift rates based on sensitivity and urgency parameters.
+        Set drift rates for anti-correlated accumulators.
         """
 
         if isinstance(drifts, np.ndarray):
             drifts = np.split(drifts, drifts.shape[1], axis=1)
-        
-        # add corresponding negated value for anti-correlated accumulator
-        # also update drift rates based on sensitivity and urgency, if provided
 
-        if labels is not None:
-            assert len(drifts) == len(labels), "drift rates and provided labels must match in length"
-            self.drift_labels = labels
+        if labels is None:
+            labels = list(range(len(drifts)))
+        self.drift_labels = labels
+
+        assert len(drifts) == len(labels), "drift rates and labels \
+            must have the same number of elements"
         
-        for d, drift in enumerate(drifts):
-            drift = drift * np.array([1, -1])
-            drifts_posneg = _urgency_scaling(drift * sensitivity, self.tvec, urgency)
-            self.drift_rates.append(drifts_posneg)
+        for drift in drifts:
+            drift2 = drift * np.array([1, -1])
+            drift2 = np.broadcast_to(drift2, (self.tvec.size, 2))
+            self.drift_rates.append(drift2)
             
-
     def cdf(self, use_vectorized: bool = True):
         """calculate cdf at boundaries for each drift rate, returns
         probability of correct choice and RT distribution (no NDT)"""
@@ -115,13 +110,13 @@ class Accumulator:
         cdf_fcn = moi_cdf_vec if use_vectorized else moi_cdf
         
         for d, drift in enumerate(self.drift_rates):
-            p_corr[d], rt_dist[d, :], flux1, flux2 = cdf_fcn(
-                self.tvec, drift, self.bound, 0.025, self.num_images
+            cdf_res = cdf_fcn(
+                self.tvec, drift, self.bound, num_images=self.num_images
                 )
+            p_corr[d], rt_dist[d, :] = cdf_res.p_up, cdf_res.rt_dist
             
         self.p_corr_ = p_corr
         self.rt_dist_ = rt_dist
-
 
     def pdf(self, use_vectorized=True, full_pdf=False):
 
@@ -174,14 +169,40 @@ class Accumulator:
         return self.log_odds_ >= self.wager_theta
 
 
-    def dv(self, drift, sigma):
-        """Return accumulated DV for given drift rate and diffusion noise."""
-        return sample_dv(
-            mu=drift*self.tvec.reshape(-1, 1),
-            s=sigma,
-            num_images=self.num_images
+    def dv(
+        self,
+        d_ind,
+        sigma=np.array([1, 1]),
+        show=False,
+        use_vectorized=True
+    ):
+        """Return accumulated DV for given drift rate and diffusion noise.
+        default sigma is set to [1,1] for consistency with MOI model which assumes unit variance
+        """
+
+        dv = sample_dv(
+                mu=self.drift_rates[d_ind],
+                dt=self.dt.item(),
+                s=sigma,
+                num_images=self.num_images,
+                use_vectorized=use_vectorized
             )
 
+        if not show:
+            return dv
+
+        fig, ax = plt.subplots()
+        ax.set_prop_cycle(
+            color=['blue', 'red', 'blue', 'red'],
+            linestyle=['-','-',':',':']
+            )
+        plt.plot(self.tvec, dv)
+        plt.plot(self.tvec, np.cumsum(self.drift_rates[d_ind]*self.dt, axis=0))
+        plt.axhline(y=1.0, color='k', linestyle='--', label='bound')
+        plt.title(f"DV simulation")
+        plt.xlabel("Time (s)")
+        plt.ylabel("DV (arb. units)")
+        return dv, fig
 
     def compute_distrs(self, use_vectorized=True, return_pdf=False):
         """Calculate cdf and pdf for accumulator object. Returns self for chaining commands"""
@@ -199,59 +220,81 @@ class Accumulator:
         d_ind: int = -1,
         save_path: Optional[str] = None,
         ):
-        """
+        f"""
         Plot summary of accumulator results.
 
         Parameters
         ----------
         d_ind : INT, optional
             index of which drift rate to plot. The default is the last one.
+        save_path: STR, optional
+            path to save figures to (will be saved as <save_path>/cdf.png and /pdf.png)
 
         Returns
         -------
         fig_cdf & fig_pdf: figure handles
         """
+        
         if not hasattr(self, 'p_corr_'):
             raise ValueError('Accumulator distributions have not yet been calculated')
 
-        fig_cdf, axc = plt.subplots(2, 1, figsize=(4, 5))
+        fig_cdf, axc = plt.subplots(2, 1, figsize=(4, 5), constrained_layout=True)
         axc[0].plot(self.drift_labels, self.p_corr_, marker='o')
-        axc[0].set_ylim([0, 1])
-        axc[0].set_xlabel('drift')
-        if self.drift_labels:
-            axc[0].set_xticks(self.drift_labels)
+        axc[0].set_ylim([0, 1.05])
+        axc[0].set_xlabel('drift rate')
+        # axc[0].tick_params()
+        # if self.drift_labels:
+        #     axc[0].set_xticks(self.drift_labels)
+        axc[0].set_xticks(self.drift_labels, self.drift_labels, rotation=45, ha='right')
         axc[0].set_ylabel('prob. correct choice')
-        axc[1].set_title('Accumulator CDF/PDF Results')
+        axc[0].spines[['right', 'top']].set_visible(False)
+        axc[0].set_title('Accumulator CDF/PDF Results')
 
         axc[1].plot(self.tvec, self.rt_dist_.T)
-        # axc[1].legend(self.drift_labels, frameon=False)
+        axc[1].legend(self.drift_labels, frameon=False)
         axc[1].set_xlabel('Time (s)')
-        axc[1].set_title('RT distribution (no NDT)')
-        fig_cdf.tight_layout()
+        axc[1].set_ylabel('Likelihood')
+        axc[1].set_title('RT distribution (no non-dec-time)')
+        axc[1].spines[['right', 'top']].set_visible(False)
+
+        axc[0].grid(alpha=0.5)
+        axc[1].grid(alpha=0.5)
 
         fig_pdf = None
         has_log_odds = hasattr(self, 'log_odds_')
         n = 3 if has_log_odds else 2
         if hasattr(self, 'up_lose_pdf_'):
-            fig_pdf, axp = plt.subplots(n, 1, figsize=(5, 6))
-            contour = axp[0].contourf(self.tvec, self.grid_vec,
-                                      log_pmap(np.squeeze(self.up_lose_pdf_[d_ind, :, :])).T,
-                                      levels=100)
-            axp[1].contourf(self.tvec, self.grid_vec,
-                            log_pmap(np.squeeze(self.lo_lose_pdf_[d_ind, :, :])).T,
-                            levels=100)
-            axp[0].set_title(f"Losing accumulator | Correct, drift rate {self.drift_labels[d_ind]}")
-            axp[1].set_title(f"Losing accumulator | Error, drift rate {self.drift_labels[d_ind]}")
-            cbar = fig_cdf.colorbar(contour, ax=axp[0])
-            cbar = fig_cdf.colorbar(contour, ax=axp[1])
-            fig_pdf.tight_layout()
+            fig_pdf, axp = plt.subplots(n, 1, figsize=(5, n*2))
+            contour = axp[0].contourf(
+                self.tvec, 
+                self.grid_vec,
+                log_pmap(np.squeeze(self.up_lose_pdf_[d_ind, :, :])).T,
+                levels=100
+                )
+            axp[1].contourf(
+                self.tvec,
+                self.grid_vec,
+                log_pmap(np.squeeze(self.lo_lose_pdf_[d_ind, :, :])).T,
+                levels=100
+                )
+            axp[0].set_title(f"Losing accumulator | Correct, drift rate {self.drift_labels[d_ind]}", fontsize=9)
+            axp[1].set_title(f"Losing accumulator | Error, drift rate {self.drift_labels[d_ind]}", fontsize=9)
+            if n == 2:
+                axp[1].set_xlabel('Time (s)')
+            cbar = fig_pdf.colorbar(contour, ax=axp[0])
+            cbar = fig_pdf.colorbar(contour, ax=axp[1])
+            cbar.set_label("Log Probability")
+
+            axp[0].set_xticklabels([])
 
             if has_log_odds:
+                axp[1].set_xticklabels([])
+                axp[-1].set_xlabel("Time (s)")
                 vmin, vmax = 0, 3
                 contour = axp[2].contourf(self.tvec, self.grid_vec,
                                             self.log_odds_.T, vmin=vmin, vmax=vmax,
                                             levels=100)
-                axp[2].set_title("Log Odds of Correct Choice given Losing Accumulator")
+                axp[2].set_title("Log Odds of Correct Choice given Losing Accumulator", fontsize=9)
                 cbar = fig_pdf.colorbar(contour, ax=axp[2])
 
         if save_path:
@@ -266,7 +309,6 @@ class Accumulator:
         self,
         drift_ind=-1,
         save_path: str = 'pdf_animation',
-        filetype: str = '.mp4'
         ):
         """Create and save animation of the full PDF over time.
 
@@ -301,8 +343,8 @@ class Accumulator:
             title.set_text(f"Frame {i + 1} - {self.tvec[i]:.2f}, drift = {drift_str}")
             return im, title
 
-        anim = mpl.animation.FuncAnimation(fig, animate, frames=n_frames, blit=True)
-        writer = mpl.animation.PillowWriter(fps=10)
+        anim = FuncAnimation(fig, animate, frames=n_frames, blit=True)
+        writer = PillowWriter(fps=10)
         anim.save(f'{save_path}_{self.drift_labels[drift_ind]}.gif', writer=writer)
         plt.close(fig)
         
@@ -346,7 +388,7 @@ def log_odds(pdf1: np.ndarray, pdf2: np.ndarray) -> np.ndarray:
 
 
 def log_pmap(pdf: np.ndarray, q: int = 30) -> np.ndarray:
-    """Set cut-off on log odds map, for better visualization."""
+    """Set cut-off on pdf, for better visualization."""
     pdf = np.clip(pdf, a_min=10**(-q), a_max=None)
     return (np.log10(pdf)+q) / q
 
