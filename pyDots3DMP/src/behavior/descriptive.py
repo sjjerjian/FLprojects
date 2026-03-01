@@ -27,13 +27,17 @@ from .utils import prop_se, cont_se, gaus
 
 def behavior_means(df, by_conds='heading', drop_na=True, long_format=True):
 
-    # TODO fix this up
-    # p_right = _groupbyconds(df, by_conds, 'choice', prop_se)
-    # p_high = _groupbyconds(df, by_conds, 'PDW', prop_se)
-    # mean_rt = _groupbyconds(df, by_conds, 'RT', cont_se)
-    # correct = _groupbyconds(df, by_conds, 'correct', prop_se)
-    # return {'choice': p_right, 'PDW': p_high, 'RT': mean_rt, 'correct': p_correct}
-
+    """
+    Compute the mean and standard error of the data for each condition.
+    Args:
+        df (pd.DataFrame): the dataframe to compute the means of
+        by_conds (list): the conditions to group by
+        drop_na (bool): whether to drop rows with missing values
+        long_format (bool): whether to return the data in long format
+    Returns:
+        pd.DataFrame: the dataframe with the means and standard errors
+    """
+    
     agg_funcs = {
         'choice': ['count', 'mean', prop_se],
         'PDW': ['count', 'mean', prop_se],
@@ -75,12 +79,6 @@ def behavior_means(df, by_conds='heading', drop_na=True, long_format=True):
     return df_means
 
 
-def _groupbyconds(df, by_conds, data_col, errfcn):
-    group_res = df.groupby(by=by_conds)[data_col].agg(['count', 'mean', errfcn]).dropna(axis=0).reset_index()
-    group_res = group_res.rename(columns={errfcn.__name__: "sem"})
-    return group_res
-
-
 def replicate_ves(df):
     """Replicate vestibular condition rows, for every coherence level."""
     if 'coherence' in df.columns and len(np.unique(df['coherence'])) > 1:
@@ -94,7 +92,7 @@ def replicate_ves(df):
                               ignore_index=True)
         result_df = pd.concat((df, result_df), ignore_index=True)
     else:
-        result_df = df
+        result_df = df.copy()
 
     return result_df
 
@@ -122,9 +120,7 @@ def gauss_fit_hdg(df, p0: np.ndarray, y_var: str = 'choice', numhdgs: int = 200)
     xhdgs = np.linspace(np.min(hdgs), np.max(hdgs), numhdgs).reshape(-1, 1)
 
     if y_var == 'choice':
-
-        probreg = sm.Probit(df['choice'], sm.add_constant(df['heading'])).fit(
-            start_params=p0)
+        probreg = sm.Probit(df['choice'], sm.add_constant(df['heading'])).fit(start_params=p0)
         yhat = probreg.predict(sm.add_constant(xhdgs))
         params = probreg.params['heading'], probreg.params['const']
 
@@ -137,7 +133,7 @@ def gauss_fit_hdg(df, p0: np.ndarray, y_var: str = 'choice', numhdgs: int = 200)
         yhat = gaus(xhdgs, *params).flatten()
 
     elif y_var == 'correct':
-        ...  # TODO
+        raise NotImplementedError("Gaussian fit to p(correct) not implemented yet")
 
     # # To compute 1SD error on parameters,
     # perr = np.sqrt(np.diag(pcov))
@@ -145,10 +141,25 @@ def gauss_fit_hdg(df, p0: np.ndarray, y_var: str = 'choice', numhdgs: int = 200)
     return pd.Series({'hdgs': xhdgs.flatten(), 'yhat': yhat, 'params': params})
 
 
-def gauss_fit_hdg_group(df, p0, y_vars: tuple = ('choice', 'PDW', 'RT'), by_conds = 'modality', numhdgs: int = 200) -> dict:
+def gauss_fit_hdg_group(
+    df: pd.DataFrame, 
+    p0: np.ndarray, 
+    y_vars: tuple = ('choice', 'PDW', 'RT'), 
+    by_conds: str = 'modality', 
+    numhdgs: int = 200
+    ) -> dict:
     """
-    apply the gaussian
+    Fit a Gaussian to the data for each condition.
+    Args:
+        df (pd.DataFrame): the dataframe to fit the Gaussian to
+        p0 (np.ndarray): the initial parameters for the Gaussian
+        y_vars (tuple): the variables to fit the Gaussian to
+        by_conds (str): the condition to group by
+        numhdgs (int): the number of headings to fit the Gaussian to
+    Returns:
+        dict: a dictionary of the fit results
     """
+    
     fit_results = {
         y_var: df.groupby(by=by_conds).apply(gauss_fit_hdg, p, y_var, numhdgs).dropna(axis=0).reset_index()
         for y_var, p in zip(y_vars, p0)
@@ -244,6 +255,7 @@ def plot_behavior_hdg(
                 )
 
         ax.set_title("")
+        ax.set_xlabel("")
         if 'choice' in ax_key:
             ax.set_title(f"coh = {ax_key[1]}")
             ax.set_ylim([0, 1.05])
@@ -271,56 +283,80 @@ def plot_behavior_hdg(
 
 # %%
 
-def plot_rtq(RTq_func):
-    def wrapper(row=None, col='modality', hue='heading', *args, **kwargs):
-        RTq = RTq_func(*args, **kwargs)
+def plot_rtq(
+    RTq,
+    row: Optional[str] = None,
+    col: str = 'modality',
+    hue: str = 'heading',
+    depvar: str = 'PDW',
+    palette = sns.color_palette(),
+    **kwargs,
+    ):
 
-        #sns.relplot(data=RTq, x=RTq['RT']['mean'], y=RTq[kwargs['depvar']]['mean'], row=row, col=col, hue=hue, style=style, kind='line')
+    g = sns.FacetGrid(
+        RTq,
+        row=row,
+        col=col,
+        hue=hue,
+        aspect=1.5,
+        height=6,
+        sharey=True,
+        palette=palette)
 
-        g = sns.FacetGrid(RTq, row=row, col=col, hue=hue, aspect=1.5, height=4, sharex=False, sharey=False)
+    # Iterate through each subplot and plot errorbars
+    def plot_errorbars(**kwargs):
+        plt.errorbar(
+            x='RT_mean',
+            y=depvar+'_mean',
+            xerr='RT_cont_se',
+            yerr=depvar+'_prop_se',
+            **kwargs
+            )
+    g.map_dataframe(
+        plot_errorbars, marker='.', capsize=3
+        )
 
-        # Iterate through each subplot and plot errorbars
-        def plot_errorbars(data, **kwargs):
-            plt.errorbar(x=data['RT']['mean'], y=data[kwargs['depvar']]['mean'],
-                         xerr=data['RT']['cont_se'], yerr=data[kwargs['depvar']]['prop_se'],
-                         marker='.', markersize=5, capsize=3)
-        g.map_dataframe(plot_errorbars, **kwargs)
+    # Customize labels and legend
+    g.set_axis_labels('Mean RT (s)', f"Mean {depvar}")
+    g.add_legend()
 
-        # Customize labels and legend
-        g.set_axis_labels('RT Mean', f"{kwargs['depvar']} Mean")
-        g.add_legend()
-
-        # Show the plot
-        plt.show()
-
-        return RTq
-    return wrapper
+    return g
 
 
-#@plot_rtq
-def RTquantiles(df: pd.DataFrame, by_conds, q_conds=None, nq: int=5, depvar: str = 'PDW', use_abs_hdg=True):
+def RTquantiles(
+    df: pd.DataFrame, 
+    by_conds: list, 
+    q_conds: Optional[list] = None, 
+    nq: int=5, 
+    depvar: str = 'PDW', 
+    use_abs_hdg: bool = True
+    ) -> pd.DataFrame:
 
     """
-
-    :param df:
-    :param by_conds: how to group trials
-    :param q_conds: how to group lines (by default, by_conds[:-1])
-    :param nq: number of quantiles
-    :param depvar:
-    :return:
+    Compute the quantiles of the RT and the dependent variable for each condition.
+    Args:
+        df (pd.DataFrame): the dataframe to compute the quantiles of
+        by_conds (list): the conditions to group by
+        q_conds (list): the conditions to group the quantiles by
+        nq (int): the number of quantiles
+        depvar (str): the dependent variable to compute the quantiles of
+        use_abs_hdg (bool): whether to use the absolute heading
+    Returns:
+        pd.DataFrame: the dataframe with the quantiles of the RT and the dependent variable
     """
-    if q_conds is None:
-        q_conds = by_conds
+
+    q_conds = by_conds or q_conds
 
     if use_abs_hdg:
         df['heading'] = df['heading'].abs()
 
     # assign a quantile to each trial in the df, and store the mid of each quantile (for plotting)
-    def calc_bin_edges(x, num_bins):
+    def calc_bin_edges(num_bins):
         q = np.arange(1, num_bins+1) / (num_bins+1)
         return np.concatenate(([0], q, [1]))
 
-    df.loc[:, 'RTq'] = df.groupby(q_conds)['RT'].transform(lambda x: pd.qcut(x, calc_bin_edges(x, nq), labels=False))
+    transform_fcn = lambda x: pd.qcut(x, calc_bin_edges(nq), labels=False, duplicates='drop')
+    df.loc[:, 'RTq'] = df.groupby(q_conds)['RT'].transform(transform_fcn)
 
     #qvals = df.groupby(q_conds)['RT'].transform(lambda x: pd.qcut(x, calc_bin_edges(x, nq)))
     #df.loc[:, 'qmid'] = qvals.apply(lambda x: x.mid)
@@ -330,7 +366,7 @@ def RTquantiles(df: pd.DataFrame, by_conds, q_conds=None, nq: int=5, depvar: str
         'RT': ['mean', cont_se],
     }
     RTq = df.groupby(by_conds + ['RTq'])[[depvar, 'RT']].agg(agg_funcs).dropna(axis=0).reset_index()
-    RTq.columns = ['_'.join(col) if col[0]==depvar or col[0]=='RT' else col for col in RTq.columns]  # remove multi-level index
+    RTq.columns = ['_'.join(col) if col[0]==depvar or col[0]=='RT' else col[0] for col in RTq.columns]  # remove multi-level index
 
     return RTq
 
