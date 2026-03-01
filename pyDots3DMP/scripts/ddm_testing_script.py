@@ -2,6 +2,11 @@
 # DDM DEMO SCRIPT
 # ===================================================
 
+"""
+This script gives an overview of the Accumulator class, SelfMotionDDM class, and fit/predict logic.
+
+"""
+
 import logging
 import time
 from pathlib import Path
@@ -9,7 +14,12 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-# set a save location
+# custom imports
+from ddm import Accumulator, SelfMotionDDM
+from behavior.utils import dots3DMP_create_trial_list
+import behavior.descriptive as behav
+
+# %% ===== set up save location and logger =====
 save_dir = Path("param_recov")
 Path.mkdir(save_dir, parents=True, exist_ok=True)
 
@@ -28,10 +38,6 @@ if not logger.handlers:
     fh.setFormatter(fmt)
     logger.addHandler(fh)
 
-# custom imports
-from ddm import Accumulator, SelfMotionDDM
-from behavior.utils import dots3DMP_create_trial_list
-from behavior.descriptive import plot_behavior_hdg, behavior_means, replicate_ves
 
 # %% ================================================
 # demonstrate use of Accumulator
@@ -113,7 +119,7 @@ X = dots3DMP_create_trial_list(
     hdgs=[-12, -6, -3, 0, 3, 6, 12],
     mods=[1, 2, 3],
     cohs=[0.3, 0.7],
-    nreps=100,
+    nreps=500,
 )
 
 # predict returns model_probs, sampled_predictions
@@ -130,21 +136,21 @@ def process_predictions(X, y):
     data = pd.concat((X, y), axis=1)
 
     # replicate ves for high coherence, for plotting convenience
-    data = replicate_ves(data) 
+    data = behav.replicate_ves(data) 
 
     # map modalities from ordinal to str labels
     data['modality'] = data['modality'].map(mod_map)
 
     return data
 
-preds_full = process_predictions(X, preds_model)
+sim_data = process_predictions(X, preds_model)
 
 # plot_behavior_hdg expects pre-computed means
-df_means = behavior_means(preds_full, by_conds=['modality', 'coherence', 'heading'], long_format=True)
+df_means = behav.behavior_means(sim_data, by_conds=['modality', 'coherence', 'heading', 'delta'], long_format=True)
 
 # plot simulated data. currently no fit curve, so will just draw lines between each
 # can fit with a gaussian eventually (using behavior.utils.gauss_fit_hdg_group)
-plot_behavior_hdg(
+behav.plot_behavior_hdg(
     df_means,
     col='coherence',
     hue='modality',
@@ -186,7 +192,7 @@ ddm_fit = SelfMotionDDM(
 # set some options for the BADS routine (or scipy.minimize)
 fit_options = {
         "random_seed": 42,
-        "max_fun_evals": 200,
+        "max_fun_evals": 10,
         "display": "full"
     }
 
@@ -216,7 +222,8 @@ X_pred = dots3DMP_create_trial_list(
     hdgs=np.linspace(-12, 12, 100),
     mods=[1, 2, 3],
     cohs=[0.3, 0.7],
-    nreps=1,        # only need 1
+    deltas=[-3, 0, 3],  # include deltas so we can see predicted fit under cue conflict
+    nreps=1,            # only need 1
     shuff=False,
 )
 
@@ -230,13 +237,48 @@ preds_, preds_samples = ddm_fit.predict(X_pred, n_samples=1, use_cached_wager_ma
 preds_['RT'] = preds_samples['RT']
 preds_full = process_predictions(X_pred, preds_)
 
-g = plot_behavior_hdg(
+g = behav.plot_behavior_hdg(
     df_means,               # original simulated data
-    data_fit=preds_full,    # model fit
+    data_fit=preds_full.loc[preds_full['delta'] == 0, :],    # model fit delta = 0
     col='coherence',
     hue='modality',
     palette=['k', 'r', 'b'],
     hue_order=['ves', 'vis', 'comb'],
     )
 g.figure.savefig(save_dir / "behavior_fit.png", dpi=150, bbox_inches="tight")
+
+# %% ================================================
+# Plot predicted cue conflict conditions
+# # ===================================================
+
+# pull out the available simulated and predicted data for cue-conflict
+# Note only zero delta used to fit the model, but preds_full contained all deltas because 
+simul_cc = df_means.loc[df_means['modality'] == 'comb', :]
+preds_cc = preds_full.loc[preds_full['modality'] == 'comb', :]
+g = behav.plot_behavior_hdg(
+    simul_cc,
+    preds_cc,
+    col='coherence',
+    hue='delta',
+    hue_order=[-3, 0, 3],
+    palette=['c', 'b', 'g'],
+    )
+g.figure.savefig(save_dir / "behavior_fit_cue_conflict.png", dpi=150, bbox_inches="tight")
+
+# %% ================================================
+# Plot PDW/choice vs RT quantiles
+# # ===================================================
+
+RTq = behav.RTquantiles(
+    sim_data,
+    by_conds=['modality', 'coherence', 'heading'],
+    nq=8,
+    depvar='PDW')
+g = behav.plot_rtq(RTq)
+g.figure.savefig(save_dir / "PDWvsRTquantiles.png", dpi=150, bbox_inches="tight")
+
+RTq = behav.RTquantiles(sim_data, by_conds=['modality', 'coherence', 'heading'], nq=5, depvar='choice')
+g = behav.plot_rtq(RTq)
+g.figure.savefig(save_dir / "CHOICEvsRTquantiles.png", dpi=150, bbox_inches="tight")
+
 # %%
