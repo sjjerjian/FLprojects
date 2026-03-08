@@ -192,7 +192,7 @@ ddm_fit = SelfMotionDDM(
 # set some options for the BADS routine (or scipy.minimize)
 fit_options = {
         "random_seed": 42,
-        "max_fun_evals": 10,
+        "max_fun_evals": 100,
         "display": "full"
     }
 
@@ -228,7 +228,12 @@ X_pred = dots3DMP_create_trial_list(
 )
 
 # use the wager maps from fitting to the short list of headings, i.e. DON'T recompute them with the new heading set!!
-preds_, preds_samples = ddm_fit.predict(X_pred, n_samples=1, use_cached_wager_maps=True, rt_sampling_method="mean")
+preds_, preds_samples = ddm_fit.predict(
+    X_pred,
+    n_samples=1,
+    use_cached_wager_maps=True,
+    rt_sampling_method="mean",
+)
 
 # a couple of kluges here to get the nice model predictions dataframe
 # RT predictions come from the samples df, preds_ originally has the RT likelihoods needed for fitting
@@ -265,6 +270,24 @@ g = behav.plot_behavior_hdg(
     )
 g.figure.savefig(save_dir / "behavior_fit_cue_conflict.png", dpi=150, bbox_inches="tight")
 
+# %% Make predictions just with the original headings
+
+X = dots3DMP_create_trial_list(
+    hdgs=[-12, -6, -3, 0, 3, 6, 12],
+    mods=[1, 2, 3],
+    cohs=[0.3, 0.7],
+    nreps=1,
+)
+preds_, preds_samples = ddm_fit.predict(
+    X,
+    n_samples=1,
+    cache_accumulators=True,
+    use_cached_wager_maps=True,
+    rt_sampling_method="mean"
+    )
+preds_['RT'] = preds_samples['RT']
+preds_full = process_predictions(X, preds_)
+
 # %% ================================================
 # Plot PDW/choice vs RT quantiles
 # # ===================================================
@@ -272,13 +295,21 @@ g.figure.savefig(save_dir / "behavior_fit_cue_conflict.png", dpi=150, bbox_inche
 RTq = behav.RTquantiles(
     sim_data,
     by_conds=['modality', 'coherence', 'heading'],
-    nq=8,
-    depvar='PDW')
-g = behav.plot_rtq(RTq)
+    nq=7,
+)
+g = behav.plot_rtq(
+    RTq,
+    preds_full.loc[preds_full['heading'] >= 0, :],
+    row='coherence', col='modality', depvar="PDW",
+    palette='Reds'
+    )
 g.figure.savefig(save_dir / "PDWvsRTquantiles.png", dpi=150, bbox_inches="tight")
 
-RTq = behav.RTquantiles(sim_data, by_conds=['modality', 'coherence', 'heading'], nq=5, depvar='choice')
-g = behav.plot_rtq(RTq)
-g.figure.savefig(save_dir / "CHOICEvsRTquantiles.png", dpi=150, bbox_inches="tight")
+g = behav.plot_rtq(
+    RTq,
+    row='coherence', col='modality', depvar="correct",
+    palette='Blues')
+g.figure.savefig(save_dir / "CORRECTvsRTquantiles.png", dpi=150, bbox_inches="tight")
+
 
 # %%
