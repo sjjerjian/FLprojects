@@ -200,7 +200,7 @@ def cue_weighting(fit_results):
 
 
 def plot_behavior_hdg(
-    data_obs,
+    data_obs : pd.DataFrame,
     data_fit: Optional[pd.DataFrame] = None,
     row: str = 'variable',
     col: str ='coherence',
@@ -264,7 +264,7 @@ def plot_behavior_hdg(
             ax.set_ylim([0, 1.05])
             ax.set_ylabel('prop. high bets')
         elif 'RT' in ax_key:
-            # ax.set_ylim([0.5, 1.2])
+            ax.set_ylim([0.5, 1.0])
             ax.set_ylabel('mean RT (s)')
 
         xhdgs = np.unique(data_obs['heading'])
@@ -285,6 +285,7 @@ def plot_behavior_hdg(
 
 def plot_rtq(
     RTq,
+    data_fit: Optional[pd.DataFrame] = None,
     row: Optional[str] = None,
     col: str = 'modality',
     hue: str = 'heading',
@@ -312,9 +313,28 @@ def plot_rtq(
             yerr=depvar+'_prop_se',
             **kwargs
             )
+    line_style = '-' if data_fit is None else ''
     g.map_dataframe(
-        plot_errorbars, marker='.', capsize=3
+        plot_errorbars, marker='.', capsize=3, linestyle=line_style
         )
+
+    # for iax, (ax_key, ax) in enumerate(g.axes_dict.items()):
+    #     if data_fit is not None:
+    #         if row:
+    #             inds = (data_fit[row]==ax_key[0]) & (data_fit[col]==ax_key[1])
+    #         else:
+    #             inds = data_fit[col]==ax_key[1]
+    #         ax_data = data_fit.loc[inds, :]
+
+    #         sns.lineplot(
+    #             data=ax_data,
+    #             x='RT',
+    #             y=depvar,
+    #             hue=hue,
+    #             ax=ax,
+    #             palette=palette,
+    #             legend=False
+    #             )        
 
     # Customize labels and legend
     g.set_axis_labels('Mean RT (s)', f"Mean {depvar}")
@@ -324,28 +344,30 @@ def plot_rtq(
 
 
 def RTquantiles(
-    df: pd.DataFrame, 
+    data: pd.DataFrame, 
     by_conds: list, 
     q_conds: Optional[list] = None, 
     nq: int=5, 
-    depvar: str = 'PDW', 
     use_abs_hdg: bool = True
     ) -> pd.DataFrame:
 
     """
     Compute the quantiles of the RT and the dependent variable for each condition.
     Args:
-        df (pd.DataFrame): the dataframe to compute the quantiles of
+        data (pd.DataFrame): the dataframe to compute the quantiles of
         by_conds (list): the conditions to group by
         q_conds (list): the conditions to group the quantiles by
         nq (int): the number of quantiles
-        depvar (str): the dependent variable to compute the quantiles of
         use_abs_hdg (bool): whether to use the absolute heading
     Returns:
         pd.DataFrame: the dataframe with the quantiles of the RT and the dependent variable
     """
 
     q_conds = by_conds or q_conds
+
+    df = data.copy()
+
+    df['correct'] = df['choice'] == (df['heading']>0) | ((df['heading'] == 0) & (np.random.rand()>0.5))
 
     if use_abs_hdg:
         df['heading'] = df['heading'].abs()
@@ -361,12 +383,14 @@ def RTquantiles(
     #qvals = df.groupby(q_conds)['RT'].transform(lambda x: pd.qcut(x, calc_bin_edges(x, nq)))
     #df.loc[:, 'qmid'] = qvals.apply(lambda x: x.mid)
 
+    var_names = ['correct', 'PDW', 'RT']
     agg_funcs = {
-        depvar: ['mean', prop_se, 'count'],
+        'correct': ['mean', prop_se, 'count'],
+        'PDW': ['mean', prop_se],
         'RT': ['mean', cont_se],
     }
-    RTq = df.groupby(by_conds + ['RTq'])[[depvar, 'RT']].agg(agg_funcs).dropna(axis=0).reset_index()
-    RTq.columns = ['_'.join(col) if col[0]==depvar or col[0]=='RT' else col[0] for col in RTq.columns]  # remove multi-level index
+    RTq = df.groupby(by_conds + ['RTq'])[var_names].agg(agg_funcs).dropna(axis=0).reset_index()
+    RTq.columns = ['_'.join(col) if col[0] in var_names else col[0] for col in RTq.columns]  # remove multi-level index
 
     return RTq
 
