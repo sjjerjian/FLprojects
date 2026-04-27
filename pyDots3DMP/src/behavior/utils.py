@@ -216,7 +216,7 @@ def data_cleanup(
     # TODO add kwargs for drop and binning parameters below, currently hardcoded...
     # TODO add print statements to explain, allow user-inputs to specify what functions to use?
 
-    folder = "/Users/stevenjerjian/Desktop/FetschLab/PLDAPS_data/dataStructs/"
+    folder = Path(filepath).parent
    
     clean_filename = Path(filepath).stem + "_clean.csv"
 
