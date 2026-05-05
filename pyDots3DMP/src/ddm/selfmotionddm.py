@@ -181,6 +181,8 @@ class SelfMotionDDM:
             # but store original list lengths for reconstructing dict later
             params_array = np.array(list(itertools.chain(*params_list)))
             self.param_end_inds = list(itertools.accumulate(map(len, params_list)))
+            self.fit_trace_ = []
+            self._eval_idx = 0
 
             # pass data as fixed inputs to objective function
             optim_fcn_part = lambda params: self._objective_fcn(params, X, y)
@@ -258,6 +260,7 @@ class SelfMotionDDM:
             'pdw': log_lik_pdw,
             'rt': log_lik_rt
         }
+        
         if self.return_wager:
             logger.debug('Log likelihoods - choice: %.2f, PDW: %.2f, RT: %.2f', 
                         log_lik_choice, log_lik_pdw, log_lik_rt)
@@ -267,6 +270,32 @@ class SelfMotionDDM:
                         log_lik_choice, log_lik_rt)
             self.neg_llh_ = -sum([log_lik_choice, log_lik_rt])
         logger.debug('Total loss:\t%.2f', self.neg_llh_)
+
+        # Store per-evaluation fit trace (objective value + fitted parameters).
+        trace_row = {
+            'eval': int(getattr(self, '_eval_idx', 0)),
+            'neg_llh': float(self.neg_llh_),
+            'log_lik_choice': float(log_lik_choice),
+            'log_lik_rt': float(log_lik_rt),
+        }
+        if self.return_wager:
+            trace_row['log_lik_pdw'] = float(log_lik_pdw)
+
+        # Raw optimizer parameter vector (flat coordinates).
+        for i, p in enumerate(np.asarray(params_array).ravel()):
+            trace_row[f'theta_{i}'] = float(p)
+
+        # Named parameter values used for prediction on this evaluation.
+        for pname, pvals in self.params_.items():
+            if isinstance(pvals, (list, tuple, np.ndarray)):
+                for j, pv in enumerate(pvals):
+                    trace_row[f'{pname}_{j}'] = float(pv)
+            else:
+                trace_row[pname] = float(pvals)
+
+        if hasattr(self, 'fit_trace_'):
+            self.fit_trace_.append(trace_row)
+        self._eval_idx = getattr(self, '_eval_idx', 0) + 1
 
         return self.neg_llh_
 

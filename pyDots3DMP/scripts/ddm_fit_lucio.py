@@ -15,20 +15,20 @@ import behavior.descriptive as behav
 from datetime import datetime
 
 # %% ===== set up save location and logger =====
-save_dir = Path(f"results/lucio/{datetime.now().strftime('%Y%m%d_%H%M%S')}")
+save_dir = Path(f"results/lucio/{datetime.now().strftime('%y%m%d_%H%M%S')}")
 Path.mkdir(save_dir, parents=True, exist_ok=True)
 
 # Set up logger to console and file - this will show us the logging info for our DDM, and the bads fitting routine
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
-fmt = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+fmt = logging.Formatter("%(asctime)s | %(name)s | %(levelname)s | %(message)s", datefmt="%y%m%d_%H%M%S")
 if not logger.handlers:
     ch = logging.StreamHandler()
-    ch.setLevel(logging.INFO)
+    ch.setLevel(logging.DEBUG)
     ch.setFormatter(fmt)
     logger.addHandler(ch)
-    log_path = save_dir / "fit_lucio.log"
-    fh = logging.FileHandler(log_path, encoding="utf-8")
+    
+    fh = logging.FileHandler(save_dir / "fit_lucio.log", encoding="utf-8")
     fh.setLevel(logging.INFO)
     fh.setFormatter(fmt)
     logger.addHandler(fh)
@@ -128,6 +128,9 @@ ddm_fit.fit(
     )
 ddm_fit.save(save_dir / "fitted_model.json")
 
+trace_df = pd.DataFrame(ddm_fit.fit_trace_)
+trace_df.to_csv(save_dir / "fit_trace.csv", index=False)
+
 # print comparison table of params
 df_params = pd.DataFrame([init_params, ddm_fit.params_])
 df_params['name'] = ['Sim', 'Fit']
@@ -175,5 +178,5 @@ g = behav.plot_behavior_hdg(
     palette=['k', 'r', 'b'],
     hue_order=['ves', 'vis', 'comb'],
     )
-g.figure.savefig(save_dir / "free_mods" / "behavior_fit.png", dpi=150, bbox_inches="tight")
+g.figure.savefig(save_dir / "behavior_fit.png", dpi=150, bbox_inches="tight")
 # %%
