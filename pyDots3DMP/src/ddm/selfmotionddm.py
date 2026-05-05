@@ -254,6 +254,8 @@ class SelfMotionDDM:
         log_lik_choice = log_lik_bin(y['choice'].to_numpy(), y_pred['choice'].to_numpy()) / len(y)
         log_lik_pdw    = log_lik_bin(y['PDW'].to_numpy(), y_pred['PDW'].to_numpy()) / len(y)
         log_lik_rt     = log_lik_cont(y_pred['RT'].to_numpy()) / len(y)
+
+        log_lik_rt /= 10 # kluge
         
         self.log_lik_ = {
             'choice': log_lik_choice,
@@ -269,6 +271,8 @@ class SelfMotionDDM:
             logger.debug('Log likelihoods - choice: %.2f, RT: %.2f', 
                         log_lik_choice, log_lik_rt)
             self.neg_llh_ = -sum([log_lik_choice, log_lik_rt])
+
+        self.neg_llh_ = -np.log(y_pred['joint_ll']).mean()
         logger.debug('Total loss:\t%.2f', self.neg_llh_)
 
         # Store per-evaluation fit trace (objective value + fitted parameters).
@@ -455,17 +459,20 @@ class SelfMotionDDM:
                             pxt_up /= total_p
                             pxt_lo /= total_p
 
+                            high = wager_is_high[m]
+                            low = ~high
+
+                            # joint pdf channels at DECISION time (sum over state grid)
+                            J_RH = (pxt_up * high).sum(axis=1) # pRight+High
+                            J_RL = (pxt_up * low ).sum(axis=1) # pRight+Low
+                            J_LH = (pxt_lo * high).sum(axis=1) # pLeft+High
+                            J_LL = (pxt_lo * low ).sum(axis=1) # pLeft+Low  
+
                             p_choice_and_wager = np.array(
-                                [
-                                    [
-                                        np.sum(pxt_up[wager_is_high[m]]),   # pRight+High
-                                        np.sum(pxt_up[~wager_is_high[m]])   # pRight+Low
-                                    ],   
-                                    [
-                                        np.sum(pxt_lo[wager_is_high[m]]),   # pLeft+High
-                                        np.sum(pxt_lo[~wager_is_high[m]])   # pLeft+Low
-                                    ]
-                                ]
+                                [[np.sum(J_RH),   
+                                  np.sum(J_RL)],   
+                                 [np.sum(J_LH),   
+                                  np.sum(J_LL)]]
                             )
 
                             # calculate p_wager using Bayes rule, then factor in base rate of low bets ("alpha")
@@ -485,8 +492,9 @@ class SelfMotionDDM:
 
                         # first convolve model RT distribution with non-decision time
                         ndt_dist = norm.pdf(self.tvec, loc=non_dec_time[m], scale=0.2) #scale=self.params_['sigma_ndt'])
-                        rt_dist = np.squeeze(accumulator.rt_dist_[h, :])
-                        rt_dist = convolve(rt_dist, ndt_dist / ndt_dist.sum())
+                        ndt_kernel = ndt_dist / ndt_dist.sum()
+                        rt_dist = np.squeeze(accumulator.rt_dist_[h])
+                        rt_dist = convolve(rt_dist, ndt_kernel)
                         rt_dist = np.clip(rt_dist, 1e-10, a_max=None)
 
                         # trim to original length of tvec and renormalize to get posterior
@@ -512,6 +520,33 @@ class SelfMotionDDM:
                             elif rt_sampling_method == "mode":
                                 pred_sample.loc[trial_index, 'RT'] = self.tvec[np.argmax(rt_dist)]
 
+                        # joint likelihood calculation
+                        if y is not None and self.return_wager:
+                            EPS = 1e-300
+
+                            # convolve each channel with NDT to get TOTAL-RT axis on accumulator.tvec
+                            T = len(accumulator.tvec)
+                            def _ndt_conv(x):
+                                return convolve(x, ndt_kernel)[:T]
+
+                            J_RH_t = np.clip(_ndt_conv(J_RH), EPS, None)
+                            J_RL_t = np.clip(_ndt_conv(J_RL), EPS, None)
+                            J_LH_t = np.clip(_ndt_conv(J_LH), EPS, None)
+                            J_LL_t = np.clip(_ndt_conv(J_LL), EPS, None)
+
+                            # observed outcomes for these trials (same trial_index used above)
+                            y_sub = y.loc[trial_index]
+                            choices = y_sub['choice'].to_numpy()
+                            pdws = y_sub['PDW'].to_numpy()
+
+                            p_joint = np.where(
+                                choices == 1,
+                                np.where(pdws == 1, J_RH_t[dist_inds], J_RL_t[dist_inds]),
+                                np.where(pdws == 1, J_LH_t[dist_inds], J_LL_t[dist_inds]),
+                            )
+
+                            predictions.loc[trial_index, 'joint_ll'] = np.clip(p_joint, EPS, 1.0)
+                        
         return predictions, pred_sample
     
 
@@ -668,7 +703,7 @@ class SelfMotionDDM:
             kvis = kmult[1] * cohs # vis scaled by coherence
         else:
             kvis = kmult[1:]  # 3 independent kmults
-        return kves, kvis
+        return kves, np.array(kvis)
 
     @staticmethod
     def _handle_param_mod(param, mods):
