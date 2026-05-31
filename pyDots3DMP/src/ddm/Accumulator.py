@@ -24,7 +24,7 @@ class Accumulator:
     - pdf returns the pdf of the accumulator model at each timepoint
         if full_pdf is False (default), it will return separate pdfs for each marginal (i.e. correct and errors).
         if full_pdf is True, it will return a single 3-D array of the square grid, with a 2-D pdf for each timepoint
-    - dist runs the cdf method, and optionally the pdf method too (if return_pdf is true), with full_pdf set to False
+    - compute_distrs runs the cdf method, and optionally the pdf method too (if return_pdf is true), with full_pdf set to False
     - log_posterior_odds uses the losing accumulator pdfs given correct and errors to calculate log odds of correct choice
     """
 
