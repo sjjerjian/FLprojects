@@ -21,6 +21,20 @@ from .Accumulator import Accumulator
 
 logger = logging.getLogger(__name__)
 
+
+def to_json_serializable(v: Any) -> Any:
+    """Convert model values to JSON-serializable Python types."""
+    if isinstance(v, np.ndarray):
+        return v.tolist()
+    if isinstance(v, (np.floating, np.integer)):
+        return float(v) if isinstance(v, np.floating) else int(v)
+    if isinstance(v, tuple) and len(v) == 2 and all(isinstance(x, np.ndarray) for x in v):
+        return {"_tuple_arrays": [v[0].tolist(), v[1].tolist()]}
+    if isinstance(v, list) and v and isinstance(v[0], np.ndarray):
+        return [x.tolist() if isinstance(x, np.ndarray) else x for x in v]
+    return v
+
+
 # %% ----------------------------------------------------------------
     
 class SelfMotionDDM:
@@ -83,31 +97,27 @@ class SelfMotionDDM:
 
     def to_dict(self) -> dict:
         """Return a JSON-serializable dict of attributes needed to reinstantiate."""
-        def to_serializable(v):
-            if isinstance(v, np.ndarray):
-                return v.tolist()
-            if isinstance(v, (np.floating, np.integer)):
-                return float(v) if isinstance(v, np.floating) else int(v)
-            if isinstance(v, tuple) and len(v) == 2 and all(isinstance(x, np.ndarray) for x in v):
-                return {"_tuple_arrays": [v[0].tolist(), v[1].tolist()]}
-            if isinstance(v, list) and v and isinstance(v[0], np.ndarray):
-                return [x.tolist() if isinstance(x, np.ndarray) else x for x in v]
-            return v
-
         return {
-            "grid_vec": to_serializable(self.grid_vec),
-            "tvec": to_serializable(self.tvec),
-            "params_": {k: to_serializable(v) for k, v in self.params_.items()},
+            "grid_vec": to_json_serializable(self.grid_vec),
+            "tvec": to_json_serializable(self.tvec),
+            "params_": {k: to_json_serializable(v) for k, v in self.params_.items()},
             "return_wager": self.return_wager,
-            "wager_maps": to_serializable(self.wager_maps) if self.wager_maps is not None else None,
+            "wager_maps": to_json_serializable(self.wager_maps) if self.wager_maps is not None else None,
             "wager_axis": self.wager_axis,
-            "stim_scaling": to_serializable(self.stim_scaling) if isinstance(self.stim_scaling, tuple) else self.stim_scaling,
+            "stim_scaling": to_json_serializable(self.stim_scaling) if isinstance(self.stim_scaling, tuple) else self.stim_scaling,
         }
 
     def save(self, path: Path | str) -> None:
         """Save the model state to a JSON file."""
         with open(path, "w") as f:
             json.dump(self.to_dict(), f, indent=2)
+
+    @staticmethod
+    def save_params(params: dict, path: Path | str, *, indent: int = 4) -> None:
+        """Save a parameter dictionary to a JSON file."""
+        serializable = {k: to_json_serializable(v) for k, v in params.items()}
+        with open(path, "w") as f:
+            json.dump(serializable, f, indent=indent)
 
     @classmethod
     def load(cls, path: Path | str) -> "SelfMotionDDM":
@@ -163,12 +173,16 @@ class SelfMotionDDM:
         fixed_params: Optional[list[str]]=None,
         fit_method: str = 'bads',
         fit_options: Optional[dict] = None,
+        save_dir: Optional[Path | str] = None,
         ) -> 'SelfMotionDDM':
         """fit model to data in X and y, with optional fixed parameters"""
 
         logger.info('Starting model fitting')
 
         fit_start_time = time.perf_counter()
+        self.fit_method_ = fit_method
+        self.fit_options_ = fit_options or {}
+        self.fit_trace_ = []
         
         self.n_features_in_ = len(X.columns)
 
@@ -181,7 +195,6 @@ class SelfMotionDDM:
             # but store original list lengths for reconstructing dict later
             params_array = np.array(list(itertools.chain(*params_list)))
             self.param_end_inds = list(itertools.accumulate(map(len, params_list)))
-            self.fit_trace_ = []
             self._eval_idx = 0
 
             # pass data as fixed inputs to objective function

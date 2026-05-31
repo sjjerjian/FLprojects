@@ -1,6 +1,5 @@
 """Fit some real data"""
 
-import json
 import logging
 from pathlib import Path
 
@@ -10,28 +9,18 @@ import pandas as pd
 # custom imports
 from ddm import SelfMotionDDM
 from behavior.utils import dots3DMP_create_trial_list, data_cleanup
+from utils import setup_loggers
 import behavior.descriptive as behav
 
 from datetime import datetime
 
-# %% ===== set up save location and logger =====
+# %% ============================== 
+# set up save location and logger 
+# ==============================
 save_dir = Path(f"results/lucio/{datetime.now().strftime('%y%m%d_%H%M%S')}")
 Path.mkdir(save_dir, parents=True, exist_ok=True)
 
-# Set up logger to console and file - this will show us the logging info for our DDM, and the bads fitting routine
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-fmt = logging.Formatter("%(asctime)s | %(name)s | %(levelname)s | %(message)s", datefmt="%y%m%d_%H%M%S")
-if not logger.handlers:
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.DEBUG)
-    ch.setFormatter(fmt)
-    logger.addHandler(ch)
-    
-    fh = logging.FileHandler(save_dir / "fit_lucio.log", encoding="utf-8")
-    fh.setLevel(logging.INFO)
-    fh.setFormatter(fmt)
-    logger.addHandler(fh)
+setup_loggers(log_file_path=save_dir / "fit_lucio.log")
 
 
 # %% ===============
@@ -41,7 +30,9 @@ if not logger.handlers:
 datafilepath = "/Users/stevenjerjian/FLprojects/lucio_20220512-20230606.csv"
 data = data_cleanup(datafilepath)  # this is a hack function to quickly load and clean the data, could be improved/generalized with options
 
-# %% set up for fitting
+# %% ================================================
+# set up for fitting
+# ===================================================
 
 def process_predictions(X, y=None):
 
@@ -62,18 +53,24 @@ df_means = behav.behavior_means(
     by_conds=['modality', 'coherence', 'heading', 'delta'],
     long_format=True)
 
-# %%
-# plot simulated data. currently no fit curve, so will just draw lines between each
-# can fit with a gaussian eventually (using behavior.utils.gauss_fit_hdg_group)
-behav.plot_behavior_hdg(
-    df_means[df_means['delta'] == 0],
-    col='coherence',
-    hue='modality',
-    palette=['k', 'r', 'b'],
-    hue_order=['ves', 'vis', 'comb'],
-    )
+# %% ================================================
+# plot actual data
+# ===================================================
 
-# %% RUN MODEL FITTING
+# currently no fit curve, so will just draw lines between each
+# can fit with a gaussian eventually (using behavior.utils.gauss_fit_hdg_group)
+
+# behav.plot_behavior_hdg(
+#     df_means[df_means['delta'] == 0],
+#     col='coherence',
+#     hue='modality',
+#     palette=['k', 'r', 'b'],
+#     hue_order=['ves', 'vis', 'comb'],
+#     )
+
+# %% ================================================
+# Set up for model fitting
+# ===================================================
 
 data_delta0 = data[data['delta'] == 0]
 X = data_delta0[["heading", "modality", "coherence", "delta"]]
@@ -90,17 +87,17 @@ init_params = {
     'wager_thr': [1.6],         # log odds threshold for high bets
     'wager_alpha': [0.06],      # base rate of low bets
 }
+
 init_params = {
-    'kmult': [0.7530327, 1.55471721, 2.80188416],          # ves, vis sensitivites. if length 2, vis will be scaled by coh
-    'bound': [0.96068757, 0.51813231, 0.86937995],               # ves, vis, comb bounds. 
-    'non_dec_time': [0.07577165, 0.37180706, 0.05],      # non-decision time (secs)
-    'wager_thr': [0.93520996, 1.03769139, 1.06222401],         # log odds threshold for high bets
-    'wager_alpha': [0.02533596, 0.10985811, 0.09932743],      # base rate of low bets
+    'kmult': [0.7, 0.7, 1.68],          # ves, vis sensitivites. if length 2, vis will be scaled by coh
+    'bound': [1.0, 1.0, 0.95],               # ves, vis, comb bounds. 
+    'non_dec_time': [0.13, 0.2, 0.5],      # non-decision time (secs)
+    'wager_thr': [1.0, 1.0, 1.2],         # log odds threshold for high bets
+    'wager_alpha': [0.03, 0.14, 0.05],      # base rate of low bets
 }
 
-with open(save_dir / "init_params.json", "w") as f:
-    json.dump(init_params, f, indent=4)
-    
+SelfMotionDDM.save_params(init_params, save_dir / "init_params.json")
+
 # initialize new DDM object
 ddm_fit = SelfMotionDDM(
     grid_vec=grid_vec,
@@ -110,21 +107,21 @@ ddm_fit = SelfMotionDDM(
     return_wager=True,
     )
 
-# ddm_fit = SelfMotionDDM.load("fit_lucio_20260423_223747/fitted_model_lucio_freemods.json")
-# print(SelfMotionDDM.params_table(ddm_fit))
-
 # set some options for the BADS routine (or scipy.minimize)
 fit_options = {
-        "random_seed": 42,
-        "max_fun_evals": 500,
-        "display": "full"
-    }
+    "random_seed": 0,
+    "max_fun_evals": 500,
+    "display": "full"
+}
 
-# %% run the fit, with some fixed params
+# ===================================================
+# run the fit, with some fixed params
+# ===================================================
 ddm_fit.fit(
     X, y,
     fit_method='bads',
-    fit_options=fit_options
+    fit_options=fit_options,
+    save_dir=save_dir,
     )
 ddm_fit.save(save_dir / "fitted_model.json")
 
@@ -136,6 +133,7 @@ df_params = pd.DataFrame([init_params, ddm_fit.params_])
 df_params['name'] = ['Sim', 'Fit']
 df_params.set_index('name', inplace=True)
 print(df_params)
+SelfMotionDDM.save_params(ddm_fit.params_, save_dir / "fitted_params.json")
 
 # %% ================================================
 # Plot fitted curves on top of original simulated data
