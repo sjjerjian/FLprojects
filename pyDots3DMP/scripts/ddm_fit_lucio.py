@@ -1,8 +1,7 @@
 """Fit some real data"""
 
-import logging
+from datetime import datetime
 from pathlib import Path
-
 import numpy as np
 import pandas as pd
 
@@ -12,23 +11,20 @@ from behavior.utils import dots3DMP_create_trial_list, data_cleanup
 from utils import setup_loggers
 import behavior.descriptive as behav
 
-from datetime import datetime
 
-# %% ============================== 
+# %% ================================================ 
 # set up save location and logger 
-# ==============================
+# ===================================================
 save_dir = Path(f"results/lucio/{datetime.now().strftime('%y%m%d_%H%M%S')}")
 Path.mkdir(save_dir, parents=True, exist_ok=True)
-
 setup_loggers(log_file_path=save_dir / "fit_lucio.log")
-
 
 # %% ===============
 # load data 
 # ==================
 
 datafilepath = "/Users/stevenjerjian/FLprojects/lucio_20220512-20230606.csv"
-data = data_cleanup(datafilepath)  # this is a hack function to quickly load and clean the data, could be improved/generalized with options
+data = data_cleanup(datafilepath)  # kluge to load and clean raw data, could be improved
 
 # %% ================================================
 # set up for fitting
@@ -39,19 +35,19 @@ def process_predictions(X, y=None):
     mod_map = {1: "ves", 2: "vis", 3: "comb"}
     data = pd.concat((X, y), axis=1) if y is not None else X.copy()
 
-    # replicate ves for high coherence, for plotting convenience
-    data = behav.replicate_ves(data) 
-    # map modalities from ordinal to str labels
-    data['modality'] = data['modality'].map(mod_map)
+    data = behav.replicate_ves(data) # rep for high coh, for plotting convenience
+    data['modality'] = data['modality'].map(mod_map) # ordinal to str labels
 
     return data
 
 data_proc = process_predictions(data)
-# plot_behavior_hdg expects pre-computed means
+
+# plot_behavior_hdg function expects pre-computed means
 df_means = behav.behavior_means(
     data_proc,
     by_conds=['modality', 'coherence', 'heading', 'delta'],
-    long_format=True)
+    long_format=True
+)
 
 # %% ================================================
 # plot actual data
@@ -81,11 +77,11 @@ grid_vec = np.arange(-3, 0, 0.01)
 time_vec = np.arange(0, 2, 0.025)
 
 init_params = {
-    'kmult': [1.5, 2.2],          # ves, vis sensitivites. if length 2, vis will be scaled by coh
-    'bound': [1.0],               # ves, vis, comb bounds. 
-    'non_dec_time': [0.1],      # non-decision time (secs)
-    'wager_thr': [1.6],         # log odds threshold for high bets
-    'wager_alpha': [0.06],      # base rate of low bets
+    'kmult': [1.5, 2.2],      # ves, vis sensitivites. if length 2, vis will be scaled by coh
+    'bound': [1.0],           # ves, vis, comb bounds. 
+    'non_dec_time': [0.1],    # non-decision time (secs)
+    'wager_thr': [1.6],       # log odds threshold for high bets
+    'wager_alpha': [0.06],    # base rate of low bets
 }
 
 init_params = {
@@ -96,8 +92,6 @@ init_params = {
     'wager_alpha': [0.03, 0.14, 0.05],      # base rate of low bets
 }
 
-SelfMotionDDM.save_params(init_params, save_dir / "init_params.json")
-
 # initialize new DDM object
 ddm_fit = SelfMotionDDM(
     grid_vec=grid_vec,
@@ -106,6 +100,7 @@ ddm_fit = SelfMotionDDM(
     stim_scaling=True,  
     return_wager=True,
     )
+SelfMotionDDM.save_params(init_params, save_dir / "init_params.json")
 
 # set some options for the BADS routine (or scipy.minimize)
 fit_options = {
@@ -121,7 +116,6 @@ ddm_fit.fit(
     X, y,
     fit_method='bads',
     fit_options=fit_options,
-    save_dir=save_dir,
     )
 ddm_fit.save(save_dir / "fitted_model.json")
 
@@ -133,6 +127,8 @@ df_params = pd.DataFrame([init_params, ddm_fit.params_])
 df_params['name'] = ['Sim', 'Fit']
 df_params.set_index('name', inplace=True)
 print(df_params)
+
+# save fitted params to disk
 SelfMotionDDM.save_params(ddm_fit.params_, save_dir / "fitted_params.json")
 
 # %% ================================================
@@ -163,14 +159,21 @@ preds_, preds_samples = ddm_fit.predict(
 # for choice and PDW we can use preds_ columns as is, because they are
 # probabilities of the binary outcome
 
-# RT in task was defined as time from "motion onset" where motion onset is 1% of max acceleration
+# RT in task was defined as time from "motion onset",
+# where motion onset is 1% of max acceleration
 # in practice this is about 0.3 seconds after the stimulus onset
 preds_['RT'] = preds_samples['RT'] - 0.3 
 preds_full = process_predictions(X_pred, preds_)
-# %%
+
+actual_data_means = df_means[
+    (df_means['delta'] == 0) & 
+    (df_means['variable'].isin(['choice', 'PDW', 'RT']))
+    ]
+fitted_data = preds_full.loc[preds_full['delta'] == 0, :]
+
 g = behav.plot_behavior_hdg(
-    df_means[(df_means['delta'] == 0) & (df_means['variable'].isin(['choice', 'PDW', 'RT']))],
-    data_fit=preds_full.loc[preds_full['delta'] == 0, :],    # model fit for delta = 0
+    actual_data_means,
+    data_fit=fitted_data,
     col='coherence',
     hue='modality',
     palette=['k', 'r', 'b'],

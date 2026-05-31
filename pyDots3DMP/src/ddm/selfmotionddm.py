@@ -173,7 +173,6 @@ class SelfMotionDDM:
         fixed_params: Optional[list[str]]=None,
         fit_method: str = 'bads',
         fit_options: Optional[dict] = None,
-        save_dir: Optional[Path | str] = None,
         ) -> 'SelfMotionDDM':
         """fit model to data in X and y, with optional fixed parameters"""
 
