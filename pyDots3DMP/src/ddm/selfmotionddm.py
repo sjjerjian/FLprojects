@@ -47,6 +47,7 @@ class SelfMotionDDM:
         kmult: list = [0.3, 0.3],
         bound: list = [1., 1., 1.],
         non_dec_time: list = [0.3],
+        cue_weights: Optional[list[float|int]] = None,
         return_wager: bool = True,
         wager_thr: list = [1.],
         wager_alpha: list = [0.05],
@@ -61,6 +62,7 @@ class SelfMotionDDM:
         :param kmult: list of k multipliers [k_ves, k_vis]
         :param bound: list of bounds per modality [ves, vis, comb]      
         :param non_dec_time: list of non-decision times per modality
+        :param cue_weights: ves,vis cue weights. (None = "optimal")
         :param return_wager: whether to compute/return wager predictions
         :param wager_thr: list of wager thresholds per modality
         :param wager_alpha: list of wager alpha parameters per modality
@@ -81,6 +83,14 @@ class SelfMotionDDM:
         self.wager_axis = wager_axis
         self.stim_scaling = stim_scaling
         self.use_vectorized = use_vectorized
+
+        self.cue_weights = cue_weights
+
+        if cue_weights is not None:
+            tmp_param_names = list(self.PARAM_NAMES)
+            tmp_param_names.append('cue_weights')
+            self.PARAM_NAMES = tuple(tmp_param_names)
+
 
         # initialize internal containers used by fit/predict
         self.init_params = {k: getattr(self, k) for k in self.PARAM_NAMES}
@@ -391,7 +401,7 @@ class SelfMotionDDM:
                 accumulator = Accumulator(grid_vec=self.grid_vec, tvec=self.tvec, bound=bound[m])
 
                 abs_drifts, t_eff = calc_selfmotion_drifts(
-                    b_vals[m], k_vals_fixed[m], self.tvec, hdgs[hdgs>=0], delta=0,
+                    b_vals[m], k_vals_fixed[m], self.tvec, hdgs[hdgs>=0], delta=0, cue_weights=self.cue_weights,
                     )
                 accumulator.tvec = t_eff
 
@@ -428,7 +438,7 @@ class SelfMotionDDM:
                     # set up accumulator for this condition
                     accumulator = Accumulator(grid_vec=self.grid_vec, tvec=self.tvec, bound=bound[m])
                     drifts, t_eff = calc_selfmotion_drifts(
-                        b_vals[m], k_vals[m], self.tvec, hdgs, delta=delta,
+                        b_vals[m], k_vals[m], self.tvec, hdgs, delta=delta, cue_weights=self.cue_weights,
                         )
                     accumulator.tvec = t_eff
                     

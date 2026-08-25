@@ -80,6 +80,7 @@ init_params = {
     'non_dec_time': [0.13, 0.2, 0.5],   # non-decision time (secs)
     'wager_thr': [1.0, 1.0, 1.2],       # log odds threshold for high bets
     'wager_alpha': [0.03, 0.14, 0.05],  # base rate of low bets
+    'cue_weights': [0.5, 0.5]
 }
 
 # initialize new DDM object
