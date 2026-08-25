@@ -481,10 +481,8 @@ class SelfMotionDDM:
                             J_LL = (pxt_lo * low ).sum(axis=1) # pLeft+Low  
 
                             p_choice_and_wager = np.array(
-                                [[np.sum(J_RH),   
-                                  np.sum(J_RL)],   
-                                 [np.sum(J_LH),   
-                                  np.sum(J_LL)]]
+                                [[np.sum(J_RH), np.sum(J_RL)],   
+                                 [np.sum(J_LH), np.sum(J_LL)]]
                             )
 
                             # calculate p_wager using Bayes rule, then factor in base rate of low bets ("alpha")

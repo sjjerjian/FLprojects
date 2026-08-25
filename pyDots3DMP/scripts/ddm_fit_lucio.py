@@ -1,27 +1,25 @@
 """Fit some real data"""
 
+# TODO hand-fit as well as possible?
+# add loop over multiple starting points / same starting point w different seeds
+# add option to set bounds without params themselves
+
 from datetime import datetime
 from pathlib import Path
 import numpy as np
 import pandas as pd
 
-# custom imports
 from ddm import SelfMotionDDM
 from behavior.utils import dots3DMP_create_trial_list, data_cleanup
 from utils import setup_loggers
 import behavior.descriptive as behav
 
-
 # %% ================================================ 
-# set up save location and logger 
+# set up save location and logger, and load data
 # ===================================================
 save_dir = Path(f"results/lucio/{datetime.now().strftime('%y%m%d_%H%M%S')}")
 Path.mkdir(save_dir, parents=True, exist_ok=True)
 setup_loggers(log_file_path=save_dir / "fit_lucio.log")
-
-# %% ===============
-# load data 
-# ==================
 
 datafilepath = "/Users/stevenjerjian/FLprojects/lucio_20220512-20230606.csv"
 data = data_cleanup(datafilepath)  # kluge to load and clean raw data, could be improved
@@ -31,13 +29,11 @@ data = data_cleanup(datafilepath)  # kluge to load and clean raw data, could be 
 # ===================================================
 
 def process_predictions(X, y=None):
-
+    """replicate ves for high coherence, for plotting convenience"""
     mod_map = {1: "ves", 2: "vis", 3: "comb"}
     data = pd.concat((X, y), axis=1) if y is not None else X.copy()
-
-    data = behav.replicate_ves(data) # rep for high coh, for plotting convenience
-    data['modality'] = data['modality'].map(mod_map) # ordinal to str labels
-
+    data = behav.replicate_ves(data)
+    data['modality'] = data['modality'].map(mod_map)
     return data
 
 data_proc = process_predictions(data)
@@ -76,20 +72,14 @@ y['RT'] += 0.3  # add offset for motion platform latency kluge
 grid_vec = np.arange(-3, 0, 0.01) 
 time_vec = np.arange(0, 2, 0.025)
 
-init_params = {
-    'kmult': [1.5, 2.2],      # ves, vis sensitivites. if length 2, vis will be scaled by coh
-    'bound': [1.0],           # ves, vis, comb bounds. 
-    'non_dec_time': [0.1],    # non-decision time (secs)
-    'wager_thr': [1.6],       # log odds threshold for high bets
-    'wager_alpha': [0.06],    # base rate of low bets
-}
+
 
 init_params = {
     'kmult': [0.7, 0.7, 1.68],          # ves, vis sensitivites. if length 2, vis will be scaled by coh
-    'bound': [1.0, 1.0, 0.95],               # ves, vis, comb bounds. 
-    'non_dec_time': [0.13, 0.2, 0.5],      # non-decision time (secs)
-    'wager_thr': [1.0, 1.0, 1.2],         # log odds threshold for high bets
-    'wager_alpha': [0.03, 0.14, 0.05],      # base rate of low bets
+    'bound': [1.0, 1.0, 0.95],          # ves, vis, comb bounds. 
+    'non_dec_time': [0.13, 0.2, 0.5],   # non-decision time (secs)
+    'wager_thr': [1.0, 1.0, 1.2],       # log odds threshold for high bets
+    'wager_alpha': [0.03, 0.14, 0.05],  # base rate of low bets
 }
 
 # initialize new DDM object
@@ -180,4 +170,3 @@ g = behav.plot_behavior_hdg(
     hue_order=['ves', 'vis', 'comb'],
     )
 g.figure.savefig(save_dir / "behavior_fit.png", dpi=150, bbox_inches="tight")
-# %%
